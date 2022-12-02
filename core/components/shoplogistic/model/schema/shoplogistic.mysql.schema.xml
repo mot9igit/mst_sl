@@ -2,52 +2,6 @@
 <model package="shoplogistic" baseClass="xPDOObject" platform="mysql" defaultEngine="InnoDB" phpdoc-package="shoplogistic"
        version="1.1">
 
-    <object class="slCityCity" table="sl_city" extends="xPDOSimpleObject">
-        <field key="key" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="fias_id" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="city" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="city_r" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="phone" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="email" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="address" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="address_full" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="address_coordinats" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="lat" dbtype="float" precision="10,6" phptype="float" null="false" default="0"/>
-        <field key="lng" dbtype="float" precision="10,6" phptype="float" null="false" default="0"/>
-        <field key="default" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
-        <field key="properties" dbtype="text" phptype="json" null="true"/>
-
-        <index alias="default" name="default" primary="false" unique="false" type="BTREE">
-            <column key="default" length="" collation="A" null="false"/>
-        </index>
-
-        <index alias="key" name="key" primary="false" unique="true" type="BTREE">
-            <column key="key" length="" collation="A" null="false"/>
-        </index>
-
-        <composite alias="fields" class="cityFolderFields" local="id" foreign="city" cardinality="many" owner="local"/>
-        <composite alias="resources" class="cityFolderResource" local="id" foreign="city" cardinality="many" owner="local"/>
-    </object>
-
-    <object class="slCityFields" table="sl_fields" extends="xPDOSimpleObject">
-        <field key="city" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
-        <field key="name" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="key" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="value" dbtype="text" phptype="string" null="false" default=""/>
-        <field key="properties" dbtype="text" phptype="json" null="true"/>
-
-        <aggregate alias="city" class="slCityCity" local="city" foreign="id" cardinality="one" owner="foreign"/>
-    </object>
-
-    <object class="slCityResource" table="sl_resource" extends="xPDOSimpleObject">
-        <field key="city" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
-        <field key="resource" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
-        <field key="content" dbtype="text" phptype="string" null="false" default=""/>
-        <field key="properties" dbtype="text" phptype="json" null="true"/>
-
-        <aggregate alias="city" class="slCityCity" local="city" foreign="id" cardinality="one" owner="foreign"/>
-    </object>
-
     <object class="slStores" table="sl_stores" extends="xPDOSimpleObject">
         <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="balance" dbtype="decimal" precision="12,2" phptype="float" null="true" default="0"/>
