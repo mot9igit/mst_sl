@@ -1,0 +1,56 @@
+Changelog for shopLogistic.
+
+0.0.10-pl
+==============
+- add search by apikey in backend (stores and warehouses)
+- add KPP field to slStores and slWarehouse
+-- add remains controller on website side
+-- add registry in payments and alert to accountant
+-- add working hours to stores
+-- add tests to difficult cart
+
+0.0.9-pl
+==============
+- Optimize stores & warehouse backend interface
+- Add pre tools for hard orders
+
+0.0.8-pl
+==============
+- Optimize geolocation services
+- Add a any tools to Profile
+
+0.0.7-pl
+==============
+- Add geolocation services
+- Add a any tools to Profile
+- Add link between order and store (column `store_id` in ms2_orders)
+
+0.0.6-pl
+==============
+- Add change Stores & Warehouses data requests
+- Add a manualy edit remains
+
+0.0.5-pl
+==============
+- Add more fields to SlStores & slWarehouse
+- Add sl.profile-products snippet
+- Add more system settings
+- Change utils JS
+
+0.0.4-pl
+==============
+- Add API KEY generate frontend
+- Add sl.profile snippet
+
+0.0.3-pl
+==============
+- Add API KEY generate tool
+
+0.0.2-pl
+==============
+- Add coloumn price to remains table
+- Add coloumn apikey to stores and warehouses tables
+
+0.0.1-pl
+==============
+- Initial release
