@@ -38,8 +38,15 @@ $_lang['setting_shoplogistic_tax_percent'] = 'Процент комиссии д
 $_lang['setting_shoplogistic_tax_percent_desc'] = 'Данный процент будет вычитаться при начислении финансов за заказ';
 $_lang['setting_shoplogistic_default_store'] = 'Магазин по умолчанию (только на доставку)';
 $_lang['setting_shoplogistic_default_store_desc'] = "У данного магазина будет игнорироваться остаток товара. При отображении товаров будет учитываться параметр \"Не доступен для заказа\"";
+
+$_lang['setting_shoplogistic_cart_mode'] = 'Режим работы корзины';
+$_lang['setting_shoplogistic_cart_mode_desc'] = '1 - ищем глобально ближайший магазин, 2 - ищем только в определенных магазинах';
+
 $_lang['setting_shoplogistic_mode'] = 'Режим работы';
 $_lang['setting_shoplogistic_mode_desc'] = '1 - показываем остатки магазина и дистрибьютора, 2 - показываем все остатки, заказ отсылаем в ближайший магазин';
+
+$_lang['setting_shoplogistic_cart_to_warehouse'] = 'Отправлять ли заказ к ближайшему дистру?';
+$_lang['setting_shoplogistic_cart_to_warehouse_desc'] = 'Если не найден магазин с остатком корзины';
 
 $_lang['setting_shoplogistic_phx_prefix'] = 'Префикс плейсхолдеров';
 $_lang['setting_shoplogistic_cityfolder_phx_prefix_desc'] = 'По данному префиксу можно получить доступ к плейсхолдерам';

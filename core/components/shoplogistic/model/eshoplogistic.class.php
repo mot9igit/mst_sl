@@ -192,16 +192,29 @@ class eShopLogistic
 	 * @return bool|mixed
 	 */
 	public function getYaDeliveryPrice($type, $product_id = 0, $sdata = array()){
-		$position = $this->sl->cart->getUserPosition();
-		$url = "https://b2b.taxi.yandex.net/b2b/cargo/integration/v1/check-price";
-		$start_coodinats = explode(",", $_SESSION['sl_location']['store']['coordinats']);
-		foreach($start_coodinats as $key => $val){
-			$start_coodinats[$key] = (float) $val;
+		//$this->modx->log(1, print_r($sdata, 1));
+		if($sdata['location']){
+			$position = $sdata['location'];
+		}else{
+			$position = $this->sl->cart->getUserPosition();
 		}
-		if(isset($sdata['to'])){
+		$url = "https://b2b.taxi.yandex.net/b2b/cargo/integration/v1/check-price";
+		$start_coodinats = array();
+		if($sdata['cart']){
+			if($sdata['cart']['object'] && $sdata['cart']['type']){
+				$object = $this->modx->getObject($sdata['cart']['type'], $sdata['cart']['object']);
+				if($object){
+					$start_coodinats = explode(",", $object->get('coordinats'));
+					foreach($start_coodinats as $key => $val){
+						$start_coodinats[$key] = (float) $val;
+					}
+				}
+			}
+		}
+		if(isset($position['geo_lon'])){
 			$to = array(
-				(float) $sdata['location']['data']['geo_lon'],
-				(float) $sdata['location']['data']['geo_lat']
+				(float) $position['geo_lon'],
+				(float) $position['geo_lat']
 			);
 		}else{
 			$to = array(
@@ -212,12 +225,13 @@ class eShopLogistic
 		$data = array();
 		$data['route_points'] = array(
 			0 => array(
-				"coordinates" => array((float) $_SESSION['sl_location']['store']['lng'], (float) $_SESSION['sl_location']['store']['lat'])
+				"coordinates" => array_reverse($start_coodinats)
 			),
 			1 => array(
 				"coordinates" => $to
 			)
 		);
+		// TODO: check this function
 		if($type == 'card'){
 			if($product_id){
 				$product = $this->modx->getObject("modResource", $product_id);
@@ -232,9 +246,9 @@ class eShopLogistic
 							$data['items'][] = array(
 								"quantity" => 1,
 								"size" => array(
-									"length" => str_replace(",", ".", $tmplr['dimensions'][0]),
-									"width" => str_replace(",", ".", $tmplr['dimensions'][1]),
-									"height" => str_replace(",", ".", $tmplr['dimensions'][2]),
+									"length" => str_replace(",", ".", $tmplr['dimensions'][0]) * 0.01,
+									"width" => str_replace(",", ".", $tmplr['dimensions'][1]) * 0.01,
+									"height" => str_replace(",", ".", $tmplr['dimensions'][2]) * 0.01,
 								),
 								"weight" => $tmplr['weight']
 							);
@@ -264,75 +278,52 @@ class eShopLogistic
 			}
 		}
 		if($type == 'cart'){
-			if($sdata['target']){
-				$token = $this->modx->getOption("shoplogistic_api_key_dadata");
-				$ch = curl_init('https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/address');
-				$dt = array(
-					"query" => $sdata['target']
-				);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-				curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dt, JSON_UNESCAPED_UNICODE));
-				curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-					'Authorization: Token '.$token,
-					'Content-Type: application/json',
-					'Accept: application/json'
-				));
-				$res = curl_exec($ch);
-				curl_close($ch);
-				$res = json_decode($res, true);
-				if($res['suggestions'][0]){
-					// $geo_data['geo_lat'] $geo_data['geo_lon']
-					$geo_data = $res['suggestions'][0]['data'];
-					$this->ms2Init();
-					if ($this->ms2) {
-						$cart = $this->ms2->cart->get();
-						$price_data = array();
-						$price_data['route_points'] = array(
-							0 => array(
-								"coordinates" => array((float) $_SESSION['sl_location']['store']['lng'], (float) $_SESSION['sl_location']['store']['lat'])
+			$cart = $sdata['cart']['products'];
+			$price_data = array();
+			$price_data['route_points'] = $data['route_points'];
+			foreach ($cart as $pr) {
+				$product = $this->modx->getObject("modResource", $pr['id']);
+				$tmp = array();
+				if($product) {
+					$par = json_decode($product->getTVValue("delivery_attributes"), true);
+					if ($par) {
+						foreach ($par as $p) {
+							$tmplr = array();
+							$tmplr['weight'] = $p['weight'];
+							$tmplr['dimensions'] = explode('*', $p['dimensions']);
+							$price_data['items'][] = array(
+								"quantity" => 1,
+								"size" => array(
+									"length" => str_replace(",", ".", $tmplr['dimensions'][0]) * 0.01,
+									"width" => str_replace(",", ".", $tmplr['dimensions'][1]) * 0.01,
+									"height" => str_replace(",", ".", $tmplr['dimensions'][2]) * 0.01,
+								),
+								"weight" => $tmplr['weight']
+							);
+						}
+					} else {
+						$pos = $this->sl->cart->getProductParams($pr['id']);
+
+						$price_data['items'][] = array(
+							"quantity" => 1,
+							"size" => array(
+								"length" => (float)$pos[0]['length'] * 0.01,
+								"width" => (float)$pos[0]['width'] * 0.01,
+								"height" => (float)$pos[0]['height'] * 0.01,
 							),
-							1 => array(
-								"coordinates" => array((float) $geo_data['geo_lon'], (float) $geo_data['geo_lat'])
-							)
+							"weight" => (float)$pos[0]['weight']
 						);
-						foreach ($cart as $product) {
-							if ($product['places']) {
-								foreach ($product['places'] as $key => $val) {
-									$val['dimensions'] = explode("*", $val['dimensions']);
-									$price_data['items'][] = [
-										'quantity' => $product['count'],
-										'weight' => $val['weight'],
-										"size" => array(
-											"length" => (float) str_replace(",", ".", $val['dimensions'][0]) * 0.01,
-											"width" => (float) str_replace(",", ".", $val['dimensions'][1]) * 0.01,
-											"height" => (float) str_replace(",", ".", $val['dimensions'][2]) * 0.01,
-										),
-									];
-								}
-							}else{
-								$params['dimensions'] = explode("*", $product['dimensions']);
-								$price_data['items'][] = array(
-									"quantity" => $product['count'],
-									"size" => array(
-										"length" => (float) str_replace(",", ".", $params['dimensions'][0]) * 0.01,
-										"width" => (float) str_replace(",", ".", $params['dimensions'][1]) * 0.01,
-										"height" => (float) str_replace(",", ".", $params['dimensions'][2]) * 0.01,
-									),
-									"weight" => (float) $product['weight']
-								);
-							}
-						}
-						$ya_delivery_data = $this->yaDeliveryRequest($url, $data);
-						if(isset($ya_delivery_data['code'])){
-							$this->yaDeliveryReport($url.' '.$ya_delivery_data['code'].' '.$ya_delivery_data['message']);
-							$this->yaDeliveryReport($data);
-							return false;
-						}else{
-							return $ya_delivery_data;
-						}
 					}
 				}
+			}
+			$this->modx->log(1, print_r($price_data, 1));
+			$ya_delivery_data = $this->yaDeliveryRequest($url, $price_data);
+			if(isset($ya_delivery_data['code'])){
+				$this->yaDeliveryReport($url.' '.$ya_delivery_data['code'].' '.$ya_delivery_data['message']);
+				$this->yaDeliveryReport($data);
+				return false;
+			}else{
+				return $ya_delivery_data;
 			}
 		}
 	}
@@ -451,108 +442,75 @@ class eShopLogistic
 				Посылка онлайн - 23020
 				EMS PT - 41020
 			*/
-			$this->ms2Init();
-			if ($this->ms2) {
-				$cart = $this->ms2->cart->get();
-				$status = $this->ms2->cart->status();
-				//$this->modx->log(1, print_r($cart, 1));
-				//$this->modx->log(1, print_r($status, 1));
-				$price_data = array();
-				$all = array();
-				$out = array();
-				$out['service'] = 'postrf';
-				foreach($cart as $product) {
-					if ($product['places'] > 1) {
-						foreach ($product['places'] as $key => $val) {
-							$offers[$product['id'] . '_' . $key] = [
-								'article' => $product['id'],
-								'name' => $product['id'],
-								'count' => $product['count'],
-								'price' => $product['price'],
-								'weight' => $val['weight'],
-								'dimensions' => $val['dimensions'] ?: ''
-							];
-						}
-						$all['places'] += (count($product['places']) * $product['count']);
-					} else {
-						$offers[$product['id']] = [
-							'article' => $product['id'],
-							'name' => $product['id'],
-							'count' => $product['count'],
-							'price' => $product['price'],
-							'weight' => $product['weight'],
-							'dimensions' => $product['dimensions'] ?: ''
-						];
-						$all['places'] += $product['count'];
-						$product['places'] = array(1);
-					}
-					$all['price'] += ($product['price'] * $product['count']);
-					$all['weight'] += ($product['weight'] * $product['count']);
-					// если общий вес корзины < 10
-					if($status['total_weight'] < 10){
-						// курьер онлайн (курьер) и посылка онлайн (до отделения)
-						$tariffs = array(
-							'terminal' => 23020,
-							'door' => 24020
-						);
-					}
-					if($status['total_weight'] > 10){
-						if($status['total_weight'] < 20){
-							// Посылка (до отделения)
-							// EMS PT (курьер)
-							$tariffs = array(
-								'terminal' => 27020,
-								'door' => 24020
-							);
-						}else{
-							$tariffs = array(
-								'terminal' => 41020,
-								'door' => 41020
-							);
-						}
-					}
-					foreach($tariffs as $key => $val){
-						$params = array(
-							'object' => $val,
-							'from' => $from,
-							'to' => $to,
-							'weight' => $product['weight'] * 1000,
-							'sumoc' => $product['price'] * 100,
-							'countinpack' => count($product['places'])
-						);
-						$prf_data = $this->post_request($params);
-						//$this->modx->log(1, print_r($prf_data, 1));
-						if (!empty($prf_data['paymoneynds'])) {
-							$all[$key]['delivery_price'] = $all[$key]['delivery_price'] + ($prf_data['paymoneynds'] * $product['count']);
-						}
-						if (!empty($prf_data['delivery'])) {
-							$all[$key]['delivery'] = $prf_data['delivery']['max'];
-						} else {
-							$all[$key]['delivery'] = '7 дней';
-						}
-					}
-					if(!empty($all['door']['delivery_price'])){
-						$out['postrf']['price']['door']["price"] = round((($all['door']['delivery_price']  / 100) * 1.13) + 15);
-					}
-					if(!empty($all['door']['delivery'])){
-						//$out['postrf']['price']['door']["time"] = $all['door']['delivery'];
-						$out['postrf']['price']['door']["time"] = '7 дней';
-					}else{
-						$out['postrf']['price']['door']["time"] = '7 дней';
-					}
-					if(!empty($all['terminal']['delivery_price'])){
-						$out['postrf']['price']['terminal']["price"] = round((($all['terminal']['delivery_price']  / 100) * 1.13) + 15);
-					}
-					if(!empty($all['door']['delivery'])){
-						//$out['postrf']['price']['terminal']["time"] = $all['terminal']['delivery'];
-						$out['postrf']['price']['terminal']["time"] = '7 дней';
-					}else{
-						$out['postrf']['price']['terminal']["time"] = '7 дней';
-					}
-				}				
+			$all = array();
+			$prepare_data = $this->sl->cart->prepareProductsList("postrf", $products);
+			if($prepare_data['weight'] > 10){
+				if($prepare_data['weight'] < 20){
+					// Посылка (до отделения)
+					// EMS PT (курьер)
+					$tariffs = array(
+						'terminal' => 27020,
+						'door' => 24020
+					);
+				}else{
+					$tariffs = array(
+						'terminal' => 41020,
+						'door' => 41020
+					);
+				}
+			}else{
+				// курьер онлайн (курьер) и посылка онлайн (до отделения)
+				$tariffs = array(
+					'terminal' => 23020,
+					'door' => 24020
+				);
 			}
+			// каждый товар = отдельное отправление
+			foreach($prepare_data['offers'] as $offer){
+				foreach($tariffs as $key => $val) {
+					$params = array(
+						'object' => $val,
+						'from' => $from,
+						'to' => $to,
+						'weight' => $offer['weight'] * 1000,
+						'sumoc' => $offer['price'] * 100,
+						'countinpack' => $offer['count']
+					);
+					$prf_data = $this->post_request($params);
+					$this->modx->log(1, print_r($params, 1));
+					$this->modx->log(1, print_r($prf_data, 1));
+					if (!empty($prf_data['paymoneynds'])) {
+						$all[$key]['delivery_price'] = $all[$key]['delivery_price'] + ($prf_data['paymoneynds'] * $offer['count']);
+					}
+					if (!empty($prf_data['delivery'])) {
+						$all[$key]['delivery'] = $prf_data['delivery']['max'];
+					} else {
+						$all[$key]['delivery'] = '7 дней';
+					}
+				}
+			}
+			if(!empty($all['door']['delivery_price'])){
+				$out['postrf']['price']['door']["price"] = round((($all['door']['delivery_price']  / 100) * 1.13) + 15);
+			}
+			if(!empty($all['door']['delivery'])){
+				//$out['postrf']['price']['door']["time"] = $all['door']['delivery'];
+				$out['postrf']['price']['door']["time"] = '7 дней';
+			}else{
+				$out['postrf']['price']['door']["time"] = '7 дней';
+			}
+			if(!empty($all['terminal']['delivery_price'])){
+				$out['postrf']['price']['terminal']["price"] = round((($all['terminal']['delivery_price']  / 100) * 1.13) + 15);
+			}
+			if(!empty($all['door']['delivery'])){
+				//$out['postrf']['price']['terminal']["time"] = $all['terminal']['delivery'];
+				$out['postrf']['price']['terminal']["time"] = '7 дней';
+			}else{
+				$out['postrf']['price']['terminal']["time"] = '7 дней';
+			}
+			$this->modx->log(1, print_r($out, 1));
+			return $out;
 		}
-		return $out;
+		return false;
 	}
 
 	public function post_request($data){

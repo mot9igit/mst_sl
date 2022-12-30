@@ -112,18 +112,18 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'price', 'description', 'actions'];
+        return ['id', 'name', 'article', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
         return [{
             header: _('shoplogistic_storeremains_product_article'),
-            dataIndex: 'product_article',
+            dataIndex: 'article',
             sortable: true,
             width: 200
         },{
-            header: _('shoplogistic_storeremains_product_name'),
-            dataIndex: 'product_name',
+            header: _('shoplogistic_storeremains_name'),
+            dataIndex: 'name',
             sortable: true,
             width: 200
         },{

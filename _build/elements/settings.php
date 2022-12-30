@@ -68,34 +68,24 @@ return [
 		'area' => 'shoplogistic_main',
 	],
 	'default_store' => [
-		'xtype' => 'shoplogistic-combo-store',
-		'value' => 5,
+		'xtype' => 'numberfield',
+		'value' => '',
+		'area' => 'shoplogistic_main',
+	],
+	'cart_mode' => [
+		'xtype' => 'numberfield',
+		'value' => 2,
+		'area' => 'shoplogistic_main',
+	],
+	'cart_to_warehouse' => [
+		'xtype' => 'combo-boolean',
+		'value' => 1,
 		'area' => 'shoplogistic_main',
 	],
 	'mode' => [
 		'xtype' => 'numberfield',
 		'value' => 1,
 		'area' => 'shoplogistic_main',
-	],
-	'phx_prefix' => [
-		'xtype' => 'textfield',
-		'value' => 'cf.',
-		'area' => 'shoplogistic_city',
-	],
-	'city_fields' => [
-		'xtype' => 'textfield',
-		'value' => 'key,city,phone,email',
-		'area' => 'shoplogistic_city',
-	],
-	'catalogs' => [
-		'xtype' => 'textfield',
-		'value' => '',
-		'area' => 'shoplogistic_city',
-	],
-	'km' => [
-		'xtype' => 'numberfield',
-		'value' => '80',
-		'area' => 'shoplogistic_city',
 	],
 	'ur_name' => [
 		'xtype' => 'textfield',

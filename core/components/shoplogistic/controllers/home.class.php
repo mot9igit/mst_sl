@@ -77,10 +77,6 @@ class shopLogisticHomeManagerController extends modExtraManagerController
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouseusers.windows.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehousestores.grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehousestores.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/city/city.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/city/fields.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/city/city.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/city/fields.windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/home.panel.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/sections/home.js?v='.$this->shopLogistic->config['version']);
 

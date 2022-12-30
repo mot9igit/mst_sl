@@ -125,8 +125,9 @@ var sl_delivery = {
         ]));
         $(sl_delivery.options.hidden_address).find("input[name=room]").val(sl_delivery.join([address.flat_type, address.flat], " "));
         var fias = $(sl_delivery.options.hidden_address).find("input[name=fias]").val();
-        if(fias){
-            sl_delivery.getDeliveryPrices(fias);
+        $(sl_delivery.options.hidden_address).find("input[name=geo_data]").val(JSON.stringify(address));
+        if(address){
+            sl_delivery.getDeliveryPrices(JSON.stringify(address));
         }
     },
     update_price: function(){
@@ -159,6 +160,8 @@ var sl_delivery = {
             $(sl_delivery.options.map).removeClass("active");
             //$(sl_delivery.options.services).show();
         }
+        // TODO: check this block
+        /*
         if(d == shoplogisticConfig['post_delivery']){
             $(sl_delivery.options.deliveries).show();
             $(sl_delivery.options.del_wrap).show();
@@ -166,26 +169,27 @@ var sl_delivery = {
             $(sl_delivery.options.map).removeClass("active");
             $(sl_delivery.options.services).removeClass('active');
         }
+        */
     },
-    getDeliveryPrices: function(fias){
-        if(fias){
+    getDeliveryPrices: function(address){
+        if(address){
             $(sl_delivery.options.services).addClass("active");
             $(sl_delivery.options.service).each(function(){
                 var service = $(this).val();
                 if(service){
-                    sl_delivery.getDeliveryPrice(fias, service);
+                    sl_delivery.getDeliveryPrice(address, service);
                 }
             })
         }
     },
-    getDeliveryPrice: async function(fias, service){
+    getDeliveryPrice: async function(address, service){
 		$('.'+service+'_price').text('');
         $('.'+service+'_srok').text('');
 		$('.'+service+'_price').closest('.service_info_'+service).hide();
 		$('.'+service+'_srok').closest('.visual_block').addClass('loading');
         var data = {
             sl_action: 'delivery/get_price',
-            fias: fias,
+            address: address,
             service: service
         }
         this.send(data);
@@ -328,18 +332,9 @@ var sl_marketplace = {
         form: '.sl_form',
         generate_api: '.regerate_apikey',
         profile_product: '.profile-products__item-wrap',
-        alert_change_btn: '.alert_change_btn',
-        geo_close: '.sl_city_close',
-        geo_more: '.sl_city_more_info',
-        geo_city: '.sl_geo_city',
-        geo_store: '.sl_geo_store'
+        alert_change_btn: '.alert_change_btn'
     },
     initialize: function () {
-        var action = 'city/status';
-        var data = {
-            sl_action: action
-        };
-        sl_marketplace.send(data);
         if($('.delivery_data').length){
             var action = 'get/delivery';
             var data = {
@@ -363,55 +358,8 @@ var sl_marketplace = {
             };
             sl_marketplace.send(data);
         });
-        $(document).on("click", '.city_checked', function(e) {
-            e.preventDefault();
-            var action = 'city/check';
-            var data = {
-                sl_action: action,
-                data: $(this).data('data')
-            };
-            sl_marketplace.send(data);
-        });
-        $(document).on("click", '.store_checked', function(e) {
-            e.preventDefault();
-            var action = 'store/check';
-            var data = {
-                sl_action: action,
-                data: $(this).data('data')
-            };
-            sl_marketplace.send(data);
-        });
-        /*
-        $(document).on("click", sl_marketplace.options.geo_close, function(e) {
-            e.preventDefault();
-            var action = 'city/accept';
-            var data = {
-                sl_action: action
-            };
-            sl_marketplace.send(data);
-        });
-        */
         $(document).on('change', '.change_status select', function(e){
             $(this).closest(sl_marketplace.options.live_form).trigger('submit');
-        });
-        $(document).on("click", sl_marketplace.options.geo_more, function(e) {
-            e.preventDefault();
-            let geoposition = navigator.geolocation.getCurrentPosition(
-                function(position) {
-                                let latitude = position.coords.latitude;
-                                let longitude = position.coords.longitude;
-                                // геокодер
-                                var action = 'city/more';
-                                var data = {
-                                    sl_action: action,
-                                    longitude: longitude,
-                                    latitude: latitude
-                                };
-                                sl_marketplace.send(data);
-                            });
-            // show modal
-            var cityModal = new bootstrap.Modal(document.getElementById('modal_city'));
-            cityModal.show();
         });
         $(document).on("click", sl_marketplace.options.alert_change_btn, function(e) {
             e.preventDefault();
@@ -571,14 +519,6 @@ var sl_marketplace = {
                         $('.delivery_data').html(data_r.data.html_delivery);
                     }
                 }
-                if(data_r.data.hasOwnProperty('pls')){
-                    if(data_r.data.pls.citycheck == 1){
-                        $(sl_marketplace.options.geo_city).text(data_r.data.pls.city);
-                        $(sl_marketplace.options.geo_store).text(data_r.data.pls.store);
-                        $('.sl_city_close').attr("data-data", JSON.stringify(data_r.data.location));
-                        $(".city_popup").addClass('active');
-                    }
-                }
                 if(typeof data_r.data.reload !== "undefined"){
                     if(data_r.data.reload) {
                         document.location.reload();
@@ -665,24 +605,6 @@ $(document).ready(function(){
         sl_delivery.initialize();
     }
     sl_marketplace.initialize();
-    // QUANTITY
-    $('.sl-quantity button.btn-count').click(function(e){
-        e.preventDefault();
-        var elem = $(this).closest('.sl-quantity').find('input.counter');
-        var krat = $(this).closest('.sl-quantity').find('input.counter').data('krat');
-        var min = $(this).closest('.sl-quantity').find('input.counter').data('min');
-        var currentQty = elem.val();
-
-        if( $(this).hasClass('minus') && currentQty>min){
-            elem.val(parseInt(currentQty, 10) - krat);
-            elem.trigger("change");
-        }else{
-            if( $(this).hasClass('plus')){
-                elem.val(parseInt(currentQty, 10) + krat);
-                elem.trigger("change");
-            }
-        }
-    });
     // ms2 pseudo submit
     $(".pseudo_submit").click(function(e) {
         e.preventDefault();

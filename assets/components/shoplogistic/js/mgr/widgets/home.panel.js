@@ -20,18 +20,6 @@ shopLogistic.panel.Home = function (config) {
             border: true,
             hideMode: 'offsets',
             items: [{
-                title: _('shoplogistic_panel_city'),
-                items: [{
-                    html: _('shoplogistic_panel_city_desc'),
-                    cls: 'panel-desc',
-                },{
-                    xtype: 'panel',
-                    cls: 'container',
-                    items: [{
-                        xtype: 'shoplogistic-grid-city'
-                    }]
-                }]
-            },{
                 title: _('shoplogistic_stores'),
                 layout: 'anchor',
                 items: [{

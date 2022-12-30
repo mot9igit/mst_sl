@@ -70,5 +70,10 @@ return [
 		'file' => 'sl.services',
 		'description' => 'print services',
 		'properties' => [],
+	],
+	'sl.cart' => [
+		'file' => 'sl.cart',
+		'description' => 'print cart',
+		'properties' => [],
 	]
 ];

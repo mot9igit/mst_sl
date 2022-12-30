@@ -41,6 +41,10 @@ class shopLogistic
 		if ($this->pdoTools = $this->modx->getService('pdoFetch')) {
 			$this->pdoTools->setConfig($this->config);
 		}
+		$this->dartLocation = $this->modx->getService('dartLocation', 'dartLocation', MODX_CORE_PATH . 'components/dartlocation/model/', array());
+		if (!$this->dartLocation) {
+			$this->modx->log(xPDO::LOG_LEVEL_ERROR, "shopLogistic: нужен dartLocation!");
+		}
 	}
 
 	/**
@@ -196,7 +200,6 @@ class shopLogistic
 			$this->ms2 = $this->modx->getService('miniShop2');
 			if ($this->ms2 instanceof miniShop2) {
 				$this->ms2->initialize($ctx);
-				return true;
 			}
 		}
 		return true;
@@ -232,123 +235,11 @@ class shopLogistic
 				break;
 			case 'delivery/get_price':
 				$s = $data['service'];
-				$offset = $this->getDeliveryDateOffset("cart");
-				if ($data['fias']) {
-					$data = array(
-						"target" => $data['fias']
-					);
-					$this->esl = new eShopLogistic($this, $this->modx);
-					$init = $this->esl->init();
-					$our_services = array('postrf', 'yandex');					
-					if (in_array($s, $our_services)) {
-						if($s == 'yandex'){
-							//$this->modx->log(1, print_r($data, 1));
-							$res = $this->getLocationData($data['target']);
-							if($offset){
-								$days = $this->decl($offset, "день|дня|дней", true);
-							}else{
-								$days = "сегодня";
-							}
-							$data['location'] = $res['suggestions'][0];
-							$ya_data = $this->esl->getYaDeliveryPrice('cart', 0, $data);
-							
-							if(isset($ya_data['price'])){
-								$services['yandex'] = array(
-									"price" => array(
-										"door" => array(
-											"price" => $ya_data['price'],
-											"time" => $days
-										)
-									)
-								);
-							}else{
-								$services['yandex'] = false;
-							}
-						}
-						if($s == 'postrf'){							
-							$res = $this->getLocationData($data['target']);
-							$this->modx->log(1, print_r($res, 1));
-							if($res['suggestions'][0]){
-								// считаем стоимость доставки почтой России
-								$city = $this->modx->getObject('slCityCity', $_SESSION['sl_location']['store']['city']);
-								if($city){
-									$c = $city->toArray();
-									$services = $this->esl->getPostRfPrice('cart', $res['suggestions'][0]['data']['postal_code'], $c['properties']['data']['postal_code']);
-									$this->modx->log(1, print_r($services, 1));
-								}
-							}
-						}
-					}else {
-						$resp = $this->esl->query("search", $data);
-						//$this->modx->log(1, print_r($resp, 1));
-						$services = array();
-						foreach ($init['data']['services'] as $key => $val) {
-							$tmp = array(
-								"name" => $val["name"],
-								"from" => $val["city_code"],
-								"to" => $resp["data"][0]["services"][$key],
-								"logo" => $val["logo"]
-							);
-							$services[$key] = $tmp;
-						}
-
-						// TODO: link weight and demensions: parameter OFFERS
-						$data = array(
-							"from" => $services[$s]['from'],
-							"to" => $services[$s]['to'],
-						);
-
-						$offers = array();
-						if ($this->ms2) {
-							$cart = $this->ms2->cart->get();
-							foreach ($cart as $product) {
-								if ($product['places']) {
-									foreach ($product['places'] as $key => $val) {
-										$offers[$product['id'] . '_' . $key] = [
-											'article' => $product['id'],
-											'name' => $product['id'],
-											'count' => $product['count'],
-											'price' => $product['price'],
-											'weight' => $val['weight'],
-											'dimensions' => $val['dimensions'] ?: ''
-										];
-									}
-								} else {
-									$offers[$product['id']] = [
-										'article' => $product['id'],
-										'name' => $product['id'],
-										'count' => $product['count'],
-										'price' => $product['price'],
-										'weight' => $product['weight'],
-										'dimensions' => $product['dimensions'] ?: ''
-									];
-								}
-							}
-						}
-
-						$data['offers'] = json_encode($offers);
-						// change city FROM
-						if (isset($_SESSION['sl_location']['store'])) {
-							$city = $this->modx->getObject("slCityCity", $_SESSION['sl_location']['store']['city']);
-							if ($city) {
-								$data['from'] = '#' . $city->get("fias_id");
-							}
-						}
-						//$this->modx->log(1, print_r($data,1));
-						$resp = $this->esl->query("delivery/" . $s, $data);
-						$types = array('terminal','door');
-						foreach($types as $type){
-							$d = explode("-", $resp['data'][$type]['time']);
-							$days = (int) preg_replace('/[^0-9]/', '', $d[0]) + 1 + $offset;
-							$resp['data'][$type]['time'] = $this->decl($days, "день|дня|дней", true);
-						}
-						//$date = $resp['data']['']
-						$services[$s]["price"] = $resp['data'];
-					}
-					
-					$services['main_key'] = $s;
-					$response = $services;
-				}
+				$this->loadServices($ctx);
+				$delivery = $this->cart->getDeliveryPrice($data);
+				// $offset = $this->getDeliveryDateOffset("cart");
+				$services['main_key'] = $s;
+				$response = $delivery;
 				break;
 			case 'delivery/add_order':
 				$response = $this->esl->add_toorder($data);
@@ -403,56 +294,6 @@ class shopLogistic
 				break;
 		}
 		return $response;
-	}
-	
-	public function getLocationData($fias){
-		$token = $this->modx->getOption("shoplogistic_api_key_dadata");
-		$ch = curl_init('https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/address');
-		$dt = array(
-			"query" => $fias
-		);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dt, JSON_UNESCAPED_UNICODE));
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-			'Authorization: Token '.$token,
-			'Content-Type: application/json',
-			'Accept: application/json'
-		));
-		$res = curl_exec($ch);
-		curl_close($ch);
-		$res = json_decode($res, true);
-		return $res;
-	}
-
-	public function decl($amount, $variants, $number = false, $delimiter = '|') {
-		$variants = explode($delimiter, $variants);
-		if (count($variants) < 2) {
-			$variants = array_fill(0, 3, $variants[0]);
-		} elseif (count($variants) < 3) {
-		$variants[2] = $variants[1];
-		}
-		$modulusOneHundred = $amount % 100;
-		switch ($amount % 10) {
-			case 1:
-				$text = $modulusOneHundred == 11
-					? $variants[2]
-					: $variants[0];
-				break;
-			case 2:
-			case 3:
-			case 4:
-				$text = ($modulusOneHundred > 10) && ($modulusOneHundred < 20)
-					? $variants[2]
-					: $variants[1];
-				break;
-			default:
-				$text = $variants[2];
-		}
-
-		return $number
-			? $amount . ' ' . $text
-			: $text;
 	}
 
 	public function getDelivery($data){
@@ -794,10 +635,6 @@ class shopLogistic
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.panel.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.grid.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.windows.js?v='.$this->config['version']);
-		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/city/resource.tab.js?v='.$this->config['version']);
-		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/city/resource.panel.js?v='.$this->config['version']);
-		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/city/resource.grid.js?v='.$this->config['version']);
-		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/city/resource.windows.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/order.info.js');
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/order.tab.js');
 
