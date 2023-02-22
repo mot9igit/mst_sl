@@ -18,7 +18,7 @@ class syncAllProcessor extends modProcessor {
 		$warehouse = trim($this->getProperty('warehouse_id'));
 		// берем все магазины с отмеченой синхронизацией
 		$remains = $this->modx->getCollection("slWarehouseRemains", array("warehouse_id" => $warehouse));
-		$stores = $this->modx->getCollection("slWarehouseStores", array("sync" => 1));
+		$stores = $this->modx->getCollection("slWarehouseStores", array("warehouse_id" => $warehouse, "sync" => 1));
 		foreach($stores as $store){
 			$this->modx->log(xPDO::LOG_LEVEL_ERROR, "Обновляем остатки: ".print_r($store->toArray(), 1));
 			// для начала удаляем все остатки, которые были ранее

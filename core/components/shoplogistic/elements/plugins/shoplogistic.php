@@ -123,6 +123,48 @@ switch ($modx->event->name) {
 			}
 		}
 		break;
+	case 'msOnGetProductFields':
+		$returned_values = & $modx->event->returnedValues;
+
+		$corePath = $modx->getOption('shoplogistic_core_path', array(), $modx->getOption('core_path') . 'components/shoplogistic/');
+		$shopLogistic = $modx->getService('shopLogistic', 'shopLogistic', $corePath . 'model/');
+		if (!$shopLogistic) {
+			$modx->log(xPDO::LOG_LEVEL_ERROR, 'Could not load shoplogistic class!');
+		}
+
+		$ctx = $modx->context->key;
+		$location = $shopLogistic->getLocationData($ctx);
+
+		$values =  $modx->event->params['data'];
+		$product_id = $values['id'];
+
+		// проверяем остаток в магазине
+		$criteria = array(
+			"product_id:=" => $product_id,
+			"AND:available:>=" => 1
+		);
+		if($modx->getOption("shoplogistic_cart_mode") == 2){
+			$criteria['AND:store_id:='] = $location['store']['id'];
+		}
+		// остатки магазина
+		// TODO: предусмотреть работу по 1 режиму
+		$remains = $modx->getObject("slStoresRemains", $criteria);
+		if($remains){
+			$returned_values['price'] = $remains->get('price');
+		}else{
+			$criteria = array(
+				"product_id:=" => $product_id,
+				"AND:available:>=" => 1
+			);
+			if($modx->getOption("shoplogistic_cart_mode") == 2){
+				$criteria['AND:warehouse_id:IN'] = $location['store']['whs'];
+				$remains = $modx->getObject("slWarehouseRemains", $criteria);
+				if($remains){
+					$returned_values['price'] = $remains->get('price');
+				}
+			}
+		}
+		break;
 	case 'msOnCreateOrder':
 		$order_data = $order->get();
 		$sl_data = [];

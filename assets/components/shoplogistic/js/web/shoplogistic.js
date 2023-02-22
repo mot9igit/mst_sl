@@ -615,7 +615,7 @@ $(document).ready(function(){
 		var d = $('input[type=radio][name=delivery]:checked').val();
 		var required = ['receiver','email','phone'];
 		required.forEach((element) => {
-			var val = $('#msOrder #'+element).val();
+			var val = $('#msOrder #order_'+element).val();
 			if(val == ''){
 				errors[element] = 'Заполните это поле.';
 			}else{
@@ -661,7 +661,7 @@ $(document).ready(function(){
 				errors['sl-services'] = 'Укажите транспортную компанию для доставки.';
 			}
 			var pvz = $('.sl_pvz').text();
-			if(pvz == ''){
+			if(pvz == '' && service != 'postrf'){
 				errors['service-map'] = 'Выберите удобный пункт выдачи заказов на карте.';
 			}
 		}

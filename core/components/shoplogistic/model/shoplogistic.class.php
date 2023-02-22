@@ -296,6 +296,14 @@ class shopLogistic
 		return $response;
 	}
 
+	public function getLocationData($ctx = false){
+		if($ctx){
+			return $_SESSION['dartlocation'][$ctx];
+		}else{
+			return $_SESSION['dartlocation'];
+		}
+	}
+
 	public function getDelivery($data){
 		$output = '';
 		if($data['id']){

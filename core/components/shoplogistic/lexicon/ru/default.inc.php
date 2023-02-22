@@ -264,12 +264,17 @@ $_lang['shoplogistic_resource_domain_ae'] = 'Нельзя добавлять 2 �
 
 $_lang['shoplogistic_storeremains'] = 'Остатки магазина';
 $_lang['shoplogistic_storeremains_id'] = 'ID';
+$_lang['shoplogistic_storeremains_guid'] = 'GUID 1С';
+$_lang['shoplogistic_storeremains_catalog'] = 'Каталог 1С';
+$_lang['shoplogistic_storeremains_article'] = 'Артикул 1С';
 $_lang['shoplogistic_storeremains_product_name'] = 'Наименование товара';
 $_lang['shoplogistic_storeremains_product_id'] = 'ID товара';
 $_lang['shoplogistic_storeremains_product_article'] = 'Артикул';
-$_lang['d'] = 'Наименование магазина';
+$_lang['shoplogistic_storeremains_store_name'] = 'Наименование магазина';
 $_lang['shoplogistic_storeremains_store_id'] = 'ID магазина';
 $_lang['shoplogistic_storeremains_remains'] = 'Остаток';
+$_lang['shoplogistic_storeremains_reserved'] = 'Резерв';
+$_lang['shoplogistic_storeremains_available'] = 'Доступно';
 $_lang['shoplogistic_storeremains_description'] = 'Описание';
 $_lang['shoplogistic_storeremains_price'] = 'Стоимость';
 
@@ -301,12 +306,19 @@ $_lang['shoplogistic_storebalances_remove_confirm'] = 'Вы уверены, чт
 
 $_lang['shoplogistic_warehouseremains'] = 'Остатки склада';
 $_lang['shoplogistic_warehouseremains_id'] = 'ID';
-$_lang['shoplogistic_warehouseremains_product_name'] = 'Наименование товара';
+$_lang['shoplogistic_warehouseremains_name'] = 'Наименование товара';
 $_lang['shoplogistic_warehouseremains_product_id'] = 'ID товара';
-$_lang['shoplogistic_warehouseremains_product_article'] = 'Артикул';
+$_lang['shoplogistic_warehouseremains_article'] = 'Артикул';
 $_lang['shoplogistic_warehouseremains_warehouse_name'] = 'Наименование склада';
 $_lang['shoplogistic_warehouseremains_warehouse_id'] = 'ID склада';
 $_lang['shoplogistic_warehouseremains_remains'] = 'Остаток';
+
+$_lang['shoplogistic_warehouseremains_guid'] = 'GUID 1С';
+$_lang['shoplogistic_warehouseremains_catalog'] = 'Каталог 1С';
+$_lang['shoplogistic_warehouseremains_reserved'] = 'Резерв';
+$_lang['shoplogistic_warehouseremains_available'] = 'Доступно';
+$_lang['shoplogistic_warehouseremains_description'] = 'Описание';
+
 $_lang['shoplogistic_warehouseremains_description'] = 'Описание';
 $_lang['shoplogistic_warehouseremains_price'] = 'Стоимость';
 

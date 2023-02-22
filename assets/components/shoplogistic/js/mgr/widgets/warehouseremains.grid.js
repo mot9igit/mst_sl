@@ -112,18 +112,18 @@ Ext.extend(shopLogistic.grid.WarehouseRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'product_article', 'product_name', 'product_id', 'warehouse_name', 'warehouse_id', 'remains', 'price', 'description', 'actions'];
+        return ['id', 'article', 'name', 'product_id', 'warehouse_name', 'warehouse_id', 'remains', 'reserved', 'available', 'catalog', 'guid', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
         return [{
-            header: _('shoplogistic_warehouseremains_product_article'),
-            dataIndex: 'product_article',
+            header: _('shoplogistic_warehouseremains_article'),
+            dataIndex: 'article',
             sortable: true,
             width: 200
         },{
-            header: _('shoplogistic_warehouseremains_product_name'),
-            dataIndex: 'product_name',
+            header: _('shoplogistic_warehouseremains_name'),
+            dataIndex: 'name',
             sortable: true,
             width: 200
         },{

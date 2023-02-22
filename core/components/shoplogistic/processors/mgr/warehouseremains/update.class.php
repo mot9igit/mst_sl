@@ -36,13 +36,13 @@ class slWarehouseRemainsUpdateProcessor extends modObjectUpdateProcessor
 
 
 
-		$product_id = trim($this->getProperty('product_id'));
+		$guid = trim($this->getProperty('guid'));
 		$warehouse_id = trim($this->getProperty('warehouse_id'));
-		$obj = $this->modx->getObject($this->classKey, ['product_id' => $product_id, 'warehouse_id' => $warehouse_id]);
-		if (empty($product_id)) {
-			$this->modx->error->addField('product_id', $this->modx->lexicon('shoplogistic_warehouseremains_err_product_id'));
+		$obj = $this->modx->getObject($this->classKey, ['guid' => $guid, 'warehouse_id' => $warehouse_id]);
+		if (empty($guid)) {
+			$this->modx->error->addField('guid', $this->modx->lexicon('shoplogistic_warehouseremains_err_product_id'));
 		} elseif ($obj->id != $id) {
-			$this->modx->error->addField('product_id', $this->modx->lexicon('shoplogistic_warehouseremains_err_double'));
+			$this->modx->error->addField('guid', $this->modx->lexicon('shoplogistic_warehouseremains_err_double'));
 		}
 
         return parent::beforeSet();

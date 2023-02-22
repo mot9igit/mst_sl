@@ -36,13 +36,14 @@ class slStoresRemainsUpdateProcessor extends modObjectUpdateProcessor
 
 
 
-		$product_id = trim($this->getProperty('product_id'));
+		$guid = trim($this->getProperty('guid'));
 		$store_id = trim($this->getProperty('store_id'));
-		$obj = $this->modx->getObject($this->classKey, ['product_id' => $product_id, 'store_id' => $store_id]);
-		if (empty($product_id)) {
-			$this->modx->error->addField('product_id', $this->modx->lexicon('shoplogistic_storeremains_err_product_id'));
+		$obj = $this->modx->getObject($this->classKey, ['guid' => $guid, 'store_id' => $store_id]);
+		$this->modx->log(1, $obj->id);
+		if (empty($guid)) {
+			$this->modx->error->addField('guid', $this->modx->lexicon('shoplogistic_storeremains_err_product_id'));
 		} elseif ($obj->id != $id) {
-			$this->modx->error->addField('product_id', $this->modx->lexicon('shoplogistic_storeremains_err_double'));
+			$this->modx->error->addField('guid', $this->modx->lexicon('shoplogistic_storeremains_err_double'));
 		}
 
         return parent::beforeSet();

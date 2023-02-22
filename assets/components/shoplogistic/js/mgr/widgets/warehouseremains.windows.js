@@ -21,9 +21,37 @@ Ext.extend(shopLogistic.window.CreateWarehouseRemains, shopLogistic.window.Defau
             xtype: 'hidden',
             name: 'warehouse_id',
             id: config.id + '-warehouse_id'
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_warehouseremains_guid'),
+            name: 'guid',
+            anchor: '99%',
+            id: config.id + '-guid',
+            allowBlank: false
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_warehouseremains_catalog'),
+            name: 'catalog',
+            anchor: '99%',
+            id: config.id + '-catalog',
+            allowBlank: true
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_warehouseremains_article'),
+            name: 'article',
+            anchor: '99%',
+            id: config.id + '-article',
+            allowBlank: false
+        }, {
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_warehouseremains_name'),
+            name: 'name',
+            anchor: '99%',
+            id: config.id + '-name',
+            allowBlank: false
         }, {
             xtype: 'shoplogistic-combo-product',
-            fieldLabel: _('shoplogistic_warehouseremains_product_name'),
+            fieldLabel: _('shoplogistic_warehouseremains_product_id'),
             name: 'product_id',
             anchor: '99%',
             id: config.id + '-product_id',
@@ -37,6 +65,20 @@ Ext.extend(shopLogistic.window.CreateWarehouseRemains, shopLogistic.window.Defau
             allowBlank: false
         }, {
             xtype: 'numberfield',
+            fieldLabel: _('shoplogistic_warehouseremains_reserved'),
+            name: 'reserved',
+            anchor: '99%',
+            id: config.id + '-reserved',
+            allowBlank: false
+        }, {
+            xtype: 'numberfield',
+            fieldLabel: _('shoplogistic_warehouseremains_available'),
+            name: 'available',
+            anchor: '99%',
+            id: config.id + '-available',
+            allowBlank: false
+        }, {
+            xtype: 'numberfield',
             decimalPrecision: 2,
             fieldLabel: _('shoplogistic_warehouseremains_price'),
             name: 'price',
@@ -45,7 +87,7 @@ Ext.extend(shopLogistic.window.CreateWarehouseRemains, shopLogistic.window.Defau
             allowBlank: true
         }, {
             xtype: 'textarea',
-            fieldLabel: _('shoplogistic_warehouseuser_description'),
+            fieldLabel: _('shoplogistic_warehouseremains_description'),
             name: 'description',
             anchor: '99%',
             id: config.id + '-description'

@@ -435,6 +435,7 @@ class eShopLogistic
 			}else{
 				$out['door']["time"] = '7 дней';
 			}
+			return $out;
 		}
 		if ($type == 'cart'){
 			/* 

@@ -5,6 +5,7 @@ return [
         'file' => 'shoplogistic',
         'description' => 'Base functional plugin',
         'events' => [
+        	'msOnGetProductFields' => [],
 			'msOnChangeOrderStatus' => [],
 			'msOnCreateOrder' => [],
 			'msOnManagerCustomCssJs' => [],

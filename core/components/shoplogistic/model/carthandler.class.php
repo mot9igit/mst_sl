@@ -140,9 +140,9 @@ class cartDifficultHandler
 		$item['old_price'] = $this->ms2->formatPrice($item['old_price']);
 		$item['price'] = $this->ms2->formatPrice($item['price']);
 		$item['weight'] = $this->ms2->formatWeight($item['weight']);
-		$item['cost'] = $this->ms2->formatPrice($item['count'] * $item['price']);
-		$item['discount_price'] = $this->ms2->formatPrice($item['discount_price']);
-		$item['discount_cost'] = $this->ms2->formatPrice($item['count'] * $item['discount_price']);
+		// $item['cost'] = $this->ms2->formatPrice($item['count'] * $item['price']);
+		// $item['discount_price'] = $this->ms2->formatPrice($item['discount_price']);
+		// $item['discount_cost'] = $this->ms2->formatPrice($item['count'] * $item['discount_price']);
 		return $item;
 	}
 
@@ -314,7 +314,7 @@ class cartDifficultHandler
 				}
 			}
 		}
-		return($new_cart);
+		return $new_cart;
 	}
 
 	public function getRemains($type, $object_id, $product_id, $count = 1){
@@ -377,13 +377,15 @@ class cartDifficultHandler
 				if($count >= $count) {
 					// если есть необходимое количество товара у дистра
 					$query = $this->modx->newQuery("slWarehouseShipment");
+					$query->leftJoin('slWarehouseShip', 'slWarehouseShip', '`slWarehouseShipment`.`ship_id` = `slWarehouseShip`.`id`');
 					$query->where(array(
 						"date:>=" => date('Y-m-d H:i:s'),
-						"FIND_IN_SET({$store_id}, store_ids) > 0"
+						"FIND_IN_SET({$store_id}, `slWarehouseShipment`.`ship_id`) > 0"
 					));
 					$query->sortby('date', 'ASC');
 					$obj = $this->modx->getObject("slWarehouseShipment", $query);
 					if ($obj) {
+						// $this->modx->log(1, print_r($obj->toArray(), 1));
 						$nowDate = new DateTime();
 						$newDate = new DateTime($obj->get('date'));
 						$newDate->add(new DateInterval('P1D'));
@@ -411,11 +413,33 @@ class cartDifficultHandler
 		}
 	}
 
+	public function getStoreRemain($product_id, $store_id){
+		$object = "slStoresRemains";
+		$key = "store_id";
+		$object = $this->modx->getObject($object, array($key => $store_id, 'product_id' => $product_id));
+		if($object){
+			return $object->toArray();
+		}
+		return false;
+	}
+
 	public function getDeliveryInfoDays($product_id){
 		$delivery_data = array();
 		$main_store = array();
-		// Список магазинов у кого есть в наличии товар (дистры нам тут не нужны)
-		$stores = $this->getNearbyStores($product_id);
+		$stores = array();
+		$loc = $this->sl->getLocationData();
+		// TODO: учесть контекст
+		$location = $loc['web'];
+		if($this->modx->getOption('shoplogistic_cart_mode') == 2){
+			// проверяем остаток к выбранного магазина
+			$remain = $this->getStoreRemain($product_id, $location['store']['id']);
+			if($remain['available'] > 0){
+				$stores[] = $location['store'];
+			}
+		}else{
+			// Список магазинов у кого есть в наличии товар (дистры нам тут не нужны)
+			$stores = $this->getNearbyStores($product_id);
+		}
 		$products = $this->getProductParams($product_id);
 		if(count($stores)){
 			// если в наличии
@@ -424,15 +448,26 @@ class cartDifficultHandler
 			$delivery_data['pickup']['term'] = 'сегодня';
 			$delivery_data['pickup']['term_default'] = 0;
 		}else{
-			// если же нет в наличии, проверяем подключен ли магазин по умолчанию
-			$default_store = $this->modx->getOption("shoplogistic_default_store");
-			if($default_store){
-				$delivery_data['pickup']['price'] = 0;
-				$delivery_data['pickup']['term'] = 'сегодня';
-				$delivery_data['pickup']['term_default'] = 0;
-				$def_store = $this->modx->getObject("slStores", $default_store);
-				if($def_store){
-					$main_store = $def_store->toArray();
+			if($this->modx->getOption('shoplogistic_cart_mode') == 2){
+				// TODO: проверить на остатке на складе и ближайшую отгрузку
+				$shipment = $this->getNearShipment($product_id, $location['store']['id']);
+				$newDate = new DateTime();
+				$interval = 'P'.$shipment.'D';
+				$newDate->add(new DateInterval($interval));
+				$delivery_data['pickup']['term_default'] = $newDate->format('Y-m-d H:i:s');
+				$delivery_data['pickup']['term'] = $newDate->format('Y-m-d H:i:s');
+				$this->modx->log(1, print_r($shipment, 1));
+			}else{
+				// если же нет в наличии, проверяем подключен ли магазин по умолчанию
+				$default_store = $this->modx->getOption("shoplogistic_default_store");
+				if ($default_store) {
+					$delivery_data['pickup']['price'] = 0;
+					$delivery_data['pickup']['term'] = 'сегодня';
+					$delivery_data['pickup']['term_default'] = 0;
+					$def_store = $this->modx->getObject("slStores", $default_store);
+					if ($def_store) {
+						$main_store = $def_store->toArray();
+					}
 				}
 			}
 		}
@@ -448,7 +483,7 @@ class cartDifficultHandler
 		$resp = $this->sl->esl->query("search", $to_data);
 		$to = $resp['data'][0]['services']['sdek'];
 
-		$city = $this->modx->getObject("dartLocationCity", $main_store['city']);
+		$city = $this->modx->getObject("dartLocationCity", $location['store']['city']);
 		if($city){
 			$properties = $city->get("properties");
 			$pos = array((float) $properties["geo_lat"], (float) $properties["geo_lon"]);
@@ -497,15 +532,16 @@ class cartDifficultHandler
 			$delivery_data['delivery']['service'] = 'Яндекс.Доставка';
 		}else{
 			// иначе выставляем postrf
+			// $this->modx->log(1, print_r($position, 1));
 			$to = $position['data']['postal_code'];
-			$city = $this->modx->getObject("dartLocationCity", $main_store['city']);
+			$city = $this->modx->getObject("dartLocationCity", $location['store']['city']);
+			// $this->modx->log(1, print_r($city->toArray(), 1));
 			if($city){
-				$pos = array((float) $city->get("lat"), (float) $city->get("lng"));
-				$dt = json_decode($this->sl->getGeoData($pos), 1);
-				$data = $dt['suggestions'][0];
-				$from = $data['data']['postal_code'];
+				$props = $city->get("properties");
+				$from = $props['postal_code'];
 			}
 			$arr = $this->sl->esl->getPostRfPrice("card", $to, $from, $products);
+			$this->modx->log(1, print_r($arr, 1));
 			$delivery_data['delivery']['price'] = round($arr['door']['price']);
 			$newDate = new DateTime();
 			$newDate->add(new DateInterval('P7D'));
@@ -655,6 +691,7 @@ class cartDifficultHandler
 				}
 			}
 		}
+		$this->modx->log(1, print_r($services, 1));
 		return $services;
 	}
 

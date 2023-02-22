@@ -21,9 +21,37 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             xtype: 'hidden',
             name: 'store_id',
             id: config.id + '-store_id'
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_storeremains_guid'),
+            name: 'guid',
+            anchor: '99%',
+            id: config.id + '-guid',
+            allowBlank: false
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_storeremains_catalog'),
+            name: 'catalog',
+            anchor: '99%',
+            id: config.id + '-catalog',
+            allowBlank: true
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_storeremains_article'),
+            name: 'article',
+            anchor: '99%',
+            id: config.id + '-article',
+            allowBlank: false
+        }, {
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_storeremains_product_name'),
+            name: 'name',
+            anchor: '99%',
+            id: config.id + '-name',
+            allowBlank: false
         }, {
             xtype: 'shoplogistic-combo-product',
-            fieldLabel: _('shoplogistic_storeremains_product_name'),
+            fieldLabel: _('shoplogistic_storeremains_product_id'),
             name: 'product_id',
             anchor: '99%',
             id: config.id + '-product_id',
@@ -34,6 +62,20 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             name: 'remains',
             anchor: '99%',
             id: config.id + '-remains',
+            allowBlank: false
+        }, {
+            xtype: 'numberfield',
+            fieldLabel: _('shoplogistic_storeremains_reserved'),
+            name: 'reserved',
+            anchor: '99%',
+            id: config.id + '-reserved',
+            allowBlank: false
+        }, {
+            xtype: 'numberfield',
+            fieldLabel: _('shoplogistic_storeremains_available'),
+            name: 'available',
+            anchor: '99%',
+            id: config.id + '-available',
             allowBlank: false
         }, {
             xtype: 'numberfield',

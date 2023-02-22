@@ -112,7 +112,7 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'article', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'price', 'description', 'actions'];
+        return ['id', 'name', 'guid', 'catalog', 'article', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
