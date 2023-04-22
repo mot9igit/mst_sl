@@ -86,6 +86,18 @@ Ext.extend(shopLogistic.window.CreateWarehouseRemains, shopLogistic.window.Defau
             id: config.id + '-price',
             allowBlank: true
         }, {
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_warehouseremains_published'),
+            name: 'published',
+            id: config.id + '-published',
+            checked: false,
+        }, {
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_warehouseremains_checked'),
+            name: 'checked',
+            id: config.id + '-checked',
+            checked: false,
+        }, {
             xtype: 'textarea',
             fieldLabel: _('shoplogistic_warehouseremains_description'),
             name: 'description',

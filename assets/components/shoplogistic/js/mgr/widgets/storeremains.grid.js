@@ -112,7 +112,7 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'guid', 'catalog', 'article', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
+        return ['id', 'name', 'published', 'checked', 'guid', 'catalog', 'article', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
@@ -122,10 +122,15 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
             sortable: true,
             width: 200
         },{
-            header: _('shoplogistic_storeremains_name'),
+            header: _('shoplogistic_storeremains_product_name'),
             dataIndex: 'name',
             sortable: true,
             width: 200
+        },{
+            header: _('shoplogistic_storeremains_product_id'),
+            dataIndex: 'product_id',
+            sortable: true,
+            width: 200,
         },{
             header: _('shoplogistic_storeremains_store_name'),
             dataIndex: 'store_name',
@@ -141,6 +146,18 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
             dataIndex: 'price',
             sortable: true,
             width: 70,
+        }, {
+            header: _('shoplogistic_storeremains_published'),
+            dataIndex: 'published',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: true,
+            width: 100,
+        }, {
+            header: _('shoplogistic_storeremains_checked'),
+            dataIndex: 'checked',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: true,
+            width: 100,
         }, {
             header: _('shoplogistic_grid_actions'),
             dataIndex: 'actions',

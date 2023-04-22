@@ -114,63 +114,11 @@ class shopLogistic
 		$load = $this->loadServices($ctx);
 		$this->initialized[$ctx] = $load;
 
-		// init city
-		// $this->modx->log(1, print_r($_SESSION['sl_location'], 1));
-		if(isset($_SESSION['sl_location'])) {
-			$this->modx->setPlaceholders($_SESSION['sl_location']['pls'], 'sl.');
-			$this->modx->setPlaceholders($_SESSION['sl_location']['store'], 'store.');
-			$products = $this->getProductsAvailable();
-			$this->modx->setPlaceholder('sl.resources_avaible', implode(",", $products));
-			$this->modx->setPlaceholders($_SESSION['sl_location']['pls'], 'sl.');
-		}
 		// init shoplogistic
 		$this->esl = new eShopLogistic($this, $this->modx);
 		$this->esl->init();
 
 		return $load;
-	}
-
-	public function getProductsAvailable(){
-		if(isset($_SESSION['sl_location'])){
-			$store_id = $_SESSION['sl_location']['store']['id'];
-			$products = array();
-			// берем товары магазина
-			$query = $this->modx->newQuery('slStoresRemains');
-			$query->select('slStoresRemains.product_id', 'slWarehouseStores.warehouse_id');
-			$query->leftJoin('slWarehouseStores','slWarehouseStores', array(
-				'`slWarehouseStores`.`store_id` = `slStoresRemains`.`store_id`'
-			));
-			$query->where(array(
-				"slStoresRemains.store_id:=" => $store_id,
-			));
-			$query->limit(0);
-			if ($query->prepare() && $query->stmt->execute()) {
-				$result = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-				foreach ($result as $row) {
-					$products[] = $row['product_id'];
-				}
-			}
-			// запрос товаров дистрибьютора
-			$query = $this->modx->newQuery('slWarehouseStores');
-			$query->leftJoin('slWarehouseRemains', 'slWarehouseRemains', "slWarehouseRemains.warehouse_id = slWarehouseStores.warehouse_id");
-			$query->select('slWarehouseRemains.product_id');
-			$query->where(array(
-				"slWarehouseStores.store_id:=" => $store_id,
-			));
-			$query->limit(0);
-
-			// если запрос подготовлен и выполнен
-			if ($query->prepare() && $query->stmt->execute()) {
-				$result = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-
-				foreach ($result as $row) {
-					$products[] = $row['product_id'];
-				}
-
-			}
-			$products = array_unique($products);
-			return $products;
-		}
 	}
 
 	/**
@@ -184,6 +132,10 @@ class shopLogistic
 		if (!class_exists('eShopLogistic')) {
 			require_once dirname(__FILE__) . '/eshoplogistic.class.php';
 		}
+		if (!class_exists('postrf')) {
+			require_once dirname(__FILE__) . '/postrf.class.php';
+			$this->postrf = new postrf($this, $this->modx);
+		}
 		if (!class_exists('Dadata')) {
 			require_once dirname(__FILE__) . '/dadata.class.php';
 		}
@@ -191,9 +143,17 @@ class shopLogistic
 			require_once dirname(__FILE__) . '/xslx.class.php';
 			$this->xslx = new slXSLX($this, $this->modx);
 		}
+		if (!class_exists('minishop2_fast_api')) {
+			require_once dirname(__FILE__) . '/api.class.php';
+			$this->api = new minishop2_fast_api($this->modx, array());
+		}
 		if (!class_exists('cartDifficultHandler')) {
 			require_once dirname(__FILE__) . '/carthandler.class.php';
 			$this->cart = new cartDifficultHandler($this, $this->modx);
+		}
+		if (!class_exists('b24Handler')) {
+			require_once dirname(__FILE__) . '/b24.class.php';
+			$this->b24 = new b24Handler($this, $this->modx);
 		}
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
@@ -202,7 +162,119 @@ class shopLogistic
 				$this->ms2->initialize($ctx);
 			}
 		}
+		if(is_dir($this->modx->getOption('core_path').'components/darttelegram/model/')) {
+			$corePath = $this->modx->getOption('darttelegram_core_path', array(), $this->modx->getOption('core_path') . 'components/darttelegram/');
+			$this->darttelegram = $this->modx->getService('dartTelegram', 'dartTelegram', $corePath . 'model/', array());
+			// $this->darttelegram = $this->modx->getService('dartTelegram');
+		}
 		return true;
+	}
+
+	public function clearCache(){
+		// чистим pdoPage из нового класса
+		array_map('unlink', glob($this->modx->getOption(xPDO::OPT_CACHE_PATH) . 'default/pdoTools/pdoPage/*.cache.php'));
+		// чистим карты ресурсов
+		array_map('unlink', glob($this->modx->getOption(xPDO::OPT_CACHE_PATH) . 'default/pdoTools/child_ids/*.cache.php'));
+		array_map('unlink', glob($this->modx->getOption(xPDO::OPT_CACHE_PATH) . 'default/pdoTools/parent_ids/*.cache.php'));
+		array_map('unlink', glob($this->modx->getOption(xPDO::OPT_CACHE_PATH) . 'default/pdoTools/product_count/*.cache.php'));
+	}
+
+	public function generateCache(){
+		array_map('unlink', glob($this->modx->getOption(xPDO::OPT_CACHE_PATH) . 'default/pdoTools/pdoPage/*.cache.php'));
+		array_map('unlink', glob($this->modx->getOption(xPDO::OPT_CACHE_PATH) . 'resource/web/resources/*.cache.php'));
+		$this->loadServices();
+		// формируем кеш чилдов
+		$fqn = $this->modx->getOption('pdoFetch.class', null, 'pdotools.pdofetch', true);
+		$path = $this->modx->getOption('pdofetch_class_path', null, MODX_CORE_PATH . 'components/pdotools/model/', true);
+		if ($pdoClass = $this->modx->loadClass($fqn, $path, false, true)) {
+			$pdoFetch = new $pdoClass($this->modx, array());
+		} else {
+			return false;
+		}
+		// сначала пробегаем по всем категориям и выставляем корректные шаблоны
+		$criteria = array(
+			"class_key:=" => "msCategory"
+		);
+		$result = $this->api->getCollection($criteria);
+		if($result) {
+			foreach ($result as $res) {
+				// проверяем есть ли у нас дочки - категории
+				$crit = array(
+					"class_key:=" => "msCategory",
+					"AND:parent:=" => $res['id']
+				);
+				$sresult = $this->api->getCollection($crit);
+				if($sresult !== false){
+					if(count($sresult)){
+						$this->api->update('modResource', array("template" => 21),$res['id']);
+						// проверим товары в категории и удалим мусор
+						$c = array(
+							"class_key:=" => "msProduct",
+							"parent:=" => $res['id']
+						);
+						$products = $this->api->getCollection($c);
+						if($products !== false){
+							foreach($products as $product){
+								// $this->api->update("modResource", array("deleted" => 1), $product['id']);
+							}
+						}
+					}else{
+						// дочек нет
+						$this->api->update('modResource', array("template" => 3),$res['id']);
+						// выставляем кол-во ресурсов
+						$pids = $pdoFetch->getChildIds("modResource", $res['id'], 10, array());
+						$this->modx->log(1, $res['id'].': '.count($pids));
+						$tmp_var = array(
+							"contentid" => $res['id'],
+							"tmplvarid" => 51
+						);
+						$record = $this->api->check("modTemplateVarResource", $tmp_var);
+						if(!$record){
+							$tmp_var['value'] = count($pids);
+							$this->api->create("modTemplateVarResource", $tmp_var);
+						}else{
+							if($record['value'] != count($pids)){
+								$this->api->update("modTemplateVarResource", $tmp_var, $record['id']);
+							}
+						}
+					}
+				}
+			}
+		}
+		// зафиналим верхним уровнем
+		$pids = $pdoFetch->getChildIds("modResource", 2, 10, array());
+	}
+
+	public function getProductCount($parent, $without_cache = 0){
+		$cache = $this->modx->getCacheManager();
+		$options = array( xPDO::OPT_CACHE_KEY=>'default/pdoTools/product_count' );
+		if($ids = $cache->get($parent, $options) && !$without_cache) {
+			return $ids;
+		}else{
+			$pdo = $this->modx->getService('pdoFetch');
+			$pids = array_merge(array($parent), $pdo->getChildIds("modResource", $parent, 10, array()));
+
+			$ids = array();
+			$q = $this->modx->newQuery('msProduct');
+			$q->where(
+				array(
+					'class_key' => 'msProduct',
+					'parent:IN' => $pids,
+					'published' => 1,
+					'deleted' => 0
+				)
+			);
+			$q->select('COUNT(*) as count');
+			if ($q->prepare() && $q->stmt->execute()) {
+				$ids = $q->stmt->fetch(PDO::FETCH_ASSOC);
+			}
+			$cache->set($parent, $ids['count'], 604800, $options);
+		}
+		if(!count($ids)){
+			return 0;
+		}else{
+			return $ids['count'];
+		}
 	}
 
 	/**
@@ -292,8 +364,25 @@ class shopLogistic
 			case 'get/delivery':
 				$response = $this->getDelivery($data);
 				break;
+			case 'map/build_stores':
+				$response = $this->buildStoresMap($data);
+				break;
 		}
 		return $response;
+	}
+
+	public function getObject($id, $type = 'slStores'){
+		$output = array();
+		if($id){
+			$sql = "SELECT * FROM {$this->modx->getTableName($type)} WHERE `id` = {$id} LIMIT 1";
+			$q = $this->modx->prepare($sql);
+			$q->execute();
+			$str = $q->fetch(PDO::FETCH_ASSOC);
+			if($str) {
+				$output = $str;
+			}
+		}
+		return $output;
 	}
 
 	public function getLocationData($ctx = false){
@@ -304,16 +393,55 @@ class shopLogistic
 		}
 	}
 
+	public function buildStoresMap($data){
+		$output = array();
+		$location = $this->getLocationData($data['ctx']);
+
+		if($location){
+			$coords_data = array(
+				$location['geo_lat'],
+				$location['geo_lon']
+			);
+			$output['center'] = $coords_data;
+			if($data['filter']){
+				$stores = $this->get_nearby('slStores', $coords_data, 30, $data['filter']);
+			}else{
+				$stores = $this->get_nearby('slStores', $coords_data, 30);
+			}
+
+			$output['html_stores'] = '';
+			foreach($stores as $key => $store){
+				$store['redirect'] = $this->modx->makeURL(2);
+				$store['data'] = json_encode($store);
+				$stores[$key]['data'] = json_encode($store);
+				$stores[$key]['text'] = $this->pdoTools->getChunk("@FILE chunks/sl_store_baloon.tpl", $store);
+				$output['html_stores'] .= $this->pdoTools->getChunk("@FILE chunks/sl_store_list.tpl", $store);
+			}
+			if($stores){
+				$output['stores'] = $stores;
+			}else{
+				$output['stores'] = array();
+			}
+			return $this->success('', $output);
+		}else{
+			$this->failure('Не определено местоположение пользователя.', $data);
+		}
+	}
+
 	public function getDelivery($data){
 		$output = '';
 		if($data['id']){
-			$output = $this->modx->runSnippet("sl.get_delivery_data", array(
+			$props = array(
 				"id" => $data["id"],
-				"tpl" => "@FILE chunks/sl_delivery_data.tpl"
-			));
+				"type" => $data['type'],
+				"from_id" => $data['from_id'],
+				"tpl" => "@FILE chunks/tpl_delivery_card.tpl"
+			);
+			// $this->modx->log(1, print_r($props, 1));
+			$output = $this->modx->runSnippet("sl.get_delivery_data", $props);
 			//$output = $this->pdoTools->getChunk("@FILE chunks/sl_delivery_data.tpl", ["id" => $data["id"]]);
 		}
-		return $this->success("", array("html_delivery" => $output));
+		return $this->success("", array("selector_id" => "#delivery_".$data["id"]."_".$data['from_id'], "html_delivery" => $output));
 	}
 
 	public function getCityStatus(){
@@ -661,7 +789,7 @@ class shopLogistic
 	 * @param type $object
 	 * @return array, boolean
 	 */
-	public function get_nearby($type, $coordinats, $limit = 1){
+	public function get_nearby($type, $coordinats, $limit = 1, $filter = ''){
 		if(is_array($coordinats)){
 			$lat = trim($coordinats[0]);
 			$lng = trim($coordinats[1]);
@@ -669,6 +797,11 @@ class shopLogistic
 			$coord = explode(',', $coordinats);
 			$lat = trim($coord[0]);
 			$lng = trim($coord[1]);
+		}
+		if($filter){
+			$where = 'AND (`name` LIKE "%'.$filter.'%" OR `address` LIKE "%'.$filter.'%")';
+		}else{
+			$where = '';
 		}
 		// this select have a small inaccuracy
 		$sql = "SELECT 
@@ -683,9 +816,9 @@ class shopLogistic
 			   sin(radians({$lat})) * 
 			   sin(radians(lat)))
 			) AS distance 
-			FROM {$this->modx->getTableName($type)} WHERE `active` = 1 ORDER BY distance LIMIT {$limit} ";
+			FROM {$this->modx->getTableName($type)} WHERE `active` = 1 {$where} ORDER BY distance LIMIT {$limit} ";
 		$statement = $this->modx->prepare($sql);
-		//$this->modx->log(1, $sql);
+		// $this->modx->log(1, $sql);
 		if ( $statement->execute()) {
 			$result = $statement->fetchAll(PDO::FETCH_ASSOC);
 			return $result;
@@ -1090,84 +1223,10 @@ class shopLogistic
 		}
 	}
 
-	/**
-	 * Get city name by domain id
-	 * @param type $domain_id
-	 * @return type
-	 */
-	public function getCityNameById($domain_id) {
-		$response = $this->modx->getObject('slCityCity', ['id' => $domain_id]);
-
-		return $response->city;
-	}
-
-	/**
-	 * Get domain id by domain
-	 * @param type $city
-	 * @return type
-	 */
-	public function getDomainId($city) {
-		$response = $this->modx->getObject('slCityCity', ['key' => $city]);
-
-		if (!$response) return false;
-
-		return $response->id;
-	}
-
-	/**
-	 * Get resource content
-	 * @param type $city
-	 * @param type $resource
-	 * @return type
-	 */
-	public function getContent($city, $resource) {
-		$response = $this->modx->getObject('slCityResource', ['city' => $this->getDomainId($city), 'resource' => $resource]);
-
-		if (!$response) return false;
-
-		return $response->content;
-	}
-
-	/**
-	 * @return int, bool
-	 */
-	public function detectCity()
-	{
-		$url = ((!empty($_SERVER['HTTPS'])) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-		$parse = parse_url($url);
-		$path = explode("/", $parse['path']);
-		$key = $path[1];
-		// Ведущий слэш и первый каталог убираем, проверяем на наличие в компоненте
-		unset($path[0]);
-		unset($path[1]);
-		$id = $this->getDomainId($key);
-		return $id;
-	}
-
-	public function cleanUrl(){
-		if($this->detectCity()){
-			$url = ((!empty($_SERVER['HTTPS'])) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-			$parse = parse_url($url);
-			$path = explode("/", $parse['path']);
-			$key = $path[1];
-			// Ведущий слэш и первый каталог убираем, проверяем на наличие в компоненте
-			unset($path[0]);
-			unset($path[1]);
-			return implode('/', $path);
-		}
-	}
-
-	/**
-	 * @return int, bool
-	 */
-	public function setCity($city)
-	{
-		$response = $this->modx->getObject('slCityCity', $city);
-		if($response){
-			$siteUrl = $this->modx->getOption('site_url');
-			$this->modx->setOption('site_url', $siteUrl."{$response->key}/");
-			$this->modx->setOption('base_url', $siteUrl."{$response->key}/");
-			$this->modx->setPlaceholder('+site_url', $siteUrl."{$response->key}/");
+	public function getCityNameById($id){
+		$object = $this->modx->getObject("dartLocationCity", $id);
+		if($object){
+			return $object->get('city');
 		}
 	}
 
@@ -1265,7 +1324,15 @@ class shopLogistic
 		return $weight;
 	}
 
-
+	public function remove_dir($dir)
+	{
+		if ($objs = glob($dir . '/*')) {
+			foreach($objs as $obj) {
+				is_dir($obj) ? $this->remove_dir($obj) : unlink($obj);
+			}
+		}
+		rmdir($dir);
+	}
 	/**
 	 * Shorthand for original modX::invokeEvent() method with some useful additions.
 	 *

@@ -86,6 +86,18 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             id: config.id + '-price',
             allowBlank: true
         }, {
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_storeremains_published'),
+            name: 'published',
+            id: config.id + '-published',
+            checked: false,
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_storeremains_checked'),
+            name: 'checked',
+            id: config.id + '-checked',
+            checked: false,
+        }, {
             xtype: 'textarea',
             fieldLabel: _('shoplogistic_storeuser_description'),
             name: 'description',

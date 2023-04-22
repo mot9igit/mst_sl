@@ -20,6 +20,16 @@ class slWarehouseCreateProcessor extends modObjectCreateProcessor
             $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_warehouse_err_ae'));
         }
 
+		$lng = trim($this->getProperty('lng'));
+		if(empty($lng)){
+			$this->setProperty('lng', 0);
+		}
+
+		$lat = trim($this->getProperty('lat'));
+		if(empty($lat)){
+			$this->setProperty('lat', 0);
+		}
+
         return parent::beforeSet();
     }
 

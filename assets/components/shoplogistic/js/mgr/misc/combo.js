@@ -77,6 +77,44 @@ shopLogistic.combo.User = function (config) {
 Ext.extend(shopLogistic.combo.User, shopLogistic.combo.ComboBoxDefault);
 Ext.reg('shoplogistic-combo-user', shopLogistic.combo.User);
 
+shopLogistic.combo.Stage = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        name: 'stage',
+        fieldLabel: config.name || 'stage',
+        hiddenName: config.name || 'stage',
+        displayField: 'name',
+        valueField: 'id',
+        anchor: '99%',
+        fields: ['name', 'id', 'category'],
+        pageSize: 20,
+        typeAhead: false,
+        editable: true,
+        allowBlank: false,
+        url: shopLogistic.config['connector_url'],
+        baseParams: {
+            action: 'mgr/system/stage/getlist',
+            combo: true,
+        },
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                        - {category}\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.Stage.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.Stage, shopLogistic.combo.ComboBoxDefault);
+Ext.reg('shoplogistic-combo-stage', shopLogistic.combo.Stage);
+
 shopLogistic.combo.Store = function (config) {
     config = config || {};
     Ext.applyIf(config, {
@@ -376,3 +414,75 @@ shopLogistic.combo.ms2Status = function (config) {
 };
 Ext.extend(shopLogistic.combo.ms2Status, MODx.combo.ComboBox);
 Ext.reg('shoplogistic-combo-ms2status', shopLogistic.combo.ms2Status);
+
+shopLogistic.combo.productField = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/order_field/getproduct',
+        },
+        name: 'field',
+        hiddenName: 'field',
+        fields: ['val', 'name'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_order_field'),
+        valueField: 'val',
+        editable: true,
+        pageSize: 10,
+        anchor: '99%',
+        allowBlank: true,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.productField.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.productField, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-productfield', shopLogistic.combo.productField);
+
+shopLogistic.combo.orderField = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/order_field/getorder',
+        },
+        name: 'field',
+        hiddenName: 'field',
+        fields: ['val', 'name'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_order_field'),
+        valueField: 'val',
+        editable: true,
+        pageSize: 10,
+        anchor: '99%',
+        allowBlank: true,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.orderField.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.orderField, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-orderfield', shopLogistic.combo.orderField);

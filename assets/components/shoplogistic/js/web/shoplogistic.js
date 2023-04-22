@@ -335,6 +335,18 @@ var sl_marketplace = {
         alert_change_btn: '.alert_change_btn'
     },
     initialize: function () {
+        if($('.delivery_info_block').length){
+            $('.delivery_info_block').each(function(){
+                var action = 'get/delivery';
+                var data = {
+                    sl_action: action,
+                    id: $(this).data('id'),
+                    type: $(this).data('type'),
+                    from_id: $(this).data('from_id')
+                };
+                sl_marketplace.send(data);
+            })
+        }
         if($('.delivery_data').length){
             var action = 'get/delivery';
             var data = {
@@ -516,7 +528,11 @@ var sl_marketplace = {
             success:  function(data_r) {
                 if(data_r.data.hasOwnProperty('html_delivery')){
                     if(data_r.data.html_delivery){
-                        $('.delivery_data').html(data_r.data.html_delivery);
+                        if(data_r.data.hasOwnProperty('selector_id')) {
+                            $(data_r.data.selector_id).html(data_r.data.html_delivery);
+                        }else{
+                            $('.delivery_data').html(data_r.data.html_delivery);
+                        }
                     }
                 }
                 if(typeof data_r.data.reload !== "undefined"){

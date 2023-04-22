@@ -16,13 +16,23 @@ shopLogistic.window.CreateStore = function (config) {
         baseParams: {
             action: 'mgr/store/create',
         },
+        bodyCssClass: 'tabs',
     });
     shopLogistic.window.CreateStore.superclass.constructor.call(this, config);
 };
 
 Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
-
     getFields: function (config) {
+        return [{
+            xtype: 'modx-tabs',
+            items: [{
+                title: _('shoplogistic_store_create'),
+                layout: 'form',
+                items: shopLogistic.window.CreateStore.prototype.getFormFields.call(this, config),
+            }]
+        }]
+    },
+    getFormFields: function (config) {
         return [{
             xtype: 'hidden',
             name: 'id',
@@ -34,6 +44,20 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
             id: config.id + '-name',
             anchor: '99%',
             allowBlank: false,
+        }, {
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_store_name_short'),
+            name: 'name_short',
+            id: config.id + '-name_short',
+            anchor: '99%',
+            allowBlank: false,
+        },{
+            xtype: 'modx-combo-browser',
+            fieldLabel: _('shoplogistic_store_image'),
+            name: 'image',
+            id: config.id + '-image',
+            anchor: '99%',
+            allowBlank: true,
         },{
             layout: 'column',
             style: {marginTop: '10px', marginRight: '5px', background: '#eeeeee', padding: '10px 10px'},
@@ -308,7 +332,7 @@ Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
             items: [{
                 title: _('shoplogistic_store_update'),
                 layout: 'form',
-                items: shopLogistic.window.CreateStore.prototype.getFields.call(this, config),
+                items: shopLogistic.window.CreateStore.prototype.getFormFields.call(this, config),
             }, {
                 title: _('shoplogistic_storeusers'),
                 items: [{
@@ -331,6 +355,12 @@ Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
                 title: _('shoplogistic_storeregistry'),
                 items: [{
                     xtype: 'shoplogistic-grid-storeregistry',
+                    record: config.record,
+                }]
+            }, {
+                title: _('shoplogistic_docs'),
+                items: [{
+                    xtype: 'shoplogistic-grid-stores-docs',
                     record: config.record,
                 }]
             }]

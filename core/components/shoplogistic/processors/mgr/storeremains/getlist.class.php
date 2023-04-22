@@ -42,6 +42,8 @@ class slStoresRemainsGetListProcessor extends modObjectGetListProcessor
             $c->where([
                 'modResource.pagetitle:LIKE' => "%{$query}%",
                 'OR:msProductData.article:LIKE' => "%{$query}%",
+				'OR:name:LIKE' => "%{$query}%",
+				'OR:article:LIKE' => "%{$query}%",
             ]);
         }
 

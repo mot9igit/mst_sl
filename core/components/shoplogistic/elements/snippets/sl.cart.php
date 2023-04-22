@@ -16,5 +16,12 @@ $shopLogistic->loadServices($ctx);
 $cart = array();
 $cart['deliveries'] = $shopLogistic->cart->checkCart();
 
+$stores = array_unique($cart['deliveries']['stores']);
+if(count($stores) > 1){
+	$modx->setPlaceholder("hide_pickup", 1);
+}
+unset($cart['deliveries']['stores']);
+
 $output = $pdoFetch->getChunk($cartTpl, $cart);
+
 return $output;

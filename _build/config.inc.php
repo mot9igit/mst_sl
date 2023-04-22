@@ -19,10 +19,10 @@ return [
     'update' => [
         'chunks' => false,
         'menus' => true,
-        'plugins' => true,
+        'plugins' => false,
         'resources' => false,
         'settings' => false,
-        'snippets' => true,
+        'snippets' => false,
         'templates' => false,
         'widgets' => false,
     ],

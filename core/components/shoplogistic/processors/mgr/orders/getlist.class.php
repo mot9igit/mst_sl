@@ -3,11 +3,11 @@
 class slOrderGetListProcessor extends modObjectGetListProcessor
 {
 	public $classKey = 'slOrder';
-	public $languageTopics = array('shoplogistic:manager');
+	public $languageTopics = array('shoplogistic');
 	public $defaultSortField = 'id';
 	public $defaultSortDirection = 'DESC';
 	//public $permission = 'msorder_list';
-	/** @var  miniShop2 $ms2 */
+	/** @var  shoplogistic $shoplogistic */
 	protected $shoplogistic;
 	/** @var  xPDOQuery $query */
 	protected $query;
@@ -35,12 +35,14 @@ class slOrderGetListProcessor extends modObjectGetListProcessor
 	 */
 	public function prepareQueryBeforeCount(xPDOQuery $c)
 	{
-		$c->leftJoin('msOrder', 'Order');
-		$c->leftJoin('modUser', 'User', 'Order.user_id = modUser.id');
-		$c->leftJoin('modUserProfile', 'UserProfile', 'Order.user_id = UserProfile.id');
-		$c->leftJoin('msOrderStatus', 'Status', 'Order.status = Status.id');
-		$c->leftJoin('msDelivery', 'Delivery', 'Order.delivery = Delivery.id');
-		$c->leftJoin('msPayment', 'Payment', 'Order.payment = Payment.id');
+		$c->leftJoin('msOrder', 'msOrder');
+		$c->leftJoin('modUser', 'User', 'msOrder.user_id = User.id');
+		$c->leftJoin('modUserProfile', 'UserProfile', 'msOrder.user_id = UserProfile.id');
+		$c->leftJoin('slOrderStatus', 'Status');
+		$c->leftJoin('msDelivery', 'Delivery', 'msOrder.delivery = Delivery.id');
+		$c->leftJoin('msPayment', 'Payment', 'msOrder.payment = Payment.id');
+		$c->leftJoin('slStores', 'Store');
+		$c->leftJoin('slWarehouse', 'Warehouse');
 
 		$query = trim($this->getProperty('query'));
 		if (!empty($query)) {
@@ -66,12 +68,12 @@ class slOrderGetListProcessor extends modObjectGetListProcessor
 		}
 		if ($customer = $this->getProperty('customer')) {
 			$c->where(array(
-				'user_id' => (int)$customer,
+				'msOrder.user_id' => (int)$customer,
 			));
 		}
 		if ($context = $this->getProperty('context')) {
 			$c->where(array(
-				'context' => $context,
+				'msOrder.context' => $context,
 			));
 		}
 		if ($date_start = $this->getProperty('date_start')) {
@@ -88,94 +90,18 @@ class slOrderGetListProcessor extends modObjectGetListProcessor
 		$this->query = clone $c;
 
 		$c->select(
-			$this->modx->getSelectColumns('slOrder', 'slOrder', '', array('status', 'delivery', 'payment'), true) . ',
-            Order.status as status_id, Order.delivery as delivery_id, Order.payment as payment_id,
+			$this->modx->getSelectColumns('slOrder', 'slOrder', '', array('delivery', 'payment'), true) . ',
+            msOrder.delivery as delivery_id, msOrder.payment as payment_id, msOrder.user_id as user_id,
             UserProfile.fullname as customer, User.username as customer_username,
-            Status.name as status, Status.color, Delivery.name as delivery, Payment.name as payment'
+            Status.name as status_name, Status.color as color, Delivery.name as delivery, Payment.name as payment, 
+            Warehouse.name as warehouse_name, Store.name as store_name'
 		);
 		$c->groupby($this->classKey . '.id');
+		$c->prepare();
+		$this->modx->log(1, $c->toSQL());
 
 		return $c;
 	}
-
-
-	/**
-	 * @param xPDOQuery $c
-	 *
-	 * @return xPDOQuery
-	 */
-	public function prepareQueryAfterCount(xPDOQuery $c)
-	{
-		$total = 0;
-		$limit = (int)$this->getProperty('limit');
-		$start = (int)$this->getProperty('start');
-
-		$q = clone $c;
-		$q->query['columns'] = ['SQL_CALC_FOUND_ROWS slOrder.id, fullname as customer'];
-		$sortClassKey = $this->getSortClassKey();
-		$sortKey = $this->modx->getSelectColumns($sortClassKey, $this->getProperty('sortAlias', $sortClassKey), '', [$this->getProperty('sort')]);
-		if (empty($sortKey)) {
-			$sortKey = $this->getProperty('sort');
-		}
-		$q->sortby($sortKey, $this->getProperty('dir'));
-		if ($limit > 0) {
-			$q->limit($limit, $start);
-		}
-
-		$ids = [];
-		if ($q->prepare() and $q->stmt->execute()) {
-			$ids = $q->stmt->fetchAll(PDO::FETCH_COLUMN);
-			$total = $this->modx->query('SELECT FOUND_ROWS()')->fetchColumn();
-		}
-		$ids = empty($ids) ? "(0)" : "(" . implode(',', $ids) . ")";
-		$c->query['where'] = [[
-			new xPDOQueryCondition(array('sql' => 'slOrder.id IN ' . $ids, 'conjunction' => 'AND')),
-		]];
-		$c->sortby($sortKey, $this->getProperty('dir'));
-
-		$this->setProperty('total', $total);
-
-		return $c;
-	}
-
-
-	/**
-	 * @return array
-	 */
-	public function getData()
-	{
-		$c = $this->modx->newQuery($this->classKey);
-		$c = $this->prepareQueryBeforeCount($c);
-		$c = $this->prepareQueryAfterCount($c);
-		$data = [
-			'results' => ($c->prepare() and $c->stmt->execute()) ? $c->stmt->fetchAll(PDO::FETCH_ASSOC) : [],
-			'total'   => (int)$this->getProperty('total'),
-		];
-
-		return $data;
-	}
-
-
-	/**
-	 * @param array $data
-	 *
-	 * @return array
-	 */
-	public function iterate(array $data)
-	{
-		$list = array();
-		$list = $this->beforeIteration($list);
-		$this->currentIndex = 0;
-		/** @var xPDOObject|modAccessibleObject $object */
-		foreach ($data['results'] as $array) {
-			$list[] = $this->prepareArray($array);
-			$this->currentIndex++;
-		}
-		$list = $this->afterIteration($list);
-
-		return $list;
-	}
-
 
 	/**
 	 * @param array $data
@@ -234,49 +160,6 @@ class slOrderGetListProcessor extends modObjectGetListProcessor
 		);
 
 		return $data;
-	}
-
-
-	/**
-	 * @param array $array
-	 * @param bool $count
-	 *
-	 * @return string
-	 */
-	public function outputArray(array $array, $count = false)
-	{
-		if ($count === false) {
-			$count = count($array);
-		}
-
-		$selected = $this->query;
-		$selected->query['columns'] = array();
-		$selected->query['limit'] =
-		$selected->query['offset'] = 0;
-		$selected->where(array('type' => 0));
-		$selected->select('SUM(slOrder.cost)');
-		$selected->prepare();
-		$selected->stmt->execute();
-
-		$month = $this->modx->newQuery($this->classKey);
-		$month->where(array('status:IN' => array(2, 3), 'type' => 0));
-		$month->where('createdon BETWEEN NOW() - INTERVAL 30 DAY AND NOW()');
-		$month->select('SUM(slOrder.cost) as sum, COUNT(slOrder.id) as total');
-		$month->prepare();
-		$month->stmt->execute();
-		$month = $month->stmt->fetch(PDO::FETCH_ASSOC);
-
-		$data = array(
-			'success' => true,
-			'results' => $array,
-			'total' => $count,
-			'num' => number_format($count, 0, '.', ' '),
-			'sum' => number_format(round($selected->stmt->fetchColumn()), 0, '.', ' '),
-			'month_sum' => number_format(round($month['sum']), 0, '.', ' '),
-			'month_total' => number_format($month['total'], 0, '.', ' '),
-		);
-
-		return json_encode($data);
 	}
 }
 

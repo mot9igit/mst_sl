@@ -112,7 +112,7 @@ Ext.extend(shopLogistic.grid.WarehouseRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'article', 'name', 'product_id', 'warehouse_name', 'warehouse_id', 'remains', 'reserved', 'available', 'catalog', 'guid', 'price', 'description', 'actions'];
+        return ['id', 'article', 'name', 'published', 'checked', 'product_id', 'warehouse_name', 'warehouse_id', 'remains', 'reserved', 'available', 'catalog', 'guid', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
@@ -141,6 +141,18 @@ Ext.extend(shopLogistic.grid.WarehouseRemains, shopLogistic.grid.Default, {
             dataIndex: 'price',
             sortable: true,
             width: 70,
+        }, {
+            header: _('shoplogistic_warehouseremains_published'),
+            dataIndex: 'published',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: true,
+            width: 100,
+        }, {
+            header: _('shoplogistic_warehouseremains_checked'),
+            dataIndex: 'checked',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: true,
+            width: 100,
         }, {
             header: _('shoplogistic_grid_actions'),
             dataIndex: 'actions',

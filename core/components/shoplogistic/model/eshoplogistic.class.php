@@ -320,6 +320,7 @@ class eShopLogistic
 			$ya_delivery_data = $this->yaDeliveryRequest($url, $price_data);
 			if(isset($ya_delivery_data['code'])){
 				$this->yaDeliveryReport($url.' '.$ya_delivery_data['code'].' '.$ya_delivery_data['message']);
+				$this->yaDeliveryReport($ya_delivery_data);
 				$this->yaDeliveryReport($data);
 				return false;
 			}else{

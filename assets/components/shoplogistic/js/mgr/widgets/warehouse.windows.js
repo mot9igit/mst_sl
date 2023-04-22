@@ -21,8 +21,17 @@ shopLogistic.window.CreateWarehouse = function (config) {
 };
 
 Ext.extend(shopLogistic.window.CreateWarehouse, shopLogistic.window.Default, {
-
     getFields: function (config) {
+        return [{
+            xtype: 'modx-tabs',
+            items: [{
+                title: _('shoplogistic_warehouse_create'),
+                layout: 'form',
+                items: shopLogistic.window.CreateWarehouse.prototype.getFormFields.call(this, config),
+            }]
+        }]
+    },
+    getFormFields: function (config) {
         return [{
             xtype: 'hidden',
             name: 'id',
@@ -87,7 +96,13 @@ Ext.extend(shopLogistic.window.CreateWarehouse, shopLogistic.window.Default, {
             name: 'active',
             id: config.id + '-active',
             checked: true,
-        },{
+        }, {
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_warehouse_delivery_tk'),
+            name: 'delivery_tk',
+            id: config.id + '-delivery_tk',
+            checked: true,
+        }, {
             layout: 'column',
             items: [{
                 columnWidth: .5,
@@ -307,7 +322,7 @@ Ext.extend(shopLogistic.window.UpdateWarehouse, shopLogistic.window.CreateWareho
             items: [{
                 title: _('shoplogistic_warehouse_update'),
                 layout: 'form',
-                items: shopLogistic.window.CreateWarehouse.prototype.getFields.call(this, config),
+                items: shopLogistic.window.CreateWarehouse.prototype.getFormFields.call(this, config),
             }, {
                 title: _('shoplogistic_warehouseusers'),
                 items: [{
@@ -324,6 +339,12 @@ Ext.extend(shopLogistic.window.UpdateWarehouse, shopLogistic.window.CreateWareho
                 title: _('shoplogistic_warehousestores'),
                 items: [{
                     xtype: 'shoplogistic-grid-warehousestores',
+                    record: config.record,
+                }]
+            }, {
+                title: _('shoplogistic_docs'),
+                items: [{
+                    xtype: 'shoplogistic-grid-warehouse-docs',
                     record: config.record,
                 }]
             }]

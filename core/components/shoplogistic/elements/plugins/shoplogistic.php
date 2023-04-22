@@ -58,6 +58,11 @@ switch ($modx->event->name) {
 		}
 		break;
 	case 'OnDocFormRender':
+		$corePath = $modx->getOption('shoplogistic_core_path', array(), $modx->getOption('core_path') . 'components/shoplogistic/');
+		$shopLogistic = $modx->getService('shopLogistic', 'shopLogistic', $corePath . 'model/');
+		if (!$shopLogistic) {
+			$modx->log(xPDO::LOG_LEVEL_ERROR, 'Could not load shoplogistic class!');
+		}
 		$controller->shopLogistic = $shopLogistic;
 		$controller->shopLogistic->loadCustomJsCss();
 		$modx->regClientStartupHTMLBlock('
@@ -148,9 +153,11 @@ switch ($modx->event->name) {
 		}
 		// остатки магазина
 		// TODO: предусмотреть работу по 1 режиму
+		$find = 0;
 		$remains = $modx->getObject("slStoresRemains", $criteria);
 		if($remains){
 			$returned_values['price'] = $remains->get('price');
+			$find = 1;
 		}else{
 			$criteria = array(
 				"product_id:=" => $product_id,
@@ -161,9 +168,102 @@ switch ($modx->event->name) {
 				$remains = $modx->getObject("slWarehouseRemains", $criteria);
 				if($remains){
 					$returned_values['price'] = $remains->get('price');
+					$find = 1;
 				}
 			}
 		}
+		if(!$find){
+			$query = $modx->newQuery("slStoresRemains");
+			$query->where(
+				array(
+					"product_id:=" => $product_id,
+					"AND:price:>" => 0
+				)
+			);
+			$query->sortby('price', 'ASC');
+			$query->select(array(
+				'slStoresRemains.*',
+			));
+			$query->prepare();
+			if($query->stmt->execute()){
+				$res = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+				foreach($res as $key => $r){
+					$store = $modx->getObject("slStores",  $r['store_id']);
+					if($store){
+						if($store->get('active')){
+							$res[$key]['store'] = $store->toArray();
+						}else{
+							unset($res[$key]);
+						}
+					}else{
+						unset($res[$key]);
+					}
+				}
+				$res = array_values($res);
+				if(count($res)){
+					$stores = array();
+					$returned_values['price'] = $res[0]['price'];
+					$returned_values['price_prefix'] = 1;
+					$modx->setPlaceholder("store_".$product_id, $res[0]['store']);
+					unset($res[0]);
+					if(count($res)){
+						foreach($res as $r){
+							$stores[] = $r;
+						}
+					}
+					if(count($stores)){
+						$modx->setPlaceholder("stores_".$product_id, $stores);
+					}
+				}else{
+					//$returned_values['available'] = 99;
+					//$returned_values['price'] = 0;
+				}
+			}else{
+				//$returned_values['available'] = 99;
+				//$returned_values['price'] = 0;
+			}
+		}else{
+			$modx->setPlaceholder("store_".$product_id, $location['store']);
+		}
+		break;
+	case 'msOnAddToCart':
+		// выставляем стоимость в зависимости от магазина
+		$corePath = $modx->getOption('shoplogistic_core_path', array(), $modx->getOption('core_path') . 'components/shoplogistic/');
+		$shopLogistic = $modx->getService('shopLogistic', 'shopLogistic', $corePath . 'model/');
+		if (!$shopLogistic) {
+			$modx->log(xPDO::LOG_LEVEL_ERROR, 'Could not load shoplogistic class!');
+		}
+		$shopLogistic->loadServices();
+		$tmp = $cart->get();
+		$modx->log(1, print_r($tmp, 1));
+		foreach ($tmp as $k => $value) {
+			$product_id = $value['id'];
+			if(isset($value['options']['store'])){
+				$remains = $shopLogistic->cart->getRemains('slStores', $value['options']['store'], $product_id, $value['count']);
+				$modx->log(1, print_r($remains, 1));
+				if($remains){
+					if($remains['remains']['price']){
+						$tmp[$k]['price'] = $remains['remains']['price'];
+					}
+				}
+			}else{
+				$position = $shopLogistic->cart->getUserPosition();
+				$remains = $shopLogistic->cart->getRemains('slStores', $position['data']['store']['id'], $product_id, $value['count']);
+				if(!$remains){
+					$remains = $shopLogistic->cart->getRemains('slWarehouse', $position['data']['store']['id'], $product_id, $value['count']);
+					if($remains){
+						if($remains['remains']['price']){
+							$tmp[$k]['price'] = $remains['remains']['price'];
+						}
+					}
+				}else{
+					if($remains['remains']['price']){
+						$tmp[$k]['price'] = $remains['remains']['price'];
+					}
+				}
+			}
+		}
+		$cart->set($tmp);
 		break;
 	case 'msOnCreateOrder':
 		$order_data = $order->get();

@@ -17,5 +17,11 @@ return [
 		'parent' => 'shoplogistic',
 		'menuindex' => 1,
 		'action' => 'mgr/settings',
+	),
+	'shoplogistic_crm' => array(
+		'description' => 'shoplogistic_crm_desc',
+		'parent' => 'shoplogistic',
+		'menuindex' => 1,
+		'action' => 'mgr/crm',
 	)
 ];

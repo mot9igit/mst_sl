@@ -4,6 +4,8 @@ $_lang['area_shoplogistic_main'] = 'Основные';
 $_lang['area_shoplogistic_eshoplogistic'] = 'eShopLogistic';
 $_lang['area_shoplogistic_city'] = 'Города и папки';
 $_lang['area_shoplogistic_requizites'] = 'Реквизиты';
+$_lang['area_shoplogistic_crm'] = 'CRM';
+$_lang['area_shoplogistic_products'] = 'Товары';
 
 $_lang['setting_shoplogistic_frontend_css'] = 'СSS-файл для фронта';
 $_lang['setting_shoplogistic_frontend_css_desc'] = 'Можно указать тут свой файл или перенести стили в свой css-файл и очистить поле.';
@@ -68,3 +70,24 @@ $_lang['setting_shoplogistic_inn_desc'] = 'Необходимо для доку�
 
 $_lang['setting_shoplogistic_kpp'] = 'КПП';
 $_lang['setting_shoplogistic_kpp_desc'] = 'Необходимо для документов, если нет оставьте пустым';
+
+$_lang['setting_shoplogistic_crm_webhook'] = 'Webhook';
+$_lang['setting_shoplogistic_crm_webhook_desc'] = 'Входящий вебхук';
+
+$_lang['setting_shoplogistic_crm_product_key_field'] = 'Ключевое поле товара';
+$_lang['setting_shoplogistic_crm_product_key_field_desc'] = 'Необходимо для проверки на дублирование в CRM, перед установкой необходимо выставить соответствие в настройках';
+
+$_lang['setting_shoplogistic_crm_link_products'] = 'Прилинковать товары?';
+$_lang['setting_shoplogistic_crm_link_products_desc'] = 'Для начала товары нужно связать с CRM';
+
+$_lang['setting_shoplogistic_check_percent'] = 'Процент цены товара для проверки на публикацию';
+$_lang['setting_shoplogistic_check_percent_desc'] = 'Если цена товара будет отличаться на +- этот процент, то он будет снят с публикации и отвязан от товара';
+
+$_lang['setting_shoplogistic_default_stage'] = 'ID стадии нового заказа';
+$_lang['setting_shoplogistic_default_stage_desc'] = '';
+
+$_lang['setting_shoplogistic_payment_stage'] = 'ID стадии оплаченного заказа';
+$_lang['setting_shoplogistic_payment_stage_desc'] = '';
+
+$_lang['setting_shoplogistic_debug_log'] = 'Вести лог расчетов?';
+$_lang['setting_shoplogistic_debug_log_desc'] = 'Вся информация будет в файле core/cache/logs/sl_calc.log';

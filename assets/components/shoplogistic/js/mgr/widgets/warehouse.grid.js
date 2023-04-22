@@ -182,7 +182,7 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'apikey','city', 'company_type', 'inn', 'bank_number', 'bank_knumber', 'bank_bik', 'bank_name', 'unique_id', 'address' , 'ur_address', 'description', 'active', 'actions'];
+        return ['id', 'name', 'apikey', 'city', 'delivery_tk', 'company_type', 'inn', 'bank_number', 'bank_knumber', 'bank_bik', 'bank_name', 'unique_id', 'address' , 'ur_address', 'description', 'active', 'actions'];
     },
 
     getColumns: function () {
@@ -214,6 +214,12 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
         }, {
             header: _('shoplogistic_warehouse_active'),
             dataIndex: 'active',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: true,
+            width: 100,
+        }, {
+            header: _('shoplogistic_warehouse_delivery_tk'),
+            dataIndex: 'delivery_tk',
             renderer: shopLogistic.utils.renderBoolean,
             sortable: true,
             width: 100,

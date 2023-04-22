@@ -20,47 +20,74 @@ shopLogistic.grid.Orders = function (config) {
 Ext.extend(shopLogistic.grid.Orders, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return shopLogistic.config['order_grid_fields'];
+        return ['id','user_id','customer','num','status','color','status_name','cart_cost','delivery_cost','payment','delivery','store_id','warehouse_id','warehouse_name','store_name','actions'];
     },
 
     getColumns: function () {
-        var all = {
-            id: {width: 35},
-            customer: {width: 100, renderer: function (val, cell, row) {
-                    return shopLogistic.utils.userLink(val, row.data['user_id'], true);
-                }},
-            num: {width: 50},
-            receiver: {width: 100},
-            createdon: {width: 75, renderer: shopLogistic.utils.formatDate},
-            updatedon: {width: 75, renderer: shopLogistic.utils.formatDate},
-            cost: {width: 50, renderer: this._renderCost},
-            cart_cost: {width: 50},
-            delivery_cost: {width: 75},
-            weight: {width: 50},
-            status: {width: 75, renderer: shopLogistic.utils.renderBadge},
-            delivery: {width: 75},
-            payment: {width: 75},
-            //address: {width: 50},
-            context: {width: 50},
-            actions: {width: 75, id: 'actions', renderer: shopLogistic.utils.renderActions, sortable: false},
-        };
-
-        //var fields = this.getFields();
-        var fields = 'id,num,customer,status,cost,weight,delivery,payment,createdon,updatedon,comment';
-        var columns = [];
-        for (var i = 0; i < fields.length; i++) {
-            var field = fields[i];
-            if (all[field]) {
-                Ext.applyIf(all[field], {
-                    header: _('ms2_' + field),
-                    dataIndex: field,
-                    sortable: true,
-                });
-                columns.push(all[field]);
+        return [{
+            header: _('shoplogistic_id'),
+            dataIndex: 'id',
+            sortable: true,
+            width: 70
+        }, {
+            header: _('shoplogistic_order_num'),
+            dataIndex: 'num',
+            sortable: true,
+            width: 200,
+        }, {
+            header: _('shoplogistic_order_status'),
+            dataIndex: 'status_name',
+            sortable: true,
+            width: 200,
+            renderer: function (val, cell, row) {
+                return shopLogistic.utils.renderBadge(val, cell, row);
             }
-        }
-
-        return columns;
+        }, {
+            header: _('shoplogistic_order_customer'),
+            dataIndex: 'customer',
+            sortable: true,
+            width: 200,
+            renderer: function (val, cell, row) {
+                return shopLogistic.utils.userLink(val, row.data['user_id'], true);
+            }
+        },{
+            header: _('shoplogistic_order_cart_cost'),
+            dataIndex: 'cart_cost',
+            sortable: true,
+            width: 200,
+        },{
+            header: _('shoplogistic_order_delivery_cost'),
+            dataIndex: 'delivery_cost',
+            sortable: true,
+            width: 200
+        }, {
+            header: _('shoplogistic_order_payment'),
+            dataIndex: 'payment',
+            sortable: false,
+            width: 250,
+        }, {
+            header: _('shoplogistic_order_delivery'),
+            dataIndex: 'delivery',
+            sortable: false,
+            width: 250,
+        }, {
+            header: _('shoplogistic_order_store'),
+            dataIndex: 'store_name',
+            sortable: false,
+            width: 250,
+        }, {
+            header: _('shoplogistic_order_warehouse'),
+            dataIndex: 'warehouse_name',
+            sortable: false,
+            width: 250,
+        }, {
+            header: _('shoplogistic_grid_actions'),
+            dataIndex: 'actions',
+            renderer: shopLogistic.utils.renderActions,
+            sortable: false,
+            width: 100,
+            id: 'actions'
+        }];
     },
 
     getTopBar: function () {

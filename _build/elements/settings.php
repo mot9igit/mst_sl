@@ -98,8 +98,43 @@ return [
 		'area' => 'shoplogistic_requizites',
 	],
 	'kpp' => [
-		'xtype' => 'shoplogistic_requizites',
+		'xtype' => 'textfield',
 		'value' => '',
 		'area' => 'shoplogistic_requizites',
-	]
+	],
+	'crm_webhook' => [
+		'xtype' => 'textfield',
+		'value' => 'https://mstmp.bitrix24.ru/rest/17/pbrmt2haeyl6feh0/',
+		'area' => 'shoplogistic_crm',
+	],
+	'crm_product_key_field' => [
+		'xtype' => 'textfield',
+		'value' => 'product.article',
+		'area' => 'shoplogistic_crm',
+	],
+	'crm_link_products' => [
+		'xtype' => 'combo-boolean',
+		'value' => 1,
+		'area' => 'shoplogistic_crm',
+	],
+	'check_percent' => [
+		'xtype' => 'textfield',
+		'value' => 15,
+		'area' => 'shoplogistic_products',
+	],
+	'default_stage' => [
+		'xtype' => 'numberfield',
+		'value' => 0,
+		'area' => 'shoplogistic_crm',
+	],
+	'payment_stage' => [
+		'xtype' => 'numberfield',
+		'value' => 0,
+		'area' => 'shoplogistic_crm',
+	],
+	'debug_log' => [
+		'xtype' => 'combo-boolean',
+		'value' => 0,
+		'area' => 'shoplogistic_main',
+	],
 ];
