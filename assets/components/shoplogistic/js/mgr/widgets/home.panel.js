@@ -27,6 +27,8 @@ shopLogistic.panel.Home = function (config) {
                     cls: 'panel-desc',
                 }, {
                     xtype: 'shoplogistic-grid-stores',
+                    type: 1,
+                    id: 'shoplogistic-grid-stores__' + 1,
                     cls: 'main-wrapper',
                 }]
             },{
@@ -36,7 +38,21 @@ shopLogistic.panel.Home = function (config) {
                     html: _('shoplogistic_intro_msg'),
                     cls: 'panel-desc',
                 }, {
-                    xtype: 'shoplogistic-grid-warehouses',
+                    xtype: 'shoplogistic-grid-stores',
+                    type: 2,
+                    id: 'shoplogistic-grid-stores__' + 2,
+                    cls: 'main-wrapper',
+                }]
+            },{
+                title: _('shoplogistic_vendors'),
+                layout: 'anchor',
+                items: [{
+                    html: _('shoplogistic_intro_msg'),
+                    cls: 'panel-desc',
+                }, {
+                    xtype: 'shoplogistic-grid-stores',
+                    id: 'shoplogistic-grid-stores__' + 3,
+                    type: 3,
                     cls: 'main-wrapper',
                 }]
             }]

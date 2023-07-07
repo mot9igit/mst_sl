@@ -41,6 +41,13 @@ class slStoresGetListProcessor extends modObjectGetListProcessor
             ]);
         }
 
+        $type = trim($this->getProperty('type'));
+        if ($type) {
+            $c->where([
+                'type:=' => $type
+            ]);
+        }
+
         return $c;
     }
 

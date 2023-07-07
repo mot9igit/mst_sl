@@ -160,6 +160,7 @@ class b24Handler
 				}
 			}
 		}
+        // TODO: проверить очистку. Чистит лишнего много
 		// чистим категории
 		$query = $this->modx->newQuery("slCRMCategory");
 		$query->where(array(
@@ -168,7 +169,7 @@ class b24Handler
 		$query->prepare();
 		$objects = $this->modx->getCollection("slCRMCategory", $query);
 		foreach($objects as $object){
-			$object->remove();
+			// $object->remove();
 		}
 		// чистим стадии
 		$query = $this->modx->newQuery("slCRMStage");
@@ -178,7 +179,7 @@ class b24Handler
 		$query->prepare();
 		$objects = $this->modx->getCollection("slCRMStage", $query);
 		foreach($objects as $object){
-			$object->remove();
+			// $object->remove();
 		}
 		return true;
 	}

@@ -6,6 +6,8 @@ $_lang['shoplogistic_menu_desc'] = 'Маркетплейс.';
 $_lang['shoplogistic_intro_msg'] = 'Вы можете выделять сразу несколько предметов при помощи Shift или Ctrl.';
 
 $_lang['shoplogistic_stores'] = 'Магазины';
+$_lang['shoplogistic_warehouses'] = 'Склады';
+$_lang['shoplogistic_vendors'] = 'Производители';
 $_lang['shoplogistic_store_id'] = 'ID';
 $_lang['shoplogistic_store_name'] = 'Название';
 $_lang['shoplogistic_store_name_short'] = 'Краткое название';
@@ -36,7 +38,9 @@ $_lang['shoplogistic_store_lat'] = 'Широта';
 $_lang['shoplogistic_store_lng'] = 'Долгота';
 $_lang['shoplogistic_store_properties'] = 'Свойства';
 $_lang['shoplogistic_store_description'] = 'Описание';
+$_lang['shoplogistic_store_delivery_tk'] = 'Доставка до магазина ТК';
 $_lang['shoplogistic_store_active'] = 'Активно';
+$_lang['shoplogistic_store_integration'] = 'Прошла интеграция?';
 
 $_lang['shoplogistic_store_create'] = 'Создать магазин';
 $_lang['shoplogistic_store_update'] = 'Изменить магазин';
@@ -49,6 +53,9 @@ $_lang['shoplogistic_stores_remove'] = 'Удалить магазины';
 $_lang['shoplogistic_store_remove_confirm'] = 'Вы уверены, что хотите удалить этот магазин?';
 $_lang['shoplogistic_stores_remove_confirm'] = 'Вы уверены, что хотите удалить эти магазины?';
 $_lang['shoplogistic_store_active'] = 'Включено';
+
+$_lang['shoplogistic_vendor_create'] = 'Создать производителя';
+$_lang['shoplogistic_vendor_update'] = 'Изменить производителя';
 
 $_lang['shoplogistic_store_err_name'] = 'Вы должны указать имя магазина.';
 $_lang['shoplogistic_store_err_ae'] = 'Магазин с таким именем уже существует.';
@@ -77,6 +84,70 @@ $_lang['shoplogistic_store_err_nf'] = 'Пользователь не найде�
 $_lang['shoplogistic_store_err_ns'] = 'Пользователь не указан.';
 $_lang['shoplogistic_store_err_remove'] = 'Ошибка при удалении пользователя.';
 $_lang['shoplogistic_store_err_save'] = 'Ошибка при сохранении пользователя.';
+
+$_lang['shoplogistic_vendorbrands'] = 'Бренды';
+$_lang['shoplogistic_vendorbrands_id'] = 'ID';
+$_lang['shoplogistic_vendorbrands_store'] = 'Производитель';
+$_lang['shoplogistic_vendorbrands_brand'] = 'Бренд';
+$_lang['shoplogistic_vendorbrands_properties'] = 'Свойства';
+$_lang['shoplogistic_vendorbrands_description'] = 'Описание';
+
+$_lang['shoplogistic_vendorbrands_create'] = 'Привязать бренд';
+$_lang['shoplogistic_vendorbrands_update'] = 'Изменить бренд';
+$_lang['shoplogistic_vendorbrands_remove'] = 'Удалить бренды';
+$_lang['shoplogistic_vendorbrands_remove_confirm'] = 'Вы уверены, что хотите удалить эти бренды?';
+
+$_lang['shoplogistic_vendorbrands_err_store_id'] = 'Вы должны указать производителя.';
+$_lang['shoplogistic_vendorbrands_err_vendor_id'] = 'Вы должны указать бренд.';
+$_lang['shoplogistic_vendorbrands_err_ae'] = 'Бренд уже существует.';
+$_lang['shoplogistic_vendorbrands_err_nf'] = 'Бренд не найден.';
+$_lang['shoplogistic_vendorbrands_err_ns'] = 'Бренд не указан.';
+$_lang['shoplogistic_vendorbrands_err_remove'] = 'Ошибка при удалении бренда.';
+$_lang['shoplogistic_vendorbrands_err_save'] = 'Ошибка при сохранении бренда.';
+
+$_lang['shoplogistic_matrixs'] = 'Матрицы';
+$_lang['shoplogistic_matrix'] = 'Матрица';
+$_lang['shoplogistic_matrix_products'] = 'Товары';
+$_lang['shoplogistic_matrix_id'] = 'ID';
+$_lang['shoplogistic_matrix_name'] = 'Наименование';
+$_lang['shoplogistic_matrix_percent'] = 'Целевое значение представленности, %';
+$_lang['shoplogistic_matrix_date_from'] = 'Дата начала действия';
+$_lang['shoplogistic_matrix_date_to'] = 'Дата окончания действия';
+$_lang['shoplogistic_matrix_createdon'] = 'Создана';
+$_lang['shoplogistic_matrix_updatedon'] = 'Отредактирована';
+$_lang['shoplogistic_matrix_store'] = 'Производитель';
+$_lang['shoplogistic_matrix_product'] = 'Товар';
+$_lang['shoplogistic_matrix_count'] = 'Кол-во';
+$_lang['shoplogistic_matrix_days'] = 'Дней';
+$_lang['shoplogistic_matrix_matrix'] = 'Матрица';
+$_lang['shoplogistic_matrix_properties'] = 'Свойства';
+$_lang['shoplogistic_matrix_description'] = 'Описание';
+
+$_lang['shoplogistic_matrix_product_create'] = 'Создать товар';
+$_lang['shoplogistic_matrix_product_update'] = 'Изменить товар';
+$_lang['shoplogistic_matrix_product_remove'] = 'Удалить товар';
+$_lang['shoplogistic_matrix_product_remove_confirm'] = 'Вы уверены, что хотите удалить эти товары?';
+
+$_lang['shoplogistic_matrix_product_err_matrix_id'] = 'Вы должны указать матрицу.';
+$_lang['shoplogistic_matrix_product_err_product_id'] = 'Вы должны указать товар.';
+$_lang['shoplogistic_matrix_product_err_ae'] = 'Товар уже существует.';
+$_lang['shoplogistic_matrix_product_err_nf'] = 'Товар не найден.';
+$_lang['shoplogistic_matrix_product_err_ns'] = 'Товар не указан.';
+$_lang['shoplogistic_matrix_product_err_remove'] = 'Ошибка при удалении товара.';
+$_lang['shoplogistic_matrix_product_err_save'] = 'Ошибка при сохранении товара.';
+
+$_lang['shoplogistic_matrix_create'] = 'Создать матрицу';
+$_lang['shoplogistic_matrix_update'] = 'Изменить матрицу';
+$_lang['shoplogistic_matrix_remove'] = 'Удалить матрицу';
+$_lang['shoplogistic_matrix_remove_confirm'] = 'Вы уверены, что хотите удалить эти матрицы?';
+
+$_lang['shoplogistic_matrix_err_store_id'] = 'Вы должны указать производителя.';
+$_lang['shoplogistic_matrix_err_vendor_id'] = 'Вы должны указать бренд.';
+$_lang['shoplogistic_matrix_err_ae'] = 'Матрица уже существует.';
+$_lang['shoplogistic_matrix_err_nf'] = 'Матрица не найден.';
+$_lang['shoplogistic_matrix_err_ns'] = 'Матрица не указан.';
+$_lang['shoplogistic_matrix_err_remove'] = 'Ошибка при удалении матрицы.';
+$_lang['shoplogistic_matrix_err_save'] = 'Ошибка при сохранении матрицы.';
 
 $_lang['shoplogistic_warehouses'] = 'Склады';
 $_lang['shoplogistic_warehouse_id'] = 'ID';
@@ -269,8 +340,10 @@ $_lang['shoplogistic_resource_domain_ae'] = 'Нельзя добавлять 2 �
 $_lang['shoplogistic_storeremains'] = 'Остатки магазина';
 $_lang['shoplogistic_storeremains_id'] = 'ID';
 $_lang['shoplogistic_storeremains_guid'] = 'GUID 1С';
+$_lang['shoplogistic_storeremains_base_guid'] = 'GUID Базы 1С';
 $_lang['shoplogistic_storeremains_catalog'] = 'Каталог 1С';
 $_lang['shoplogistic_storeremains_article'] = 'Артикул 1С';
+$_lang['shoplogistic_storeremains_barcode'] = 'Штрихкод 1С';
 $_lang['shoplogistic_storeremains_product_name'] = 'Наименование товара';
 $_lang['shoplogistic_storeremains_product_id'] = 'ID товара';
 $_lang['shoplogistic_storeremains_product_article'] = 'Артикул';
@@ -438,6 +511,8 @@ $_lang['shoplogistic_crm_deal_stage_sort'] = 'Сортировка';
 $_lang['shoplogistic_crm_deal_stage_properties'] = 'Параметры';
 $_lang['shoplogistic_crm_deal_stage_description'] = 'Описание';
 $_lang['shoplogistic_crm_deal_stage_active'] = 'Активно';
+$_lang['shoplogistic_crm_deal_stage_pay'] = 'Выплатить средства магазину';
+$_lang['shoplogistic_crm_deal_stage_to_tk'] = 'Отправить заявку в ТК';
 $_lang["shoplogistic_crm_deal_stage_stores_available"] = "Доступен для магазинов";
 $_lang["shoplogistic_crm_deal_stage_warehouses_available"] = "Доступен для складов";
 
@@ -487,6 +562,7 @@ $_lang['shoplogistic_docs'] = "Документы";
 $_lang['shoplogistic_stores_docs_id'] = "ID";
 $_lang['shoplogistic_stores_docs_store_id'] = "Магазин";
 $_lang['shoplogistic_stores_docs_guid'] = "GUID";
+$_lang['shoplogistic_stores_docs_base_guid'] = 'GUID Базы 1С';
 $_lang['shoplogistic_stores_docs_createdon'] = "Дата создания";
 $_lang['shoplogistic_stores_docs_doc_number'] = "Номер документа";
 $_lang['shoplogistic_stores_docs_description'] = "Описание";

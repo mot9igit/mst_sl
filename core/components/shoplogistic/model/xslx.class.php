@@ -3,6 +3,11 @@
 require_once dirname(__FILE__) . '/../libs/vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Reader\IReader;
+use PhpOffice\PhpSpreadsheet\Writer\IWriter;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class slXSLX{
@@ -294,4 +299,161 @@ class slXSLX{
 		$writer->save($file_path);
 		return $file;
 	}
+
+    public function generateReportFile($report_id){
+        $report = $this->modx->getObject('slReports', $report_id);
+        if($report){
+            if($report->get("type") == 4){
+                if($file = $this->generateWeekSalesFile($report_id)){
+                    $report->set("file", $file);
+                    $report->save();
+                }
+            }
+        }
+    }
+
+    public function generateWeekSalesFile($report_id){
+        // нужно взять данные
+        $output = array();
+        $report = $this->modx->getObject("slReports", $report_id);
+        if($report) {
+            $report_data = $report->toArray();
+            if (isset($report_data['properties']['matrix'])) {
+                $subq = $this->modx->newQuery("slStoresMatrixProducts");
+                $subq->leftJoin('slStoresMatrix', 'slStoresMatrix', 'slStoresMatrix.id = slStoresMatrixProducts.matrix_id');
+                $subq->leftJoin('msProductData', 'msProductData', 'msProductData.id = slStoresMatrixProducts.product_id');
+                $subq->leftJoin('modResource', 'modResource', 'modResource.id = slStoresMatrixProducts.product_id');
+                $subq->where(array("matrix_id:=" => $report_data['properties']['matrix']));
+                $subq->select(array("modResource.pagetitle as name, msProductData.*"));
+                if ($subq->prepare() && $subq->stmt->execute()) {
+                    $prods = $subq->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach($prods as $prod){
+                        $output['products'][$prod['id']] = $prod;
+                    }
+                }
+                $output['products']['all'] = array(
+                    "name" => "Итого",
+                    "product_id" => "all",
+                    "vendor_article" => "",
+                    "id" => "all",
+                );
+            }
+            $query = $this->modx->newQuery("slReportsWeeks");
+            $query->where(array("report_id" => $report_id));
+            $query->select(array("slReportsWeeks.*"));
+            if ($query->prepare() && $query->stmt->execute()) {
+                $weeks = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($weeks as $key => $week) {
+                    $query = $this->modx->newQuery("slReportsWeekSales");
+                    $query->where(array("week_id:=" => $week['id']));
+                    $query->select(array("slReportsWeekSales.*"));
+                    if ($query->prepare() && $query->stmt->execute()) {
+                        $sales = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $stores = array();
+                        $general = array(
+                            'all' => 0
+                        );
+                        // суммарно по номенклатурно
+                        foreach($output['products'] as $product){
+                            $general['sales'][] = array(
+                                "product_id" => $product['id'],
+                                "sales" => 0
+                            );
+                        }
+                        foreach ($sales as $sale) {
+                            $stores[] = $sale['store_id'];
+                            foreach($general['sales'] as $kk => $val){
+                                if($val['product_id'] == $sale['product_id']){
+                                    $general['sales'][$kk]['sales'] += $sale['sales'];
+                                }
+                            }
+                            $general['all'] += $sale['sales'];
+                        }
+                        $weeks[$key]['general'] = $general;
+                        $stores = array_unique($stores);
+                        $query = $this->modx->newQuery("slStores");
+                        $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+                        $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
+                        $query->select(array("slStores.id,slStores.name,slStores.address,dartLocationCity.city as city_name,dartLocationRegion.name as region_name"));
+                        $query->where(array("slStores.id:IN" => $stores));
+                        if ($query->prepare() && $query->stmt->execute()) {
+                            $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($stores as $k => $store) {
+                                $str = array(
+                                    "product_id" => "all",
+                                    "sales" => 0
+                                );
+                                foreach ($sales as $sale) {
+                                    if ($store['id'] == $sale['store_id']) {
+                                        $stores[$k]['sales'][] = $sale;
+                                        $str['sales'] += $sale['sales'];
+                                    }
+                                }
+                                $stores[$k]['sales'][] = $str;
+                            }
+                        }
+                        $weeks[$key]['sales'] = $stores;
+                    }
+                    $output['weeks'] = $weeks;
+                }
+                // генерируем документ
+                $spreadsheet = new Spreadsheet();
+                $activeWorksheet = $spreadsheet->getActiveSheet();
+                // заполняем товары
+                $product_coords = array();
+                $line = 3;
+                $activeWorksheet->mergeCells('A1:B1');
+                $activeWorksheet->setCellValue('A1', "Номенклатура");
+                $activeWorksheet->setCellValue('A2', "Артикул");
+                $activeWorksheet->setCellValue('B2', "Наименование");
+                foreach($output['products'] as $product){
+                    $activeWorksheet->setCellValue('A'.$line, $product['vendor_article']);
+                    $activeWorksheet->setCellValue('B'.$line, $product['name']);
+                    $product_coords[$product['id']] = $line;
+                    $line++;
+                }
+                // mergeCellsByColumnAndRow($pColumn1 = 0, $pRow1 = 1, $pColumn2 = 0, $pRow2 = 1)
+                $coloumn = 3;
+                $row = 1;
+                foreach($output['weeks'] as $week){
+                    $date_from = date("d.m.Y", strtotime($week['date_from']));
+                    $date_to = date("d.m.Y", strtotime($week['date_to']));
+                    $coloumns = count($week['sales']);
+                    $last_c = $coloumn + $coloumns - 1;
+                    $last_c++;
+                    $activeWorksheet->mergeCellsByColumnAndRow($coloumn, $row, $last_c, $row);
+                    $activeWorksheet->setCellValueByColumnAndRow($coloumn, $row, $date_from.' - '.$date_to);
+                    for ($i = $coloumn + 1; $i <= $last_c; $i++) {
+                        $activeWorksheet->getColumnDimensionByColumn($i)->setOutlineLevel(1)->setVisible(false)->setCollapsed(true);
+                    }
+                    $r = $row + 1;
+                    $c = $coloumn;
+                    $activeWorksheet->setCellValueByColumnAndRow($c, $r, "Итого");
+                    foreach($week['general']['sales'] as $gs){
+                        $product_line = $product_coords[$gs['product_id']];
+                        $activeWorksheet->setCellValueByColumnAndRow($c, $product_line, $gs['sales']);
+                    }
+                    $product_line = $product_coords['all'];
+                    $activeWorksheet->setCellValueByColumnAndRow($c, $product_line, $week['general']['all']);
+                    $c++;
+                    foreach($week['sales'] as $sale){
+                        $activeWorksheet->setCellValueByColumnAndRow($c, $r, $sale['name']);
+                        foreach($sale['sales'] as $s){
+                            $product_line = $product_coords[$s['product_id']];
+                            $activeWorksheet->setCellValueByColumnAndRow($c, $product_line, $s['sales']);
+                        }
+                        $c++;
+                    }
+                    $coloumn += $coloumns + 1;
+                }
+                $writer = new Xlsx($spreadsheet);
+                $path = "assets/files/organization/{$report_data['store_id']}/reports/sales/";
+                if (!file_exists( $this->modx->getOption('base_path').$path)) {
+                    mkdir($this->modx->getOption('base_path').$path, 0777, true);
+                }
+                $writer->save($this->modx->getOption('base_path').$path."weeksales_{$report_data['id']}.xlsx");
+                return $path."weeksales_{$report_data['id']}.xlsx";
+            }
+        }
+    }
 }

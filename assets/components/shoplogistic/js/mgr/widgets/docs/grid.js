@@ -36,7 +36,7 @@ Ext.extend(shopLogistic.grid.StoresDocs, shopLogistic.grid.Default, {
             },
             {
                 header: _('shoplogistic_stores_docs_createdon'),
-                dataIndex: 'createdon',
+                dataIndex: 'date',
                 sortable: true,
                 width: 100,
             },

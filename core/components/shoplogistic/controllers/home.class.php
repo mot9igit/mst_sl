@@ -60,6 +60,11 @@ class shopLogisticHomeManagerController extends modExtraManagerController
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.window.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/vendors.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/brands.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/brands.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/matrix.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/matrix.windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores.windows.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeusers.grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeusers.windows.js?v='.$this->shopLogistic->config['version']);

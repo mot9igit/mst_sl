@@ -117,6 +117,11 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
 
     getColumns: function () {
         return [{
+            header: _('shoplogistic_storeremains_guid'),
+            dataIndex: 'guid',
+            sortable: true,
+            width: 200
+        },{
             header: _('shoplogistic_storeremains_product_article'),
             dataIndex: 'article',
             sortable: true,

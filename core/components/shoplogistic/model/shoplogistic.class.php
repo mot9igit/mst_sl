@@ -147,6 +147,22 @@ class shopLogistic
 			require_once dirname(__FILE__) . '/api.class.php';
 			$this->api = new minishop2_fast_api($this->modx, array());
 		}
+        if (!class_exists('SphinxClient')) {
+            require_once dirname(__FILE__) . '/sphinx.class.php';
+            $this->sphinx = new SphinxClient();
+        }
+        if (!class_exists('objectsHandler')) {
+            require_once dirname(__FILE__) . '/objects.class.php';
+            $this->objects = new objectsHandler($this, $this->modx);
+        }
+        if (!class_exists('reportsHandler')) {
+            require_once dirname(__FILE__) . '/reports.class.php';
+            $this->reports = new reportsHandler($this, $this->modx);
+        }
+        if (!class_exists('productHandler')) {
+            require_once dirname(__FILE__) . '/product.class.php';
+            $this->product = new productHandler($this, $this->modx);
+        }
 		if (!class_exists('cartDifficultHandler')) {
 			require_once dirname(__FILE__) . '/carthandler.class.php';
 			$this->cart = new cartDifficultHandler($this, $this->modx);
@@ -155,6 +171,10 @@ class shopLogistic
 			require_once dirname(__FILE__) . '/b24.class.php';
 			$this->b24 = new b24Handler($this, $this->modx);
 		}
+        if (!class_exists('slSearch')) {
+            require_once dirname(__FILE__) . '/search.class.php';
+            $this->search = new slSearch($this, $this->modx);
+        }
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
 			$this->ms2 = $this->modx->getService('miniShop2');
@@ -367,9 +387,120 @@ class shopLogistic
 			case 'map/build_stores':
 				$response = $this->buildStoresMap($data);
 				break;
+            case 'search/get_preresults':
+                $response = $this->getPreresult($data);
+                break;
 		}
 		return $response;
 	}
+
+    public function num_word($value, $words, $show = true)
+    {
+        $num = $value % 100;
+        if ($num > 19) {
+            $num = $num % 10;
+        }
+
+        $out = ($show) ?  $value . ' ' : '';
+        switch ($num) {
+            case 1:  $out .= $words[0]; break;
+            case 2:
+            case 3:
+            case 4:  $out .= $words[1]; break;
+            default: $out .= $words[2]; break;
+        }
+
+        return $out;
+    }
+
+    public function getPreresult($data, $html = 1){
+        $this->loadServices();
+        $output = array();
+        $output['categories'] = $this->getResults($data['search'], 'msCategory', 5, 0);
+        $output['products'] = $this->getResults($data['search']);
+        if(count($output['categories']) < 2){
+            foreach($output['products'] as $product){
+                $obj = $this->modx->getObject("modResource", $product);
+                if($obj){
+                    $output['categories'][] = $obj->get("parent");
+                }
+            }
+        }
+        $output['categories'] = array_unique($output['categories']);
+        $output['requests'] = $this->getRequests($data['search']);
+        $output['search'] = $data['search'];
+        $pdo = $this->modx->getService('pdoFetch');
+        $chunk = "@FILE chunks/search_pre_results.tpl";
+        if($html){
+            $out = $pdo->getChunk($chunk, $output);
+            return $this->success("", array("data" => $out));
+        }else{
+            return $output;
+        }
+    }
+
+    public function getRequests($search){
+        $query = $this->modx->newQuery('slSearchHistory');
+        $query->select('slSearchHistory.*');
+        $query->where(array(
+            "request:LIKE" => '%'.$search.'%'
+        ));
+        $query->sortby('slSearchHistory.num', 'DESC');
+        $query->limit(5);
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $result;
+        }
+        return false;
+    }
+
+    public function getResults($string, $type = 'msProduct', $limit = 12, $offset = 0){
+        if (!class_exists('SphinxClient')) {
+            require_once dirname(__FILE__) . '/sphinx.class.php';
+        }
+        $sphinx = new SphinxClient();
+        $sphinx->SetServer('localhost', 9312);
+        $sphinx->SetMatchMode(SPH_MATCH_ALL);
+        $sphinx->SetSortMode(SPH_SORT_EXTENDED, "@relevance DESC, source_id ASC");
+        $sphinx->SetFieldWeights(array('vendor_article' => 20, 'pagetitle' => 10));
+        $sphinx->SetFilterString('class_key', $type);
+        if($type == 'class_key'){
+            $sphinx->SetFilter('available', array(1));
+        }
+        $sphinx->SetLimits($offset, $limit, 1000);
+        $result = $sphinx->Query($string, 'mst_tools');
+        if ($result && isset($result['matches'])){
+            $res = array();
+            foreach($result['matches'] as $key => $val){
+                $res[] = $key;
+            }
+            return $res;
+        }else{
+            return false;
+        }
+    }
+
+    public function getBigResults($string, $type = 'msProduct', $limit = 12, $offset = 0){
+        if (!class_exists('SphinxClient')) {
+            require_once dirname(__FILE__) . '/sphinx.class.php';
+        }
+        $sphinx = new SphinxClient();
+        $sphinx->SetServer('localhost', 9312);
+        $sphinx->SetMatchMode(SPH_MATCH_ALL);
+        $sphinx->SetSortMode(SPH_SORT_EXTENDED, "@relevance DESC, source_id ASC");
+        $sphinx->SetFieldWeights(array('vendor_article' => 20, 'pagetitle' => 10));
+        $sphinx->SetFilterString('class_key', $type);
+        if($type == 'class_key'){
+            $sphinx->SetFilter('available', array(1));
+        }
+        $sphinx->SetLimits($offset, $limit, 1000);
+        $result = $sphinx->Query($string, 'mst_tools');
+        if ($result && isset($result['matches'])){
+            return $result;
+        }else{
+            return false;
+        }
+    }
 
 	public function getObject($id, $type = 'slStores'){
 		$output = array();
@@ -1369,6 +1500,10 @@ class shopLogistic
 		);
 	}
 
+    // telegram alert
+    public function sendAlert($message = '', $data = array()){
+        return true;
+    }
 
 	/**
 	 * This method returns an error of the order

@@ -1,3 +1,133 @@
+var dart_search = {
+    options: {
+        input: '.dart_header_search-block input',
+        inputAlt: '.search-block input',
+        form: '.dart-search__form',
+        formInput: '.dart-search__form input',
+        search: '.dart-search',
+        activeClass: 'active',
+        overlay: '.dart-search__overlay',
+        dialog: '.dart-search__dialog',
+        clear: '.dart-search__clear',
+        timerId: null
+    },
+    initialize: function(){
+        const searchField = document.querySelector(this.options.input)
+        searchField.addEventListener( 'focusin', (e) => {
+            const body = document.querySelector('body')
+            const formInput = document.querySelector(this.options.formInput)
+            var elementOffset = e.target.getBoundingClientRect().top;
+            var availableHeight = window.innerHeight
+            const field = document.querySelector(this.options.search)
+            field.classList.add(this.options.activeClass)
+            if(elementOffset > 0){
+                field.style.paddingTop = elementOffset + 'px'
+            }else{
+                field.style.paddingTop = 0
+            }
+            this.getHeight(availableHeight)
+            body.classList.add('noscroll')
+            formInput.focus()
+        })
+        const searchFieldAlt = document.querySelector(this.options.inputAlt)
+        searchFieldAlt.addEventListener( 'focusin', (e) => {
+            const body = document.querySelector('body')
+            const formInput = document.querySelector(this.options.formInput)
+            var elementOffset = e.target.getBoundingClientRect().top;
+            var availableHeight = window.innerHeight
+            const field = document.querySelector(this.options.search)
+            field.classList.add(this.options.activeClass)
+            if(elementOffset > 0){
+                field.style.paddingTop = elementOffset + 'px'
+            }else{
+                field.style.paddingTop = 0
+            }
+            this.getHeight(availableHeight)
+            body.classList.add('noscroll')
+            formInput.focus()
+        })
+        const overlay = document.querySelector(this.options.overlay)
+        overlay.addEventListener( 'click', (e) => {
+            const body = document.querySelector('body')
+            const field = document.querySelector(this.options.search)
+            field.classList.remove(this.options.activeClass)
+            body.classList.remove('noscroll')
+        })
+        const clear = document.querySelector(this.options.clear)
+        clear.addEventListener( 'click', (e) => {
+            e.preventDefault();
+            const body = document.querySelector('body')
+            const searchField = document.querySelector(this.options.formInput)
+            searchField.value = ""
+            const field = document.querySelector(this.options.input)
+            field.value = ""
+            const search = document.querySelector(this.options.search)
+            search.classList.remove(this.options.activeClass)
+            body.classList.remove('noscroll')
+        })
+        // handle input
+        const formInput = document.querySelector(this.options.formInput)
+        formInput.addEventListener('input', function(e) {
+            const search = document.querySelector('.dart-search__results')
+            search.classList.remove(dart_search.options.activeClass)
+            if(e.target.value.length > 3){
+                let inputValue = e.target.value.trim();
+                let lastTime = performance.now();
+                if (dart_search.options.timerId) {
+                    clearTimeout(dart_search.options.timerId);
+                }
+                dart_search.options.timerId = setTimeout(function() {
+                    var timer = performance.now() - lastTime;
+                    console.log(timer)
+                    if (timer > 1000 && inputValue) {
+                        var data = {
+                            sl_action: 'search/get_preresults',
+                            search: inputValue
+                        }
+                        dart_search.send(data);
+                    }
+                }, 1000);
+            }
+        })
+        window.addEventListener( 'resize', (e) => {
+            var availableHeight = window.innerHeight
+            this.getHeight(availableHeight)
+        })
+    },
+    getHeight: function(availableHeight){
+        const dialog = document.querySelector(this.options.dialog)
+        const height = availableHeight * 0.7
+        if(availableHeight < 1000){
+            dialog.style.maxHeight = height + 'px'
+        }
+    },
+    send: function(data){
+        const form = document.querySelector(dart_search.options.form)
+        form.classList.add('loading')
+        var response = '';
+        $.ajax({
+            type: "POST",
+            url: shoplogisticConfig['actionUrl'],
+            dataType: 'json',
+            data: data,
+            success:  function(data_r) {
+                if(data_r.hasOwnProperty('data')){
+                    const container = document.querySelector('.dart-search__results')
+                    container.innerHTML = data_r.data.data
+                    container.classList.add('active')
+                }
+                form.classList.remove('loading')
+            }
+        });
+    },
+}
+
+
+document.addEventListener("DOMContentLoaded", function(event) {
+    dart_search.initialize();
+});
+
+
 var sl_delivery = {
     options: {
         wrapper: '.sl_order',
@@ -652,7 +782,7 @@ $(document).ready(function(){
 		if(d == shoplogisticConfig['curier_delivery']){
 			var required = ['address', 'index','region','city','street','building'];
 			required.forEach((element) => {
-				var val = $('#msOrder #'+element).val();
+				var val = $('#msOrder #order_'+element).val();
 				if(val == ''){
 					errors['address'] = 'Укажите адрес полностью, включая квартиру, если это необходимо.';
 				}
@@ -688,10 +818,11 @@ $(document).ready(function(){
 					$('.'+key).prepend(error_string);
 				}else{
 					var error_string = "<span class='error-desc'>"+value+"</span>";
-					$('#'+key).closest('.form_input_group').addClass('error').append(error_string);
+					$('#order_'+key).closest('.form_input_group').addClass('error').append(error_string);
 				}
 			}
-			$('.summary_title_block').append("<div class='sl-alert sl-alert-error'>Проверьте форму на наличие ошибок.</div>")
+            $('.summary-block__title').find('.alert').remove();
+			$('.summary-block__title').append("<div class='alert alert-danger'>Проверьте форму на наличие ошибок.</div>")
 		}else{
 			$('body').addClass("sl_noscroll");  
 			$('body').addClass('loading');

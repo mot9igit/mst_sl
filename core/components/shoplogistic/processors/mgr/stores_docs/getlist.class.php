@@ -36,6 +36,7 @@ class slStoreDocsGetListProcessor extends modObjectGetListProcessor
 		if ($query) {
 			$c->where([
 				'guid:LIKE' => "%{$query}%",
+                'OR:doc_number:LIKE' => "%{$query}%",
 				'OR:description:LIKE' => "%{$query}%",
 			]);
 		}

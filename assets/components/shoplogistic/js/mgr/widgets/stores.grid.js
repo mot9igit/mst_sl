@@ -10,7 +10,8 @@ shopLogistic.grid.Stores = function (config) {
         tbar: this.getTopBar(config),
         sm: new Ext.grid.CheckboxSelectionModel(),
         baseParams: {
-            action: 'mgr/store/getlist'
+            action: 'mgr/store/getlist',
+            type: config.type
         },
         listeners: {
             rowDblClick: function (grid, rowIndex, e) {
@@ -34,6 +35,7 @@ shopLogistic.grid.Stores = function (config) {
         remoteSort: true,
         autoHeight: true,
     });
+
     shopLogistic.grid.Stores.superclass.constructor.call(this, config);
 
     // Clear selection on grid refresh
@@ -59,6 +61,7 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
         var w = MODx.load({
             xtype: 'shoplogistic-store-window-create',
             id: Ext.id(),
+            type: this.config.baseParams.type,
             listeners: {
                 success: {
                     fn: function () {
@@ -69,6 +72,7 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
         });
         w.reset();
         w.setValues({active: true});
+        w.setValues({type: this.config.baseParams.type});
         w.show(e.target);
     },
 
@@ -94,6 +98,7 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
                             xtype: 'shoplogistic-store-window-update',
                             id: Ext.id(),
                             record: r,
+                            type: r.object.type,
                             listeners: {
                                 success: {
                                     fn: function () {
@@ -182,54 +187,89 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'apikey', 'company_type', 'ur_name', 'inn', 'bank_number', 'bank_knumber', 'bank_bik', 'bank_name', 'unique_id', 'address' , 'ur_address', 'city', 'description', 'active', 'actions'];
+        return [
+            'id',
+            'type',
+            'name',
+            'apikey',
+            'company_type',
+            'ur_name',
+            'inn',
+            'bank_number',
+            'bank_knumber',
+            'bank_bik',
+            'bank_name',
+            'unique_id',
+            'address' ,
+            'ur_address',
+            'city',
+            'description',
+            'active',
+            'actions'
+        ];
     },
 
-    getColumns: function () {
-        return [{
-            header: _('shoplogistic_store_id'),
-            dataIndex: 'id',
-            sortable: true,
-            width: 70
-        }, {
-            header: _('shoplogistic_store_name'),
-            dataIndex: 'name',
-            sortable: true,
-            width: 200,
-        }, {
-            header: _('shoplogistic_store_apikey'),
-            dataIndex: 'apikey',
-            sortable: true,
-            width: 200,
-        }, {
-            header: _('shoplogistic_store_city'),
-            dataIndex: 'city',
-            sortable: true,
-            width: 200,
-        }, {
-            header: _('shoplogistic_store_description'),
-            dataIndex: 'description',
-            sortable: false,
-            width: 250,
-        }, {
-            header: _('shoplogistic_store_active'),
-            dataIndex: 'active',
-            renderer: shopLogistic.utils.renderBoolean,
-            sortable: true,
-            width: 100,
-        }, {
+    getColumns: function (config) {
+        var fields = [
+            'id',
+            'name',
+            'apikey',
+            'city',
+            'description'
+        ];
+        var checks = [];
+        console.log(config.type)
+        if(config.type === 1){
+            // fields.push('elem1', 'elem2')
+        }
+        if(config.type === 2){
+            // fields.push('elem1', 'elem2')
+            checks.push('delivery_tk');
+        }
+        if(config.type === 3){
+
+        }
+        var ff = [];
+        fields.forEach(element => {
+            ff.push({
+                header: _('shoplogistic_store_' + element),
+                dataIndex: element,
+                sortable: true,
+                width: 70
+            });
+        });
+        checks.forEach(element => {
+            ff.push({
+                header: _('shoplogistic_store_' + element),
+                dataIndex: element,
+                renderer: shopLogistic.utils.renderBoolean,
+                sortable: true,
+                width: 100
+            });
+        });
+        ff.push({
             header: _('shoplogistic_grid_actions'),
             dataIndex: 'actions',
             renderer: shopLogistic.utils.renderActions,
             sortable: false,
             width: 100,
             id: 'actions'
-        }];
+        });
+        return ff;
     },
 
-    getTopBar: function () {
+    getTopBar: function (config) {
+        if(config.type == 1){
+            var anchor = _('shoplogistic_store_create');
+        }
+        if(config.type == 2){
+            var anchor = _('shoplogistic_warehouse_create');
+        }
+        if(config.type == 3){
+            var anchor = _('shoplogistic_vendor_create');
+        }
         return [{
-            text: '<i class="icon icon-plus"></i>&nbsp;' + _('shoplogistic_store_create'),
+            text: '<i class="icon icon-plus"></i>&nbsp;' + anchor,
             handler: this.createStore,
             scope: this
         }, '->', {

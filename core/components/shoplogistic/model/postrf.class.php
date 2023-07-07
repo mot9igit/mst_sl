@@ -73,12 +73,14 @@ class postrf{
 	 * @return array
 	 */
 
-	public function getPrice($to, $from, $products = array()){
+	public function getPrice($to, $from, $products = array(), $scache = 1){
 		// кеш
 		$cache_id = md5($from.' '.$to.' '.json_encode($products));
 		$cache = $this->modx->getCacheManager();
 		$cache_options = array( xPDO::OPT_CACHE_KEY => 'default/delivery/postrf/' );
-		if($out = $cache->get($cache_id, $cache_options)) {
+        if($out = $cache->get($cache_id, $cache_options) && $scache) {
+            //$this->modx->log(1, print_r($out, 1));
+            //$this->modx->log(1, print_r($scache, 1));
 			return $out;
 		}else{
 			$out = array(
@@ -101,18 +103,19 @@ class postrf{
 				'delivery' => ''
 			);
 			$products = $this->prepareProducts($products);
+            //$this->modx->log(1, print_r($products, 1));
 			foreach ($products as $product) {
 				if($product['weight'] > 10){
 					if($product['weight'] < 20){
 						// Посылка (до отделения)
 						// EMS PT (курьер)
 						$tariffs = array(
-							'terminal' => 27020,
-							'door' => 24020
+							'terminal' => 23020,
+							'door' => 41020
 						);
 					}else{
 						$tariffs = array(
-							'terminal' => 41020,
+							'terminal' => 23020,
 							'door' => 41020
 						);
 					}
@@ -125,17 +128,24 @@ class postrf{
 				}
 				$this->modx->log(1, print_r($tariffs, 1));
 				foreach($tariffs as $key => $tarif) {
+                    // TODO: сделать заплатку для упаковки
 					$params = array(
 						'object' => $tarif,
 						'from' => $from,
 						'to' => $to,
+                        'pack' => 21,
 						'weight' => $product['weight'] * 1000,
 						'sumoc' => $product['price'] * 100,
 						'countinpack' => count($product['places'])
 					);
+                    $this->modx->log(1, print_r($params, 1));
 					$prf_data = $this->post_request($params);
 					// $out['product'] = $product;
-					$this->modx->log(1, print_r($params, 1));
+                    // TODO: сделать заплатку для курьера
+                    if($prf_data['errors']){
+                        $out['debug'][] = $prf_data['errors'];
+                    }
+					//$this->modx->log(1, print_r($params, 1));
 					$this->modx->log(1, print_r($prf_data, 1));
 					if (!empty($prf_data['paymoneynds'])) {
 						$all[$key]['price'] = $all[$key]['price'] + ($prf_data['paymoneynds'] * $product['count']);

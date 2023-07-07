@@ -33,10 +33,15 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
         }]
     },
     getFormFields: function (config) {
-        return [{
+        // console.log(config)
+        var default_fields = [{
             xtype: 'hidden',
             name: 'id',
             id: config.id + '-id'
+        },{
+            xtype: 'hidden',
+            name: 'type',
+            id: config.id + '-type'
         }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_store_name'),
@@ -98,7 +103,7 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                     }
                 }],
             }
-        ]},{
+            ]},{
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_store_apikey'),
             emptyText: _('shoplogistic_apikey_placeholder'),
@@ -120,6 +125,12 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
             name: 'active',
             id: config.id + '-active',
             checked: true,
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_store_integration'),
+            name: 'integration',
+            id: config.id + '-integration',
+            checked: false,
         },{
             layout: 'column',
             items: [{
@@ -307,6 +318,16 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
             height: 150,
             anchor: '99%'
         }];
+        if(config.type == 2){
+            default_fields.push({
+                xtype: 'xcheckbox',
+                boxLabel: _('shoplogistic_warehouse_delivery_tk'),
+                name: 'delivery_tk',
+                id: config.id + '-delivery_tk',
+                checked: true,
+            })
+        }
+        return default_fields
     },
 });
 Ext.reg('shoplogistic-store-window-create', shopLogistic.window.CreateStore);
@@ -327,19 +348,28 @@ shopLogistic.window.UpdateStore = function (config) {
 Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
 
     getFields: function (config) {
-        return [{
-            xtype: 'modx-tabs',
+        if(config.type == 1){
+            var title = _('shoplogistic_store_update');
+        }
+        if(config.type == 2){
+            var title = _('shoplogistic_warehouse_update');
+        }
+        if(config.type == 3){
+            var title = _('shoplogistic_vendor_update');
+        }
+        var default_tabs = [{
+            title: title,
+            layout: 'form',
+            items: shopLogistic.window.CreateStore.prototype.getFormFields.call(this, config),
+        }, {
+            title: _('shoplogistic_storeusers'),
             items: [{
-                title: _('shoplogistic_store_update'),
-                layout: 'form',
-                items: shopLogistic.window.CreateStore.prototype.getFormFields.call(this, config),
-            }, {
-                title: _('shoplogistic_storeusers'),
-                items: [{
-                    xtype: 'shoplogistic-grid-storeusers',
-                    record: config.record,
-                }]
-            }, {
+                xtype: 'shoplogistic-grid-storeusers',
+                record: config.record,
+            }]
+        }];
+        if(config.type == 1){
+            default_tabs.push({
                 title: _('shoplogistic_storeremains'),
                 items: [{
                     xtype: 'shoplogistic-grid-storeremains',
@@ -363,7 +393,59 @@ Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
                     xtype: 'shoplogistic-grid-stores-docs',
                     record: config.record,
                 }]
-            }]
+            })
+        }
+        if(config.type == 2){
+            default_tabs.push({
+                title: _('shoplogistic_storeremains'),
+                items: [{
+                    xtype: 'shoplogistic-grid-storeremains',
+                    record: config.record,
+                }]
+            }, {
+                title: _('shoplogistic_warehousestores'),
+                items: [{
+                    xtype: 'shoplogistic-grid-warehousestores',
+                    record: config.record,
+                }]
+            }, {
+                title: _('shoplogistic_storebalance'),
+                items: [{
+                    xtype: 'shoplogistic-grid-storebalance',
+                    record: config.record,
+                }]
+            }, {
+                title: _('shoplogistic_storeregistry'),
+                items: [{
+                    xtype: 'shoplogistic-grid-storeregistry',
+                    record: config.record,
+                }]
+            }, {
+                title: _('shoplogistic_docs'),
+                items: [{
+                    xtype: 'shoplogistic-grid-stores-docs',
+                    record: config.record,
+                }]
+            })
+        }
+        if(config.type == 3){
+            default_tabs.push({
+                title: _('shoplogistic_vendorbrands'),
+                items: [{
+                    xtype: 'shoplogistic-grid-vendorbrands',
+                    record: config.record,
+                }]
+            },{
+                title: _('shoplogistic_matrixs'),
+                items: [{
+                    xtype: 'shoplogistic-grid-matrix',
+                    record: config.record,
+                }]
+            });
+        }
+        return [{
+            xtype: 'modx-tabs',
+            items: default_tabs
         }];
     }
 

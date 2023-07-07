@@ -276,6 +276,62 @@ Ext.extend(shopLogistic.combo.Search, Ext.form.TwinTriggerField, {
 Ext.reg('shoplogistic-combo-search', shopLogistic.combo.Search);
 Ext.reg('shoplogistic-field-search', shopLogistic.combo.Search);
 
+shopLogistic.combo.Vendor = function (config) {
+    config = config || {};
+
+    Ext.applyIf(config, {
+        name: config.name || 'vendor',
+        fieldLabel: _('shoplogistic_' + config.name || 'vendor'),
+        hiddenName: config.name || 'vendor',
+        displayField: 'name',
+        valueField: 'id',
+        anchor: '99%',
+        fields: ['name', 'id'],
+        pageSize: 20,
+        url: shopLogistic.config['connector_url'],
+        typeAhead: true,
+        editable: true,
+        allowBlank: true,
+        emptyText: _('no'),
+        minChars: 1,
+        forceSelection: false,
+        baseParams: {
+            action: 'mgr/system/vendor/getlist',
+            combo: true,
+            id: config.value,
+        }
+    });
+    shopLogistic.combo.Vendor.superclass.constructor.call(this, config);
+    this.on('expand', function () {
+        if (!!this.pageTb) {
+            this.pageTb.show();
+        }
+    });
+};
+Ext.extend(shopLogistic.combo.Vendor, shopLogistic.combo.ComboBoxDefault);
+Ext.reg('shoplogistic-combo-vendor', shopLogistic.combo.Vendor);
+
+shopLogistic.combo.store_type = function(config) {
+    config = config || {};
+    Ext.applyIf(config,{
+        store: new Ext.data.ArrayStore({
+            id: 0
+            ,fields: ['type', 'display']
+            ,data: [
+                ['1', 'Магазин']
+                ,['2', 'Оптовая компания']
+                ,['3', 'Производитель']
+            ]
+        })
+        ,mode: 'local'
+        ,displayField: 'display'
+        ,valueField: 'type'
+    });
+    shopLogistic.combo.store_type.superclass.constructor.call(this,config);
+};
+Ext.extend(shopLogistic.combo.store_type, MODx.combo.ComboBox);
+Ext.reg('combo-store_type', shopLogistic.combo.store_type);
+
 shopLogistic.combo.company_type = function(config) {
     config = config || {};
     Ext.applyIf(config,{

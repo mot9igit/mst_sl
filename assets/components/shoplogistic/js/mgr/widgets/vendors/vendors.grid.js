@@ -1,7 +1,7 @@
-shopLogistic.grid.Warehouse = function (config) {
+shopLogistic.grid.Vendors = function (config) {
     config = config || {};
     if (!config.id) {
-        config.id = 'shoplogistic-grid-warehouses';
+        config.id = 'shoplogistic-grid-vendors';
     }
     Ext.applyIf(config, {
         url: shopLogistic.config.connector_url,
@@ -11,12 +11,12 @@ shopLogistic.grid.Warehouse = function (config) {
         sm: new Ext.grid.CheckboxSelectionModel(),
         baseParams: {
             action: 'mgr/store/getlist',
-            type: 2
+            type: 3
         },
         listeners: {
             rowDblClick: function (grid, rowIndex, e) {
                 var row = grid.store.getAt(rowIndex);
-                this.updateWarehouse(grid, e, row);
+                this.updateStore(grid, e, row);
             }
         },
         viewConfig: {
@@ -35,7 +35,7 @@ shopLogistic.grid.Warehouse = function (config) {
         remoteSort: true,
         autoHeight: true,
     });
-    shopLogistic.grid.Warehouse.superclass.constructor.call(this, config);
+    shopLogistic.grid.Vendors.superclass.constructor.call(this, config);
 
     // Clear selection on grid refresh
     this.store.on('load', function () {
@@ -44,7 +44,7 @@ shopLogistic.grid.Warehouse = function (config) {
         }
     }, this);
 };
-Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
+Ext.extend(shopLogistic.grid.Vendors, MODx.grid.Grid, {
     windows: {},
 
     getMenu: function (grid, rowIndex) {
@@ -58,7 +58,7 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
 
     createStore: function (btn, e) {
         var w = MODx.load({
-            xtype: 'shoplogistic-warehouse-window-create',
+            xtype: 'shoplogistic-store-window-create',
             id: Ext.id(),
             listeners: {
                 success: {
@@ -70,7 +70,7 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
         });
         w.reset();
         w.setValues({active: true});
-        w.setValues({type: 2});
+        w.setValues({type: 3});
         w.show(e.target);
     },
 
@@ -93,7 +93,7 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
                 success: {
                     fn: function (r) {
                         var w = MODx.load({
-                            xtype: 'shoplogistic-warehouse-window-update',
+                            xtype: 'shoplogistic-store-window-update',
                             id: Ext.id(),
                             record: r,
                             listeners: {
@@ -120,11 +120,11 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
         }
         MODx.msg.confirm({
             title: ids.length > 1
-                ? _('shoplogistic_warehouses_remove')
-                : _('shoplogistic_warehouse_remove'),
+                ? _('shoplogistic_stores_remove')
+                : _('shoplogistic_store_remove'),
             text: ids.length > 1
-                ? _('shoplogistic_warehouses_remove_confirm')
-                : _('shoplogistic_warehouse_remove_confirm'),
+                ? _('shoplogistic_stores_remove_confirm')
+                : _('shoplogistic_store_remove_confirm'),
             url: this.config.url,
             params: {
                 action: 'mgr/store/remove',
@@ -184,7 +184,7 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
     },
 
     getFields: function () {
-        return ['id', 'type', 'name', 'apikey', 'city', 'delivery_tk', 'company_type', 'inn', 'bank_number', 'bank_knumber', 'bank_bik', 'bank_name', 'unique_id', 'address' , 'ur_address', 'description', 'active', 'actions'];
+        return ['id', 'type', 'name', 'apikey', 'company_type', 'ur_name', 'inn', 'bank_number', 'bank_knumber', 'bank_bik', 'bank_name', 'unique_id', 'address' , 'ur_address', 'city', 'description', 'active', 'actions'];
     },
 
     getColumns: function () {
@@ -220,12 +220,6 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
             sortable: true,
             width: 100,
         }, {
-            header: _('shoplogistic_store_delivery_tk'),
-            dataIndex: 'delivery_tk',
-            renderer: shopLogistic.utils.renderBoolean,
-            sortable: true,
-            width: 100,
-        }, {
             header: _('shoplogistic_grid_actions'),
             dataIndex: 'actions',
             renderer: shopLogistic.utils.renderActions,
@@ -237,7 +231,7 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
 
     getTopBar: function () {
         return [{
-            text: '<i class="icon icon-plus"></i>&nbsp;' + _('shoplogistic_warehouse_create'),
+            text: '<i class="icon icon-plus"></i>&nbsp;' + _('shoplogistic_vendor_create'),
             handler: this.createStore,
             scope: this
         }, '->', {
@@ -302,4 +296,4 @@ Ext.extend(shopLogistic.grid.Warehouse, MODx.grid.Grid, {
         this.getBottomToolbar().changePage(1);
     },
 });
-Ext.reg('shoplogistic-grid-warehouses', shopLogistic.grid.Warehouse);
+Ext.reg('shoplogistic-grid-vendors', shopLogistic.grid.Vendors);

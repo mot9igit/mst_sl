@@ -14,7 +14,7 @@ shopLogistic.window.CreateWarehouse = function (config) {
         title: _('shoplogistic_warehouse_create'),
         width: 900,
         baseParams: {
-            action: 'mgr/warehouse/create',
+            action: 'mgr/store/create',
         },
     });
     shopLogistic.window.CreateWarehouse.superclass.constructor.call(this, config);
@@ -36,6 +36,10 @@ Ext.extend(shopLogistic.window.CreateWarehouse, shopLogistic.window.Default, {
             xtype: 'hidden',
             name: 'id',
             id: config.id + '-id'
+        },{
+            xtype: 'hidden',
+            name: 'type',
+            id: config.id + '-type'
         }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_warehouse_name'),
@@ -308,7 +312,7 @@ shopLogistic.window.UpdateWarehouse = function (config) {
         baseParams: {
             title: _('shoplogistic_warehouse_update'),
             width: 900,
-            action: 'mgr/warehouse/update',
+            action: 'mgr/store/update',
         },
         bodyCssClass: 'tabs',
     });
@@ -326,13 +330,13 @@ Ext.extend(shopLogistic.window.UpdateWarehouse, shopLogistic.window.CreateWareho
             }, {
                 title: _('shoplogistic_warehouseusers'),
                 items: [{
-                    xtype: 'shoplogistic-grid-warehouseusers',
+                    xtype: 'shoplogistic-grid-storeusers',
                     record: config.record,
                 }]
             }, {
                 title: _('shoplogistic_warehouseremains'),
                 items: [{
-                    xtype: 'shoplogistic-grid-warehouseremains',
+                    xtype: 'shoplogistic-grid-storeremains',
                     record: config.record,
                 }]
             }, {
@@ -344,7 +348,7 @@ Ext.extend(shopLogistic.window.UpdateWarehouse, shopLogistic.window.CreateWareho
             }, {
                 title: _('shoplogistic_docs'),
                 items: [{
-                    xtype: 'shoplogistic-grid-warehouse-docs',
+                    xtype: 'shoplogistic-grid-stores-docs',
                     record: config.record,
                 }]
             }]

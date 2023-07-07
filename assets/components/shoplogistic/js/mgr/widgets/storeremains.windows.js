@@ -30,6 +30,13 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             allowBlank: false
         },{
             xtype: 'textfield',
+            fieldLabel: _('shoplogistic_storeremains_base_guid'),
+            name: 'base_guid',
+            anchor: '99%',
+            id: config.id + '-base_guid',
+            allowBlank: false
+        },{
+            xtype: 'textfield',
             fieldLabel: _('shoplogistic_storeremains_catalog'),
             name: 'catalog',
             anchor: '99%',
@@ -41,6 +48,13 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             name: 'article',
             anchor: '99%',
             id: config.id + '-article',
+            allowBlank: false
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_storeremains_barcode'),
+            name: 'barcode',
+            anchor: '99%',
+            id: config.id + '-barcode',
             allowBlank: false
         }, {
             xtype: 'textfield',
