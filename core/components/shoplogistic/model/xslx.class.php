@@ -313,6 +313,104 @@ class slXSLX{
     }
 
     public function generateWeekSalesFile($report_id){
+        $report = $this->modx->getObject("slReports", $report_id);
+        $styleArray = [
+            'font' => [
+                'bold' => true,
+            ]
+        ];
+        if($report) {
+            $report_data = $report->toArray();
+            $data = $this->sl->reports->getWeekSales(array("report_id" => 30));
+            if ($data) {
+                // return $data["columns"];
+                // generate xlsx header
+                $spreadsheet = new Spreadsheet();
+                $activeWorksheet = $spreadsheet->getActiveSheet();
+                $activeWorksheet->setCellValue('A1', "Период");
+                $activeWorksheet->setCellValue('A2', "Номер недели");
+                $activeWorksheet->mergeCells('B1:E1');
+                $activeWorksheet->mergeCells('B2:E2');
+                $activeWorksheet->setCellValue('B1', "Сводная информация за период");
+                $activeWorksheet->setCellValue('B2', count($data['weeks'])." нед.");
+                $i = 6;
+                foreach($data["weeks"] as $index => $week){
+                    $date_from = date("d.m.Y", strtotime($week['date_from']));
+                    $date_to = date("d.m.Y", strtotime($week['date_to']));
+                    $num = $index + 1;
+                    $last_c = $i + 3;
+                    $activeWorksheet->mergeCellsByColumnAndRow($i, 1, $last_c, 1);
+                    $activeWorksheet->mergeCellsByColumnAndRow($i, 2, $last_c, 2);
+                    $activeWorksheet->setCellValueByColumnAndRow($i, 1, $num.' нед.');
+                    $activeWorksheet->setCellValueByColumnAndRow($i, 2, $date_from.' - '.$date_to);
+                    /*
+                    for ($j = $i + 1; $j <= $last_c; $j++) {
+                        $activeWorksheet->getColumnDimensionByColumn($j)->setOutlineLevel(1)->setVisible(false)->setCollapsed(true);
+                    }
+                    */
+                    $i = $last_c + 1;
+                }
+                $row = 3;
+                $i = 1;
+                foreach ($data["columns"] as $column) {
+                    $activeWorksheet->setCellValueByColumnAndRow($i, $row, $column['label']);
+                    $i++;
+                }
+                $row++;
+                foreach ($data["items"] as $item) {
+                    if ($item["data"]) {
+                        $i = 1;
+                        foreach ($data["columns"] as $column) {
+                            $activeWorksheet->setCellValueByColumnAndRow($i, $row,$item["data"][$column["field"]]);
+                            $activeWorksheet->getStyleByColumnAndRow($i, $row)->applyFromArray($styleArray);
+                            $i++;
+                        }
+                    }
+                    // запоминаем родителя
+                    $row++;
+                    $collapse_row = $row;
+                    if ($item["children"]) {
+                        foreach ($item["children"] as $sub_row) {
+                            if ($sub_row["data"]) {
+                                $i = 1;
+                                foreach ($data["columns"] as $column) {
+                                    $activeWorksheet->setCellValueByColumnAndRow($i, $row, $sub_row["data"][$column["field"]]);
+                                    if(isset($sub_row["children"])){
+                                        $activeWorksheet->getStyleByColumnAndRow($i, $row)->applyFromArray($styleArray);
+                                    }
+                                    $i++;
+                                }
+                                // запоминаем суб родителя
+                                $row++;
+                                $collapse_row_2 = $row;
+                                if (isset($sub_row["children"])) {
+                                    foreach ($sub_row["children"] as $s_row) {
+                                        if ($s_row["data"]) {
+                                            $i = 1;
+                                            foreach ($data["columns"] as $column) {
+                                                $activeWorksheet->setCellValueByColumnAndRow($i, $row, $s_row["data"][$column["field"]]);
+                                                $i++;
+                                            }
+                                            $row++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                $writer = new Xlsx($spreadsheet);
+                $path = "assets/files/organization/{$report_data['store_id']}/reports/sales/";
+                if (!file_exists($this->modx->getOption('base_path') . $path)) {
+                    mkdir($this->modx->getOption('base_path') . $path, 0777, true);
+                }
+                $writer->save($this->modx->getOption('base_path') . $path . "weeksales_{$report_data['id']}.xlsx");
+                return $path . "weeksales_{$report_data['id']}.xlsx";
+            }
+        }
+    }
+
+    public function generateWeekSalesFileOLD($report_id){
         // нужно взять данные
         $output = array();
         $report = $this->modx->getObject("slReports", $report_id);

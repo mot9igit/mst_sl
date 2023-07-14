@@ -40,6 +40,11 @@ $_lang['shoplogistic_store_properties'] = 'Свойства';
 $_lang['shoplogistic_store_description'] = 'Описание';
 $_lang['shoplogistic_store_delivery_tk'] = 'Доставка до магазина ТК';
 $_lang['shoplogistic_store_active'] = 'Активно';
+$_lang['shoplogistic_store_check_remains'] = 'Следить за обменом остатков';
+$_lang['shoplogistic_store_check_docs'] = 'Следить за обменом документов';
+$_lang['shoplogistic_store_date_api_ping'] = 'Дата последней связи по API';
+$_lang['shoplogistic_store_date_remains_update'] = 'Дата последнего обновления остатков по API';
+$_lang['shoplogistic_store_date_docs_update'] = 'Дата последнего обновления документов по API';
 $_lang['shoplogistic_store_integration'] = 'Прошла интеграция?';
 
 $_lang['shoplogistic_store_create'] = 'Создать магазин';

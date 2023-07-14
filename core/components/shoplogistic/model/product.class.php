@@ -70,7 +70,7 @@ class productHandler
 
     public function importRemain($data){
         if($data['key']) {
-            $store = $this->getStore($data['key']);
+            $store = $this->getStore($data['key'], "date_remains_update");
             if ($store['id']) {
                 $this->tolog('store_' . $store['id'], $data);
                 $response = array();
@@ -118,15 +118,21 @@ class productHandler
                             $message = 'WARN! Не указана категория товара';
                         }
                     }
+                    // чекаем GUID
+                    if(isset($product['GUID'])){
+                        $guid = $product['GUID'];
+                    }else{
+                        $guid = $key;
+                    }
                     if ($error) {
                         $response['failed_info'][] = array(
-                            'guid' => $key,
+                            'guid' => $guid,
                             'message' => $message
                         );
                     } else {
                         // проверяем товар на дублирование по GUID
                         $criteria = array(
-                            'guid' => $key,
+                            'guid' => $guid,
                             'store_id' => $store['id']
                         );
                         $o = $this->modx->getObject('slStoresRemains', $criteria);
@@ -144,12 +150,12 @@ class productHandler
                                 $message = "Product updated!";
                             }
                         }
-                        $o->set("guid", $key);
+                        $o->set("guid", $guid);
                         if($data['base_GUID']){
                             $o->set("base_guid", $data['base_GUID']);
                         }
                         if($product['barcode']){
-                            $o->set("barcode", $product['barcode']);
+                            $o->set("barcode", implode(",", $product['barcode']));
                         }
                         $o->set("article", $product['article']);
                         $o->set("remains", $product['count_current']);
@@ -202,12 +208,12 @@ class productHandler
                                 }
                             }
                             $response['success_info'][] = array(
-                                'guid' => $key,
+                                'guid' => $guid,
                                 'message' => $message
                             );
                         } else {
                             $response['failed_info'][] = array(
-                                'guid' => $key,
+                                'guid' => $guid,
                                 'message' => 'Product save filed, check API!'
                             );
                         }
@@ -221,9 +227,13 @@ class productHandler
         return false;
     }
 
-    public function getStore($key) {
+    public function getStore($key, $type = "date_api_ping") {
         $store = $this->modx->getObject("slStores", array('apikey' => $key));
         if($store){
+            // set request dates
+            $store->set($type, time());
+            $store->set("date_api_ping", time());
+            $store->save();
             $resp = array(
                 'id' => $store->get('id')
             );
@@ -498,7 +508,7 @@ class productHandler
             'failed_info' => array(),
             'products_info' => array()
         );
-        $store = $this->getStore($data['key']);
+        $store = $this->getStore($data['key'], "date_docs_update");
         foreach ($data['docs'] as $key => $doc) {
             // если удаление
             if ($doc['delete']) {

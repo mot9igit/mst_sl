@@ -138,6 +138,54 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 layout: 'form',
                 defaults: {msgTarget: 'under'},
                 items: [{
+                    xtype: 'xcheckbox',
+                    boxLabel: _('shoplogistic_store_check_remains'),
+                    name: 'check_remains',
+                    id: config.id + '-check_remains',
+                    anchor: '99%',
+                    checked: true
+                },{
+                    xtype: 'xcheckbox',
+                    boxLabel: _('shoplogistic_store_check_docs'),
+                    name: 'check_docs',
+                    id: config.id + '-check_docs',
+                    anchor: '99%',
+                    checked: true,
+                }]
+            },{
+                columnWidth: .5,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
+                    xtype: 'xdatetime',
+                    fieldLabel: _('shoplogistic_store_date_api_ping'),
+                    name: 'date_api_ping',
+                    id: config.id + '-date_api_ping',
+                    anchor: '99%',
+                    allowBlank: true
+                },{
+                    xtype: 'xdatetime',
+                    fieldLabel: _('shoplogistic_store_date_remains_update'),
+                    name: 'date_remains_update',
+                    id: config.id + '-date_remains_update',
+                    anchor: '99%',
+                    allowBlank: true
+                },{
+                    xtype: 'xdatetime',
+                    fieldLabel: _('shoplogistic_store_date_docs_update'),
+                    name: 'date_docs_update',
+                    id: config.id + '-date_docs_update',
+                    anchor: '99%',
+                    allowBlank: true
+                }]
+            }]
+        },{
+            layout: 'column',
+            items: [{
+                columnWidth: .5,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
                     xtype: 'textfield',
                     fieldLabel: _('shoplogistic_store_website'),
                     name: 'website',
@@ -318,7 +366,7 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
             height: 150,
             anchor: '99%'
         }];
-        if(config.type == 2){
+        if(config.type == 2 || config.type == 3){
             default_fields.push({
                 xtype: 'xcheckbox',
                 boxLabel: _('shoplogistic_warehouse_delivery_tk'),

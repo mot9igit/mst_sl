@@ -50,6 +50,11 @@
         <field key="delivery_tk" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="integration" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="date_api_ping" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="date_remains_update" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="date_docs_update" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="check_remains" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="check_docs" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
         <index alias="name" name="name" primary="false" unique="false" type="BTREE">
@@ -63,6 +68,21 @@
         </index>
         <index alias="active" name="active" primary="false" unique="false" type="BTREE">
             <column key="active" length="" collation="A" null="false"/>
+        </index>
+        <index alias="check_remains" name="check_remains" primary="false" unique="false" type="BTREE">
+            <column key="check_remains" length="" collation="A" null="false"/>
+        </index>
+        <index alias="check_docs" name="check_docs" primary="false" unique="false" type="BTREE">
+            <column key="check_docs" length="" collation="A" null="false"/>
+        </index>
+        <index alias="check_docs" name="check_docs" primary="false" unique="false" type="BTREE">
+            <column key="check_docs" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date_remains_update" name="date_remains_update" primary="false" unique="false" type="BTREE">
+            <column key="date_remains_update" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date_docs_update" name="date_docs_update" primary="false" unique="false" type="BTREE">
+            <column key="date_docs_update" length="" collation="A" null="false"/>
         </index>
 
         <aggregate alias="City" class="dartLocationCity" local="city" foreign="id" cardinality="one" owner="foreign"/>
