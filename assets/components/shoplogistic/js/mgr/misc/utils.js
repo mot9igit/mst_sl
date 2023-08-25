@@ -16,6 +16,15 @@ shopLogistic.utils.renderBoolean = function (value) {
         : String.format('<span class="red">{0}</span>', _('no'));
 };
 
+shopLogistic.utils.renderFieldType = function (value) {
+    if(value == 1){
+        return 'Поле отчета'
+    }
+    if(value == 2){
+        return 'Параметр'
+    }
+};
+
 shopLogistic.utils.getMenu = function (actions, grid, selected) {
     var menu = [];
     var cls, icon, title, action;

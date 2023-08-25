@@ -38,7 +38,7 @@ class ShoplogisticMgrOrdersManagerController extends slManagerController
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/orders/orders.grid.js?v='.$this->shopLogistic->config['version']);
 
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/orders/orders.panel.js?v='.$this->shopLogistic->config['version']);
+		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/orders/panel.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/orders/orders.js?v='.$this->shopLogistic->config['version']);
 
 		$this->addHtml('<script type="text/javascript">

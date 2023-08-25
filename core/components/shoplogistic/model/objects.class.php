@@ -15,6 +15,35 @@ class objectsHandler
         $this->modx->lexicon->load('shoplogistic:default');
     }
 
+    public function handleFeeds () {
+        // $user_id = $_SESSION['analytics_user']['profile']['id'];
+        // черновая обработка
+        $feeds = $this->modx->getCollection("slExportFiles", array("status:=" => 1));
+        foreach($feeds as $feed){
+            // чистим лишнее
+            $cats = $this->modx->getCollection("slExportFilesCats");
+            foreach($cats as $cat){
+                $cat->remove();
+            }
+            $file = $feed->get("file");
+            $xml = simplexml_load_file($file);
+            $cats = count($xml->shop->categories->category);
+            $offers = count($xml->shop->offers->offer);
+            $feed->set("categories", $cats);
+            $feed->set("products", $offers);
+            $feed->save();
+            foreach ($xml->shop->categories->category as $row) {
+                $cat = $this->modx->newObject("slExportFilesCats");
+                $cat->set("name", strval($row));
+                $cat->set("file_id", $feed->get("id"));
+                $cat->set("export_id", $row['id']);
+                $cat->set("export_parent_id", $row['parentId']);
+                $cat->set("createdon", time());
+                $cat->save();
+            }
+        }
+    }
+
     public function getObject($class, $id = 0, $criteria = array()){
         $query = $this->modx->newQuery($class);
         if($id){
@@ -40,12 +69,38 @@ class objectsHandler
         // $this->modx->log(1, print_r($properties, 1));
         if($properties['type'] == 'bonuses'){
             return $this->getBonuses($properties);
+        }if($properties['type'] == 'request'){
+            return $this->getRequests($properties);
+        }
+        if($properties['type'] == 'rrcreport'){
+            return $this->getRRCReport($properties);
+        }
+        if($properties['type'] == 'rrcreportdata'){
+            return $this->getRRCReportData($properties);
+        }
+        if($properties['type'] == 'reporttypes'){
+            return $this->getReportTypes($properties);
+        }
+        if($properties['type']== 'bonus_part'){
+            return $this->getBonusesParts($properties);
+        }
+        if($properties['type'] == 'docs'){
+            return $this->getDocs($properties);
+        }
+        if($properties['type'] == 'docsstatus'){
+            return $this->getDocsStatus($properties);
         }
         if($properties['type'] == 'available_stores'){
             return $this->getAvailableStores($properties, 1);
         }
         if($properties['type'] == 'bonus'){
             return $this->getBonuses($properties);
+        }
+        if($properties['type'] == 'plan'){
+            return $this->getPlan($properties);
+        }
+        if($properties['type'] == 'bonus_plans'){
+            return $this->getPlans($properties);
         }
         if($properties['type'] == 'akbpunkts'){
             return $this->getAkbPunkts($properties);
@@ -59,10 +114,777 @@ class objectsHandler
         if($properties['type'] == 'akbdata'){
             return $this->getAkbData($properties);
         }
+        if($properties['type'] == 'bonus_stores'){
+            return $this->getBonusAvailableStores($properties);
+        }
+        if($properties['type'] == 'feeds'){
+            return $this->getFeeds($properties);
+        }
         return array(
             "total" => 0,
             "items" => array()
         );
+    }
+
+    public function getRequests($properties): array
+    {
+        $result = array();
+        $query = $this->modx->newQuery("slCardRequest");
+        $query->where(array("remain_id:=" => $properties['product_id']));
+        $query->leftJoin("slCardRequestStatus", "slCardRequestStatus", "slCardRequestStatus.id = slCardRequest.status");
+        $query->select(array("slCardRequest.*, slCardRequestStatus.name as status_name"));
+
+        $result['total'] = $this->modx->getCount('slCardRequest', $query);
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+
+        // И сортируем по ID в обратном порядке
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby('slCardRequest.id', 'desc');
+        }
+
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            // add TYPE FILE
+            foreach($result['items'] as $key => $val){
+                $result['items'][$key]['date'] = date('d.m.Y', strtotime($val['date']));
+            }
+        }
+        return $result;
+    }
+
+    public function getRRCReport($properties): array
+    {
+        $output = array();
+        $plan = false;
+        $this->modx->log(1, print_r($properties, 1));
+        $plan = $this->modx->getObject('slBonusesPlans', $properties['plan_id']);
+        if($plan){
+            $plan_data = $plan->toArray();
+            $store = $this->modx->getObject("slStores", $properties['store_id']);
+            $output = $plan_data;
+            if($store){
+                $output['store_name'] = $store->get("name");
+            }
+            $output['date_from'] = date('d.m.Y', strtotime($output['date_from']));
+            $output['date_to'] = date('d.m.Y', strtotime($output['date_to']));
+            $output['period_date'] = $output['date_from'] . ' - ' . $output['date_to'];
+            $field = $this->modx->getObject("slReportsTypeFields", $plan_data["report_type_field_id"]);
+            $output['summary']['plan'] = $plan_data["report_type_field_value"];
+            $output['summary']['fact'] = 0;
+            if ($field) {
+                $output['summary']['plan_field'] = $field->get("name");
+            }
+            $products = array();
+            if($plan_data['properties']['matrix']){
+                $q = $this->modx->newQuery("slStoresMatrixProducts");
+                $q->where(array("matrix_id" => $plan_data['properties']['matrix']));
+                $q->select(array("slStoresMatrixProducts.product_id"));
+                if($q->prepare() && $q->stmt->execute()) {
+                    $ps = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach($ps as $p) {
+                        $products[] = $p['product_id'];
+                    }
+                }
+            }
+            $query = $this->modx->newQuery("slStoresRemains");
+            $query->select(array("slStoresRemains.*, msProductData.price_rrc, msProductData.image as product_image, msProductData.vendor_article as product_vendor_article, modResource.pagetitle as product_name"));
+            $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+            $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
+            $query->where(array(
+                "msProductData.id:IN" => $products,
+                "msProductData.price_rrc:>" => 0,
+                "AND:slStoresRemains.store_id:=" => $properties['store_id']
+            ));
+            if($properties['filter']){
+                $words = explode(" ", $properties['filter']);
+                foreach($words as $word){
+                    $criteria = array();
+                    $criteria['modResource.pagetitle:LIKE'] = '%'.trim($word).'%';
+                    $criteria['msProductData.vendor_article:LIKE'] = '%'.trim($word).'%';
+                    $query->where($criteria);
+                }
+            }
+            $query->prepare();
+            $this->modx->log(1, $query->toSQL());
+            if($query->prepare() && $query->stmt->execute()) {
+                // echo $query->toSQL()."<br/>";
+                $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                // получили все товары
+                foreach ($remains as $remain) {
+                    $remain_info = array(
+                        "product_image" => $remain['product_image'],
+                        "product_vendor_article" => $remain['product_vendor_article'],
+                        "product_name" => $remain['product_name'],
+                        "remain_id" => $remain['id'],
+                        "price_now" => $remain['price'],
+                        "price_rrc" => $remain['price_rrc'],
+                        "price_max" => 0,
+                        "price_min" => 9999999999,
+                        "non_rrc" => 0,
+                        "avg_price" => 0,
+                        "avg_weighted_price" => 0,
+                        "avg_weighted_price_variation_percent" => 0,
+                        "avg_weighted_price_variation_money" => 0,
+                        "summ_price" => 0,
+                        "avg_variation_money" => 0,
+                        "avg_variation_percent" => 0,
+                        'prices' => array(),
+                        'middle_weight_prices' => array(),
+                        "violation" => 0
+                    );
+                    // ищем историю изменения на основе дат
+                    $query = $this->modx->newQuery("slStoresRemainsHistory");
+                    $query->select(array("slStoresRemainsHistory.*"));
+                    $query->where(array(
+                        "slStoresRemainsHistory.remain_id:=" => $remain['id'],
+                        "AND:slStoresRemainsHistory.remains:>" => 0,
+                        "AND:slStoresRemainsHistory.date:>=" => $plan->get('date_from'),
+                        "AND:slStoresRemainsHistory.date:<=" => $plan->get('date_to'),
+                    ));
+                    if ($query->prepare() && $query->stmt->execute()) {
+                        $history = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($history as $h) {
+                            if ($h['price'] != $remain_info['price_rrc']) {
+                                $remain_info['violation'] = 1;
+                                $output['summary']['fact']++;
+                            }
+                            $remain_info['prices'][] = array(
+                                "date" => date('d.m.Y', strtotime($h['date'])),
+                                "price" => $h['price'],
+                                "remains" => $h['remains']
+                            );
+                            if (isset($remain_info['middle_weight_prices'][$h['price']])) {
+                                $remain_info['middle_weight_prices'][$h['price']]++;
+                            } else {
+                                $remain_info['middle_weight_prices'][$h['price']] = 1;
+                            }
+                            $remain_info['summ_price'] += $h['price'];
+                            if ($h['price'] != $remain['price_rrc']) {
+                                $remain_info['non_rrc']++;
+                            }
+                            if ($h['price'] > $remain_info['price_max']) {
+                                $remain_info['price_max'] = $h["price"];
+                            }
+                            if ($h['price'] < $remain_info['price_min']) {
+                                $remain_info['price_min'] = $h["price"];
+                            }
+                        }
+                        if (count($remain_info['middle_weight_prices'])) {
+                            $summ_price = 0;
+                            $summ_days = 0;
+                            foreach ($remain_info['middle_weight_prices'] as $key => $val) {
+                                $summ_price += $key * $val;
+                                $summ_days += $val;
+                            }
+                            $remain_info['avg_weighted_price'] = round($summ_price / $summ_days, 2);
+                        } else {
+                            $remain_info['avg_weighted_price'] = $remain_info["current_price"];
+                            $remain_info["avg_weighted_price_variation_money"] = abs($remain_info["price_rrc"] - $remain_info['avg_weighted_price']);
+                            $remain_info["avg_weighted_price_variation_percent"] = round(abs(($remain_info["avg_weighted_price"] / $remain_info["price_rrc"]) * 100), 2);
+                        }
+                        if (count($remain_info['prices'])) {
+                            $remain_info['avg_price'] = round($remain_info['summ_price'] / count($remain_info['prices']), 2);
+                            $remain_info["avg_variation_money"] = abs($remain_info["price_rrc"] - $remain_info['avg_price']);
+                            $remain_info["avg_variation_percent"] = round(abs(($remain_info["avg_variation_money"] / $remain_info["price_rrc"]) * 100), 2);
+                        } else {
+                            $remain_info['price_max'] = $remain_info["current_price"];
+                            $remain_info['price_min'] = $remain_info["current_price"];
+                        }
+                    }
+                    $output['items'][] = $remain_info;
+                }
+            }
+        }
+        if($output['summary']["fact"] > 0){
+            $output["field_value"]["no_percent"] = 0;
+            $output["field_value"]["no_percent"] = 0;
+            $output["field_value"]["percent"] = 100;
+        }else{
+            $output["field_value"]["no_percent"] = 0;
+            $output["field_value"]["percent"] = 0;
+        }
+        $output['total'] = count($output['items']);
+        return $output;
+    }
+
+    public function getRRCReportData($properties): array{
+        $result = array(
+            "items" => array(),
+            "total" => 0
+        );
+        $plan = false;
+        if($properties['source'] && $properties['elem_id']){
+            if($properties['source'] == 'plan'){
+                $plan = $this->modx->getObject('slBonusesPlans', $properties['elem_id']);
+            }
+            if($properties['source'] == 'report'){
+                $plan = $this->modx->getObject('slReports', $properties['elem_id']);
+            }
+        }
+        // $plan = $this->modx->getObject('slBonusesPlans', $properties['plan_id']);
+        if($plan) {
+            $plan_data = $plan->toArray();
+            $query = $this->modx->newQuery("msProductData");
+            $query->leftJoin("slStoresRemains", "slStoresRemains", "slStoresRemains.product_id = msProductData.id");
+            $query->where(array("slStoresRemains.id:=" => $properties['remain_id']));
+            $query->select(array("msProductData.price_rrc"));
+            $query->prepare();
+            $this->modx->log(1, $query->toSQL());
+            if ($query->prepare() && $query->stmt->execute()) {
+                $product = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            }
+            $query = $this->modx->newQuery("slStoresRemainsHistory");
+            $query->select(array("slStoresRemainsHistory.*"));
+            $query->where(array(
+                "slStoresRemainsHistory.remain_id:=" => $properties['remain_id'],
+                "AND:slStoresRemainsHistory.remains:>" => 0,
+                "AND:slStoresRemainsHistory.date:>=" => $plan->get('date_from'),
+                "AND:slStoresRemainsHistory.date:<=" => $plan->get('date_to'),
+            ));
+            $result['total'] = $this->modx->getCount('slStoresRemainsHistory', $query);
+            // Устанавливаем лимит 1/10 от общего количества записей
+            // со сдвигом 1/20 (offset)
+            if($properties['page'] && $properties['perpage']){
+                $limit = $properties['perpage'];
+                $offset = ($properties['page'] - 1) * $properties['perpage'];
+                $query->limit($limit, $offset);
+            }
+
+            // И сортируем по ID в обратном порядке
+            if($properties['sort']){
+                $keys = array_keys($properties['sort']);
+                $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+            }else{
+                $query->sortby('slStoresRemainsHistory.id', 'ASC');
+            }
+            if ($query->prepare() && $query->stmt->execute()) {
+                $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($result['items'] as $key => $item){
+                    $result['items'][$key]['date'] = date('d.m.Y', strtotime($item['date']));
+                    $result['items'][$key]['variation_money'] = $product['price_rrc'] - $item['price'];
+                    $result['items'][$key]['variation_percent'] = round(abs(($result['items'][$key]['variation_money'] / $product['price_rrc']) * 100), 2);
+                }
+            }
+        }
+        return $result;
+    }
+
+    public function changeObject($properties){
+        if($properties['type'] == 'docs'){
+            return $this->changeDocs($properties);
+        }
+        if($properties['type'] == 'report'){
+            return $this->changeReport($properties);
+        }
+        return array(
+            "total" => 0,
+            "items" => array()
+        );
+    }
+
+    public function changeReport($properties){
+        $report = $this->modx->getObject("slReports", $properties['report_id']['id']);
+        if($report){
+            $id = $report->get('id');
+            if(!$this->sl->reports->checkFileBlock($id)){
+                $this->sl->reports->createFileBlock($id);
+            }
+            // теперь запускаем формирование отчетов
+            if($report->get("type") == 1){
+                $report->set("status", 2);
+                $report->save();
+                if($this->sl->reports->generateTopSales($id)){
+                    $report->set("updatedon", time());
+                    $report->set("status", 3);
+                    $report->save();
+                    $this->sl->reports->deleteFileBlock($id);
+                }
+            }
+            if($report->get("type") == 2){
+                $report->set("status", 2);
+                $report->save();
+                if($this->sl->reports->generatePresent($id)) {
+                    $report->set("updatedon", time());
+                    $report->set("status", 3);
+                    $report->save();
+                    $this->sl->reports->deleteFileBlock($id);
+                }
+            }
+            if($report->get("type") == 3){
+                $this->sl->reports->set("status", 2);
+                $report->save();
+                if($this->sl->reports->generateRRC($id)){
+                    $report->set("updatedon", time());
+                    $report->set("status", 3);
+                    $report->save();
+                    $this->sl->reports->deleteFileBlock($id);
+                }
+            }
+            if($report->get("type") == 4){
+                $report->set("status", 2);
+                $report->save();
+                if($this->sl->reports->generateWeekSales($id)){
+                    $report->set("updatedon", time());
+                    $report->set("status", 3);
+                    $report->save();
+                    $this->sl->reports->deleteFileBlock($id);
+                }
+            }
+        }
+        return true;
+    }
+
+    public function changeDocs($properties){
+        if($properties['doc_id'] == 'all'){
+            $docs = $this->modx->getCollection("slDocs", array("status" => 3, "store_id" => $properties['id']));
+            foreach($docs as $doc){
+                if($doc){
+                    $doc->set("status", 4);
+                    $doc->save();
+                }else{
+                    return false;
+                }
+            }
+        }else{
+            $doc = $this->modx->getObject("slDocs", array("id" => $properties['doc_id'], "store_id" => $properties['id']));
+            if($doc){
+                $doc->set("status", 4);
+                $doc->save();
+            }else{
+                return false;
+            }
+        }
+    }
+
+    public function getReportTypes($properties){
+        $query = $this->modx->newQuery("slReportsType");
+        $query->select(array("slReportsType.*"));
+        if($properties['toplan']){
+            $query->where(array("slReportsType.toplan:=" => 1));
+        }
+        // $result['total'] = $this->modx->getCount('slReportsType', $query);
+        if ($query->prepare() && $query->stmt->execute()) {
+            $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($results as $key => $result){
+                $query = $this->modx->newQuery("slReportsTypeFields");
+                $query->where(array("slReportsTypeFields.type:=" => $result['id'], "AND:slReportsTypeFields.field_type:=" => 1));
+                $query->select(array("slReportsTypeFields.*"));
+                if ($query->prepare() && $query->stmt->execute()) {
+                    $results[$key]['fields'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+            }
+            foreach($results as $key => $result){
+                $query = $this->modx->newQuery("slReportsTypeFields");
+                $query->where(array("slReportsTypeFields.type:=" => $result['id'], "AND:slReportsTypeFields.field_type:=" => 2));
+                $query->select(array("slReportsTypeFields.*"));
+                if ($query->prepare() && $query->stmt->execute()) {
+                    $results[$key]['params'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+            }
+            return $results;
+        }
+    }
+
+    public function getPlan ($properties){
+        if($properties['plan_id']) {
+            $query = $this->modx->newQuery("slBonusesPlans");
+            $query->where(array("id:=" => $properties['plan_id'], "AND:fornew:!=" => 1));
+            $query->leftJoin("slReportsType", "slReportsType", "slReportsType.id = slBonusesPlans.report_type_id");
+            $query->leftJoin("slStores", "slStores", "slStores.id = slBonusesPlans.store_id");
+            $query->leftJoin("slReportsTypeFields", "slReportsTypeFields", "slReportsTypeFields.id = slBonusesPlans.report_type_field_id");
+            $query->select(array("slStores.name as store_name, slBonusesPlans.*,slReportsType.name as report_name,slReportsType.id as report_id,slReportsTypeFields.name as report_field_name,slReportsTypeFields.id as report_field_id"));
+            $query->prepare();
+
+            if ($query->prepare() && $query->stmt->execute()) {
+
+                $result = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                $field = $this->modx->getObject("slReportsTypeFields", $result["report_type_field_id"]);
+                $result['summary']['plan'] = $result["report_type_field_value"];
+                if ($field) {
+                    $result['summary']['plan_field'] = $field->get("name");
+                }
+                if($result["report_type_id"] == 2){
+                    $criteria = array(
+                        "slStoresConnection.vendor_id:IN" => array($result["store_id"]),
+                        "AND:slStoresConnection.date:>=" => $result['date_from'],
+                        "AND:slStoresConnection.date:<=" => $result['date_to'],
+                        "AND:slStoresConnection.active:=" => 1,
+                        "AND:slStores.active:=" => 1
+                    );
+                    if(isset($result["properties"]['region'])) {
+                        $geo_data = $this->parseRegions($result["properties"]['region']);
+                        if ($geo_data["cities"]) {
+                            $criteria["AND:dartLocationCity.id:IN"] = explode(",", $geo_data["cities"]);
+                        }
+                        if ($geo_data["regions"]) {
+                            $criteria["AND:dartLocationRegion.id:IN"] = explode(",", $geo_data["regions"]);
+                        }
+                    }
+                    $q = $this->modx->newQuery('slStores');
+                    $q->leftJoin("slStoresConnection", "slStoresConnection", "slStoresConnection.store_id = slStores.id");
+                    $q->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+                    $q->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
+                    $q->where($criteria);
+                    $q->select(array("COUNT(*) as count"));
+                    $q->prepare();
+                    if($q->prepare() && $q->stmt->execute()){
+                        $res = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                        if($res["count"]){
+                            $result['summary']['fact'] = $res["count"];
+                        }else{
+                            $result['summary']['fact'] = 0;
+                        }
+                        $result["field_value"]["no_percent"] = (($result['summary']['plan'] - $result['summary']["fact"]) * 100) / $result['summary']['plan'];
+                        $result["field_value"]["no_percent"] = round($result["field_value"]["no_percent"], 2);
+                        $result["field_value"]["percent"] = 100 - $result["field_value"]["no_percent"];
+                    }
+                }
+
+                if($result["report_type_id"] == 3){
+                    $query = $this->modx->newQuery("slStoresConnection");
+                    $query->leftJoin("slStores", "slStores", "slStores.id = slStoresConnection.store_id");
+                    $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+                    $query->where(array("vendor_id" => $result["store_id"]));
+                    $query->groupby("slStores.city");
+                    $query->select(array("dartLocationCity.*"));
+                    if($query->prepare() && $query->stmt->execute()) {
+                        $res = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        if($res["count"]){
+                            $result['summary']['fact'] = $res["count"];
+                        }else{
+                            $result['summary']['fact'] = 0;
+                        }
+                        $result["field_value"]["no_percent"] = (($result['summary']['plan'] - $result['summary']["fact"]) * 100) / $result['summary']['plan'];
+                        $result["field_value"]["no_percent"] = round($result["field_value"]["no_percent"], 2);
+                        $result["field_value"]["percent"] = 100 - $result["field_value"]["no_percent"];
+                    }
+                }
+
+                if($result["report_type_id"] == 4){
+                    $properties['store_id'] = $result["store_id"];
+                    $res = $this->getRRCReport($properties);
+                    $this->modx->log(1, print_r($res, 1));
+                    if($res["field_value"]["no_percent"]){
+                        $result["field_value"]["no_percent"] = $res["field_value"]["no_percent"];
+                    }else{
+                        $result["field_value"]["no_percent"] = 0;
+                    }
+                    if($res["field_value"]["percent"]){
+                        $result["field_value"]["percent"] = $res["field_value"]["percent"];
+                    }else{
+                        $result["field_value"]["percent"] = 100;
+                    }
+                    $result["summary"] = $res["summary"];
+                }
+
+                $result['date_from'] = date('d.m.Y', strtotime($result['date_from']));
+                $result['date_to'] = date('d.m.Y', strtotime($result['date_to']));
+                $result['period_date'] = $result['date_from'] . ' - ' . $result['date_to'];
+                if($result['period'] == "dayly"){
+                    $result['period'] = "Ежедневно";
+                }
+                if($result['period'] == "weekly"){
+                    $result['period'] = "Еженедельно";
+                }
+                if($result['period'] == "monthly"){
+                    $result['period'] = "Ежемесячно";
+                }
+                return $result;
+            }
+        }
+    }
+
+    public function getPlans($properties) {
+        $query = $this->modx->newQuery("slBonusesPlans");
+        $query->where(array("bonus_id:=" => $properties['bonus_id']));
+        $query->leftJoin("slReportsType", "slReportsType", "slReportsType.id = slBonusesPlans.report_type_id");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slBonusesPlans.store_id");
+        $query->leftJoin("slReportsTypeFields", "slReportsTypeFields", "slReportsTypeFields.id = slBonusesPlans.report_type_field_id");
+        $query->select(array("slStores.name as store_name, slBonusesPlans.*,slReportsType.name as report_name,slReportsType.id as report_id,slReportsTypeFields.name as report_field_name,slReportsTypeFields.id as report_field_id"));
+        if($properties['new']){
+            $query->where(array("`slBonusesPlans`.`fornew`:=" => 1));
+        }else{
+            $query->where(array("`slBonusesPlans`.`fornew`:!=" => 1));
+        }
+        $result['total'] = $this->modx->getCount('slBonusesPlans', $query);
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+
+        // И сортируем по ID в обратном порядке
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby('slBonusesPlans.id', 'desc');
+        }
+
+        if($properties['filter']){
+            $words = explode(" ", $properties['filter']);
+            foreach($words as $word){
+                $criteria = array();
+                $criteria['slBonusesPlans.name:LIKE'] = '%'.trim($word).'%';
+                $query->where($criteria);
+            }
+        }
+
+        if($properties['filtersdata']){
+            if($properties['filtersdata']['date']){
+                if($properties['filtersdata']['date'][0] && $properties['filtersdata']['date'][1]){
+                    $from = date('Y-m-d H:i:s', strtotime($properties['filtersdata']['date'][0]));
+                    $to = date('Y-m-d H:i:s', strtotime($properties['filtersdata']['date'][1]));
+                    $query->where(array("`slBonusesPlans`.`date`:>" => $from, "`slBonusesConnection`.`date`:<" => $to));
+                }
+                if($properties['filtersdata']['date'][0] && !$properties['filtersdata']['date'][1]){
+                    $from = date('Y-m-d H:i:s', strtotime($properties['filtersdata']['date'][0]));
+                    $query->where(array("`slBonusesPlans`.`date`:>" => $from));
+                }
+            }
+        }
+
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            // add TYPE FILE
+            foreach($result['items'] as $key => $val){
+                $result['items'][$key]['date_from'] = date('d.m.Y', strtotime($val['date_from']));
+                $result['items'][$key]['date_to'] = date('d.m.Y', strtotime($val['date_to']));
+                $result['items'][$key]['period_date'] = $result['items'][$key]['date_from'] . ' - ' . $result['items'][$key]['date_to'];
+                if($val['period'] == "dayly"){
+                    $result['items'][$key]['period'] = "Ежедневно";
+                }
+                if($val['period'] == "weekly"){
+                    $result['items'][$key]['period'] = "Еженедельно";
+                }
+                if($val['period'] == "monthly"){
+                    $result['items'][$key]['period'] = "Ежемесячно";
+                }
+            }
+            return $result;
+        }
+        return array(
+            "items" => array(),
+            "total" => 0
+        );
+    }
+
+    public function getDocsStatus($properties){
+        $query = $this->modx->newQuery("slDocsStatus");
+        $query->select(array("slDocsStatus.*"));
+        $result['total'] = $this->modx->getCount('slDocsStatus', $query);
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $result;
+        }
+    }
+
+    public function getBonusesParts($properties) {
+        $query = $this->modx->newQuery("slBonusesConnection");
+        $query->where(array("bonus_id:=" => $properties['bonus_id']));
+        $query->leftJoin("slStores", "slStores", "slStores.id = slBonusesConnection.store_id");
+        $query->select(array("slBonusesConnection.date,slStores.name,slStores.address"));
+        $result['total'] = $this->modx->getCount('slBonusesConnection', $query);
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+
+        // И сортируем по ID в обратном порядке
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby('slBonusesConnection.id', 'desc');
+        }
+
+        if($properties['filter']){
+            $words = explode(" ", $properties['filter']);
+            foreach($words as $word){
+                $criteria = array();
+                $criteria['slStores.name:LIKE'] = '%'.trim($word).'%';
+                $criteria['OR:slStores.address:LIKE'] = '%'.trim($word).'%';
+                $query->where($criteria);
+            }
+        }
+
+        if($properties['filtersdata']){
+            if($properties['filtersdata']['date']){
+                if($properties['filtersdata']['date'][0] && $properties['filtersdata']['date'][1]){
+                    $from = date('Y-m-d H:i:s', strtotime($properties['filtersdata']['date'][0]));
+                    $to = date('Y-m-d H:i:s', strtotime($properties['filtersdata']['date'][1]));
+                    $query->where(array("`slBonusesConnection`.`date`:>" => $from, "`slBonusesConnection`.`date`:<" => $to));
+                }
+                if($properties['filtersdata']['date'][0] && !$properties['filtersdata']['date'][1]){
+                    $from = date('Y-m-d H:i:s', strtotime($properties['filtersdata']['date'][0]));
+                    $query->where(array("`slBonusesConnection`.`date`:>" => $from));
+                }
+            }
+        }
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            // add TYPE FILE
+            foreach($result['items'] as $key => $val){
+                $result['items'][$key]['date'] = date('d.m.Y', strtotime($val['date']));
+            }
+            return $result;
+        }
+        return array(
+            "items" => array(),
+            "total" => 0
+        );
+    }
+
+    public function getDocs($properties) {
+        $query = $this->modx->newQuery("slDocs");
+        $query->where(array("FIND_IN_SET({$properties["id"]}, store_id) > 0", "OR:global:=" => 1));
+        $query->leftJoin("slDocsStatus", "slDocsStatus", "slDocsStatus.id = slDocs.status");
+        $query->select(array("slDocs.*,slDocsStatus.name as status_name,slDocsStatus.has_action as has_action,slDocsStatus.has_submit as has_submit"));
+        $result['total'] = $this->modx->getCount('slDocs', $query);
+        $result['submitted'] = 0;
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+
+        // И сортируем по ID в обратном порядке
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby('id', 'desc');
+        }
+
+        if($properties['filter']){
+            $words = explode(" ", $properties['filter']);
+            foreach($words as $word){
+                $criteria = array();
+                $criteria['slDocs.name:LIKE'] = '%'.trim($word).'%';
+                $criteria['OR:slDocs.description:LIKE'] = '%'.trim($word).'%';
+                $query->where($criteria);
+            }
+        }
+
+        if($properties['filtersdata']){
+            if($properties['filtersdata']['status']){
+                $query->where(array(
+                    "slDocs.status:=" => $properties['filtersdata']['status']
+                ));
+            }
+        }
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
+        if ($query->prepare() && $query->stmt->execute()) {
+
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            // add TYPE FILE
+            foreach($result['items'] as $key => $val){
+                $result['items'][$key]['site_url'] = $this->modx->getOption("site_url");
+                $result['items'][$key]['file'] = $this->modx->getOption("site_url").'assets/files/'.$val['file'];
+                $result['items'][$key]['file_type'] = $this->getFileType('assets/files/'.$val['file']);
+                $result['items'][$key]['date'] = date('d.m.Y', strtotime($val['date']));
+                $result['items'][$key]['has_action'] = intval($val['has_action']);
+                $result['items'][$key]['has_submit'] = intval($val['has_submit']);
+                if($result['items'][$key]['has_submit']){
+                    $result['submitted']++;
+                }
+            }
+            return $result;
+        }
+    }
+
+    public function getFeeds($properties) {
+        $query = $this->modx->newQuery("slExportFiles");
+        $query->where(array("store_id:=" => $properties["id"]));
+        $query->leftJoin("slExportFileStatus", "slExportFileStatus", "slExportFileStatus.id = slExportFiles.status");
+        $query->select(array("slExportFiles.*,slExportFileStatus.name as status_name,slExportFileStatus.has_action as has_action,slExportFileStatus.has_submit as has_submit"));
+        $result['total'] = $this->modx->getCount('slExportFiles', $query);
+        $result['submitted'] = 0;
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+
+        // И сортируем по ID в обратном порядке
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby('id', 'desc');
+        }
+
+        if($properties['filter']){
+            $words = explode(" ", $properties['filter']);
+            foreach($words as $word){
+                $criteria = array();
+                $criteria['slExportFiles.name:LIKE'] = '%'.trim($word).'%';
+                $criteria['OR:slExportFiles.description:LIKE'] = '%'.trim($word).'%';
+                $query->where($criteria);
+            }
+        }
+
+        if($properties['filtersdata']){
+            if($properties['filtersdata']['status']){
+                $query->where(array(
+                    "slExportFiles.status:=" => $properties['filtersdata']['status']
+                ));
+            }
+        }
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            // add TYPE FILE
+            foreach($result['items'] as $key => $val){
+                $result['items'][$key]['date'] = date('d.m.Y', strtotime($val['date']));
+                $result['items'][$key]['has_action'] = intval($val['has_action']);
+                $result['items'][$key]['has_submit'] = intval($val['has_submit']);
+            }
+            return $result;
+        }
+    }
+
+    public function getFileType($file){
+        $data = mime_content_type($this->modx->getOption("base_path") . $file);
+        if($data == "application/pdf"){
+            return "pdf";
+        }
+        if($data == "image/png"){
+            return "png";
+        }
+        if($data == "image/jpeg"){
+            return "jpg";
+        }
+        if($data == "application/msword" || $data == "application/vnd.ms-word.document.macroenabled.12" || $data == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"){
+            return "doc";
+        }
+        if($data == "application/vnd.ms-excel" || $data == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"){
+            return "xls";
+        }
     }
 
     public function getAkbDotsPlan($properties) {
@@ -463,6 +1285,15 @@ class objectsHandler
 
     public function setObjects($properties){
         $response = array();
+        if($properties['type'] == 'feed' && $properties['action'] == 'set'){
+            $response = $this->setFeed($properties);
+        }
+        if($properties['type'] == 'request' && $properties['action'] == 'set'){
+            $response = $this->setRequest($properties);
+        }
+        if($properties['type'] == 'plan' && $properties['action'] == 'set'){
+            $response = $this->setPlan($properties);
+        }
         if($properties['type'] == 'bonus' && $properties['action'] == 'set'){
             $response = $this->setBonus($properties);
         }
@@ -475,7 +1306,158 @@ class objectsHandler
         if($properties['type'] == 'akbdotsplan' && $properties['action'] == 'set') {
             $response = $this->setAkbDotsPlan($properties);
         }
+        if($properties['type'] == 'akbsettlementplan' && $properties['action'] == 'set') {
+            $response = $this->setAkbSettlementPlan($properties);
+        }
         return $response;
+    }
+
+    public function setRequest($properties){
+        $user_id = $_SESSION['analytics_user']['profile']['id'];
+        $object = $this->modx->newObject("slCardRequest");
+        $object->set("name", $properties["data"]["name"]);
+        $object->set("url", $properties["data"]["url"]);
+        $object->set("description", $properties["data"]["description"]);
+        $object->set("store_id", $properties["id"]);
+        $object->set("remain_id", $properties["product_id"]);
+        $object->set("status", 1);
+        $object->set("date", time());
+        $object->set("createdon", time());
+        $object->set("createdby", $user_id);
+        $object->save();
+        return array();
+    }
+
+    public function setFeed($properties) {
+        $obj = 0;
+        $user_id = $_SESSION['analytics_user']['profile']['id'];
+        if($properties['id']){
+            if($properties['data']['id']){
+                $obj = $this->modx->getObject("slExportFiles", $properties['data']['id']);
+                if($obj){
+                    $obj->set("updatedon", time());
+                    $obj->set("updatedby", $user_id);
+                }
+            }
+            if(!$obj){
+                $obj = $this->modx->newObject("slExportFiles");
+                if($obj){
+                    $obj->set("date", time());
+                    $obj->set("createdon", time());
+                    $obj->set("createdby", $user_id);
+                    $obj->set("store_id", $properties['id']);
+                }
+            }
+            $obj->set("name", $properties['data']['name']);
+            $obj->set("status", 1);
+            $obj->set("file", $properties['data']['file']);
+            $obj->set("description", $properties['data']['description']);
+            $obj->save();
+            return $obj->toArray();
+        }
+    }
+
+    public function setPlan($properties) {
+        $this->modx->log(1, print_r($properties, 1));
+        $start = new DateTime($properties['data']['dates'][0]);
+        $start->setTime(00,00);
+        $end = new DateTime($properties['data']['dates'][1]);
+        $end->setTime(23,59);
+        if($properties["new"]){
+            $criteria = array(
+                "bonus_id" => $properties['bonus_id'],
+                "fornew" => 1,
+            );
+            $plan = $this->modx->getObject("slBonusesPlans", $criteria);
+            if($plan){
+                // уже есть объект
+                return false;
+            }
+        }
+        // запустить цикл
+        $stores = array(
+            array(
+                "id" => 0
+            )
+        );
+        if($properties['data']['fstores']){
+            // ставим на все магазины
+            $q = $this->modx->newQuery("slBonusesConnection");
+            $q->leftJoin("slStores", "slStores", "slStores.id = slBonusesConnection.store_id");
+            $q->where(array(
+                "slStores.type:IN" => array(1),
+                "slBonusesConnection.bonus_id:=" => $properties["bonus_id"]
+            ));
+            $q->select(array(
+                'slStores.id',
+                'slStores.name',
+                'slStores.address'
+            ));
+            $q->where(array(
+                "slStores.active:=" => 1
+            ));
+            if($q->prepare() && $q->stmt->execute()) {
+                $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $stores = $out;
+            }
+        }
+        if($properties['data']['fwarehouses']){
+            // ставим на все склады
+            $q = $this->modx->newQuery("slBonusesConnection");
+            $q->leftJoin("slStores", "slStores", "slStores.id = slBonusesConnection.store_id");
+            $q->where(array(
+                "slStores.type:IN" => array(2),
+                "slBonusesConnection.bonus_id:=" => $properties["bonus_id"]
+            ));
+            $q->select(array(
+                'slStores.id',
+                'slStores.name',
+                'slStores.address'
+            ));
+            $q->where(array(
+                "slStores.active:=" => 1
+            ));
+            if($q->prepare() && $q->stmt->execute()) {
+                $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $stores = $out;
+            }
+        }
+        if($properties['data']['selected'] && !$properties['data']['fwarehouses'] && !$properties['data']['fstores']){
+            // ставим на все выбранные
+            $stores = $properties['data']['selected'];
+        }
+        $output = array();
+        foreach($stores as $store){
+            $plan = $this->modx->newObject("slBonusesPlans");
+            $plan->set("bonus_id", $properties['bonus_id']);
+            $plan->set("store_id", $store['id']);
+            $plan->set("report_type_id", $properties['data']['report']);
+            $plan->set("report_type_field_id", $properties['data']['report_field']);
+            $plan->set("report_type_field_value", $properties['data']['report_field_value']);
+            $plan->set("period", $properties['data']['regular']);
+            $plan->set("name", $properties['data']['name']);
+            $plan->set("reward", $properties['data']['reward']);
+            $plan->set("description", $properties['data']['description']);
+            $plan->set("date_from", $start->format('Y-m-d H:i:s'));
+            $plan->set("date_to", $end->format('Y-m-d H:i:s'));
+            $plan->set("createdon", time());
+            $plan->set("active", 1);
+            if($properties["new"]){
+                $plan->set("fornew", 1);
+            }else{
+                $plan->set("fornew", 0);
+            }
+            if($properties['data']["params"]){
+                $plan->set("properties", json_encode($properties['data']["params"], JSON_UNESCAPED_UNICODE));
+            }
+            if($plan->save()){
+                $output[] = $plan->toArray();
+            }else{
+                // TODO: ADD TO TELEGRAM ALERT
+                return false;
+            }
+        }
+        return $output;
     }
 
     public function parseRegions($data){
@@ -535,6 +1517,29 @@ class objectsHandler
         return false;
     }
 
+    public function setAkbSettlementPlan ($properties) {
+        if($properties['action'] == 'set' && $properties['type'] == 'akbsettlementplan'){
+            $store_id = $properties['id'];
+            $date = new DateTime($properties['data']['month']);
+            $one_day = new DateInterval('P1D');
+            $date->add($one_day);
+            $date->setTime(00,00);
+            $akbsettlementplan = $this->modx->newObject('slStoresAkbSettlementPlan');
+            $akbsettlementplan->set('store_id', $store_id);
+            $akbsettlementplan->set('date', $date->format('Y-m-d H:i:s'));
+            $akbsettlementplan->set("createdon", time());
+            $akbsettlementplan->set('count', $properties['data']['dots']);
+            $akbsettlementplan->set('properties', json_encode($properties['data'], JSON_UNESCAPED_UNICODE));
+            if($akbsettlementplan->save()){
+                return $akbsettlementplan->toArray();
+            }else{
+                // TODO: ADD TO TELEGRAM ALERT
+                return false;
+            }
+        }
+        return false;
+    }
+
     public function setBonusConnection($properties){
         $output = array();
         $criteria = array(
@@ -552,8 +1557,39 @@ class objectsHandler
             $connection->set("active", 1);
             $connection->save();
             $output = $connection->toArray();
+            // check plan for newby
+            $new_plan = $this->modx->getObject("slBonusesPlans", array("bonus_id" => $properties['bonus_id'], "fornew" => 1));
+            if($new_plan){
+                // создаем план для организации и создаем отчет
+                $date_from = time();
+                $period = $new_plan->get("period");
+                $dt = new DateTime();
+                $dt->setTimestamp($date_from);
+                if($period == 'dayly'){
+                    // ставим конец дня
+                    $dt->setTime(23,59)->format('Y/m/d H:i:s');
+                }
+                if($period == 'weekly'){
+                    // ставим конец недели
+                    $dt->modify('sunday this week')->setTime(23,59)->format('Y/m/d H:i:s');
+                }
+                if($period == 'monthly'){
+                    // ставим конец месяца
+                    $dt->modify('last day of this month')->setTime(23,59)->format('Y/m/d H:i:s');
+                }
+
+                $report_type = $new_plan->get("report_type_id");
+                if($report_type == 2){
+                    // создаем планы АКБ по торговым точкам
+                    // $akbplan = $this->setAkbDotsPlan
+                }
+                if($report_type == 3){
+                    // создаем планы АКБ по населенным пунктам
+
+                }
+            }
         }
-        // first connection
+        // first connection TODO: edit to slWarehouseStores
         $bonus = $this->modx->getObject("slBonuses", $properties['bonus_id']);
         if($bonus){
             $vendor = $bonus->get("store_id");
@@ -639,34 +1675,7 @@ class objectsHandler
             $bonus->set("brand_id", $properties['brand']);
             $bonus->set("date_from", $start->format('Y-m-d H:i:s'));
             $bonus->set("date_to", $end->format('Y-m-d H:i:s'));
-            if($properties['files']){
-                if($file = $bonus->get("banner")){
-                    $full_path = $this->modx->getOption("base_path").$file;
-                    if(is_file($full_path)) {
-                        unlink($full_path);
-                    }
-                }
-                $source = $this->modx->getOption("base_path").$properties['files'][0]["original"];
-                // грузим новый
-                if($properties['files'][0]['path']){
-                    $target_path = $this->modx->getOption("base_path")."assets/files/organizations/{$store_id}/{$properties['files'][0]['path']}/";
-                    $target_file = $target_path.basename($source);
-                    $url = "assets/files/organizations/{$store_id}/{$properties['files'][0]['path']}/".basename($source);
-                }else{
-                    $target_path = $this->modx->getOption("base_path")."assets/files/organizations/{$store_id}/";
-                    $target_file = $target_path.basename($source);
-                    $url = "assets/files/organizations/{$store_id}/".basename($source);
-                }
-                if(!file_exists($target_path)){
-                    mkdir($target_path, 0777, true);
-                }
-                if (copy($source, $target_file)) {
-                    if(is_file($source)) {
-                        unlink($source);
-                    }
-                    $bonus->set("banner", $url);
-                }
-            }
+
             if($properties['store_ids']){
                 $ids = array();
                 foreach($properties['store_ids'] as $store){
@@ -682,9 +1691,51 @@ class objectsHandler
             }
             $bonus->set("active", 1);
             $bonus->save();
+            if($properties['files']){
+                if($file = $bonus->get("banner")){
+                    $full_path = $this->modx->getOption("base_path").$file;
+                    if(is_file($full_path)) {
+                        unlink($full_path);
+                    }
+                }
+                $source = $this->modx->getOption("base_path").$properties['files'][0]["original"];
+                // грузим новый
+                if($properties['files'][0]['path']){
+                    $target_path = $this->modx->getOption("base_path")."assets/files/organizations/{$store_id}/{$properties['files'][0]['path']}/";
+                    $target_file = $target_path.$this->pcgbasename($source);
+                    $url = "assets/files/organizations/{$store_id}/{$properties['files'][0]['path']}/".$this->pcgbasename($source);
+                }else{
+                    $target_path = $this->modx->getOption("base_path")."assets/files/organizations/{$store_id}/";
+                    $target_file = $target_path.$this->pcgbasename($source);
+                    $url = "assets/files/organizations/{$store_id}/".$this->pcgbasename($source);
+                }
+                if(!file_exists($target_path)){
+                    mkdir($target_path, 0777, true);
+                }
+                if (copy($source, $target_file)) {
+                    if(is_file($source)) {
+                        unlink($source);
+                    }
+                    $bonus->set("banner", $url);
+                    $bonus->save();
+                }
+            }
             return $bonus->toArray();
         }
         return false;
+    }
+
+    function pcgbasename($param, $suffix=null) {
+        if ( $suffix ) {
+            $tmpstr = ltrim(substr($param, strrpos($param, DIRECTORY_SEPARATOR) ), DIRECTORY_SEPARATOR);
+            if ( (strpos($param, $suffix)+strlen($suffix) )  ==  strlen($param) ) {
+                return str_ireplace( $suffix, '', $tmpstr);
+            } else {
+                return ltrim(substr($param, strrpos($param, DIRECTORY_SEPARATOR) ), DIRECTORY_SEPARATOR);
+            }
+        } else {
+            return ltrim(substr($param, strrpos($param, DIRECTORY_SEPARATOR) ), DIRECTORY_SEPARATOR);
+        }
     }
 
     public function getBonuses($properties){
@@ -709,15 +1760,19 @@ class objectsHandler
                     unset($data['stores']);
                     unset($data['warehouses']);
                     if($data['banner']){
-                        $url = $data['banner'];
+                        if($data['banner']){
+                            $url = $data['banner'];
+                        }else{
+                            $url = "assets/files/img/nopic.png";
+                        }
                         $image = $this->modx->getOption("base_path") . $url;
                         $small_file = $this->modx->runSnippet("phpThumbOn", array(
                             "input" => $image,
-                            "options" => "w=300&zc=1"
+                            "options" => "w=286&h=160&q=99&zc=1"
                         ));
                         $big_file = $this->modx->runSnippet("phpThumbOn", array(
                             "input" => $image,
-                            "options" => "w=1920&h=860&zc=1"
+                            "options" => "w=742&h=420&q=99&zc=1"
                         ));
                         $data['thumb_big'] = $this->modx->getOption("site_url") . $big_file;
                         $data['files'][] = array(
@@ -762,6 +1817,8 @@ class objectsHandler
                     $criteria = array(
                         "store_id:=" => $st['id']
                     );
+                }else{
+                    
                 }
                 // TODO: сделать выборку по флагам для магазинов и складов
                 $q->where($criteria);
@@ -789,15 +1846,18 @@ class objectsHandler
                         $results['items'][$key]['date_to'] = date("d.m.Y H:i", $date_to);
                         $results['items'][$key]['date_from_e'] = date('d.m.Y', $date_from);
                         $results['items'][$key]['date_to_e'] = date('d.m.Y', $date_to);
-                        if ($results['items'][$key]['banner']){
-                            $image = $this->modx->getOption("base_path") . $results['items'][$key]['banner'];
-                            //$this->modx->log(1, $image);
-                            $small_file = $this->modx->runSnippet("phpThumbOn", array(
-                                "input" => $image,
-                                "options" => "w=100&zc=1"
-                            ));
-                            $results['items'][$key]['banner'] = $small_file;
+                        if($results['items'][$key]['banner']){
+                            $url = $results['items'][$key]['banner'];
+                        }else{
+                            $url = "assets/files/img/nopic.png";
                         }
+                        $image = $this->modx->getOption("base_path") . $url;
+                        //$this->modx->log(1, $image);
+                        $small_file = $this->modx->runSnippet("phpThumbOn", array(
+                            "input" => $image,
+                            "options" => "w=742&h=420=99&zc=1"
+                        ));
+                        $results['items'][$key]['banner'] = $small_file;
                         $connection = $this->modx->getObject("slBonusesConnection", array(
                             "bonus_id" => $results['items'][$key]['id'],
                             "store_id" => $properties['id']
@@ -816,6 +1876,58 @@ class objectsHandler
             }
         }
         return $results;
+    }
+
+    public function getBonusAvailableStores ($properties, $include = 1) {
+        $results = array();
+        $q = $this->modx->newQuery("slBonusesConnection");
+        $q->leftJoin("slStores", "slStores", "slStores.id = slBonusesConnection.store_id");
+        $q->where(array(
+            "slStores.type:IN" => array(1,2),
+            "slBonusesConnection.bonus_id:=" => $properties["bonus_id"]
+        ));
+        $q->select(array(
+            'slStores.id',
+            'slStores.name',
+            'slStores.address'
+        ));
+        if($properties['sel_arr']){
+            if($include){
+                $q->where(array(
+                    "slStores.id:IN" => $properties['sel_arr']
+                ));
+            }else{
+                $q->where(array(
+                    "slStores.id:NOT IN" => $properties['sel_arr']
+                ));
+            }
+        }
+        if($properties['filter']){
+            $q->where(array(
+                "slStores.name:LIKE" => "%{$properties['filter']}%",
+                "OR:slStores.address:LIKE" => "%{$properties['filter']}%"
+            ));
+        }
+        $q->where(array(
+            "slStores.active:=" => 1
+        ));
+        $q->prepare();
+        $this->modx->log(1, $q->toSQL());
+        if($q->prepare() && $q->stmt->execute()){
+            $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+            if($properties['sel_arr']){
+                $results = $out;
+            }else{
+                $results['items'][] = $out;
+                if($properties['selected']){
+                    $results['items'][] = $properties['selected'];
+                }else{
+                    $results['items'][] = array();
+                }
+            }
+            return $results;
+        }
+        return array();
     }
 
     public function getAvailableStores($properties, $include = 1){
@@ -875,32 +1987,49 @@ class objectsHandler
         );
         $vs = array();
         $vendors = $this->modx->getCollection("slStoresBrands", $criteria);
-        foreach($vendors as $v){
+        foreach($vendors as $v) {
             $vs[] = $v->get("brand_id");
         }
-        $q = $this->modx->newQuery("modResource");
-        $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
-        $q->where(array(
-            "modResource.class_key:=" => "msProduct",
-            "msProduct.vendor:IN" => $vs
-        ));
         if($properties['sel_arr']){
             if($include){
+                $q = $this->modx->newQuery("slStoresMatrixProducts");
+                $q->leftJoin("modResource", "modResource", "modResource.id = slStoresMatrixProducts.product_id");
+                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresMatrixProducts.product_id');
+                $q->where(array(
+                    "slStoresMatrixProducts.matrix_id:=" => $properties['matrix_id'],
+                    "modResource.class_key:=" => "msProduct",
+                    "msProduct.vendor:IN" => $vs
+                ));
                 $q->where(array(
                     "modResource.id:IN" => $properties['sel_arr']
                 ));
+                $q->select(array(
+                    'modResource.id',
+                    'modResource.pagetitle as name',
+                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                    'msProduct.vendor_article as article',
+                    'slStoresMatrixProducts.count',
+                    'slStoresMatrixProducts.days'
+                ));
             }else{
+                $q = $this->modx->newQuery("modResource");
+                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
+                $q->where(array(
+                    "modResource.class_key:=" => "msProduct",
+                    "msProduct.vendor:IN" => $vs
+                ));
                 $q->where(array(
                     "modResource.id:NOT IN" => $properties['sel_arr']
                 ));
+                $q->select(array(
+                    'modResource.id',
+                    'modResource.pagetitle as name',
+                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                    'msProduct.vendor_article as article'
+                ));
             }
         }
-        $q->select(array(
-            'modResource.id',
-            'modResource.pagetitle as name',
-            'msProduct.image',
-            'msProduct.vendor_article as article'
-        ));
+
         if($properties['filter']){
             $q->where(array(
                 "modResource.pagetitle:LIKE" => "%{$properties['filter']}%",
@@ -910,7 +2039,6 @@ class objectsHandler
         // Подсчитываем общее число записей
         // $result['total'] = $this->modx->getCount('slStoresRemains', $q);
         $q->prepare();
-        $this->modx->log(1, $q->toSQL());
         if($q->prepare() && $q->stmt->execute()){
             $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
             if($properties['sel_arr']){
@@ -1064,6 +2192,19 @@ class objectsHandler
     public function deleteObject($properties){
         $this->modx->log(1, print_r($properties, 1));
         // проверка доступа должна быть в процессоре
+        if($properties['type'] == 'request'){
+            if(isset($properties['request_id'])){
+                $request = $this->modx->getObject("slCardRequest", $properties['request_id']['id']);
+                if($request){
+                    if ($request->remove() !== false) {
+                        return true;
+                    }else{
+                        $this->modx->log(1, "Проверьте удаление заявки ". $properties['request_id']['id']);
+                        return false;
+                    }
+                }
+            }
+        }
         if($properties['type'] == 'bonus'){
             if(isset($properties['bonus_id'])){
                 $bonus = $this->modx->getObject("slBonuses", $properties['bonus_id']['id']);
@@ -1080,6 +2221,19 @@ class objectsHandler
         if($properties['type'] == 'akbdotsplan'){
             if(isset($properties['plan_id'])){
                 $plan = $this->modx->getObject("slStoresAkbDotsPlan", $properties['plan_id']['id']);
+                if($plan){
+                    if ($plan->remove() !== false) {
+                        return true;
+                    }else{
+                        $this->modx->log(1, "Проверьте удаление плана ". $properties['plan_id']['id']);
+                        return false;
+                    }
+                }
+            }
+        }
+        if($properties['type'] == 'plan'){
+            if(isset($properties['plan_id'])){
+                $plan = $this->modx->getObject("slBonusesPlans", $properties['plan_id']['id']);
                 if($plan){
                     if ($plan->remove() !== false) {
                         return true;

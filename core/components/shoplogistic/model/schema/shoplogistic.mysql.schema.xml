@@ -93,6 +93,7 @@
         <field key="warehouse_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="sync" dbtype="tinyint" precision="1" phptype="boolean" null="false" default="0"/>
+        <field key="date" dbtype="datetime" phptype="datetime" null="true" />
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
         <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
@@ -523,7 +524,7 @@
     <object class="slDocs" table="sl_docs" extends="xPDOSimpleObject">
         <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
-        <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="store_id" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="global" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="date" dbtype="datetime" phptype="datetime" null="true" />
@@ -559,10 +560,192 @@
         <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="color" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="has_submit" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="has_action" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
         <index alias="name" name="name" primary="false" unique="false" type="BTREE">
             <column key="name" length="" collation="A" null="false"/>
+        </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+        <index alias="has_submit" name="has_submit" primary="false" unique="false" type="BTREE">
+            <column key="has_submit" length="" collation="A" null="false"/>
+        </index>
+        <index alias="has_action" name="has_action" primary="false" unique="false" type="BTREE">
+            <column key="has_action" length="" collation="A" null="false"/>
+        </index>
+    </object>
+
+    <object class="slCardRequest" table="sl_card_request" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="url" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="store_id" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="remain_id" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="date" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="created_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="file" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
+            <column key="store_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="status" name="status" primary="false" unique="false" type="BTREE">
+            <column key="status" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date" name="date" primary="false" unique="false" type="BTREE">
+            <column key="date" length="" collation="A" null="false"/>
+        </index>
+        <index alias="remain_id" name="remain_id" primary="false" unique="false" type="BTREE">
+            <column key="remain_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="CreatedUser" class="modUser" local="created_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="CreatedUserProfile" class="modUserProfile" local="created_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUser" class="modUser" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUserProfile" class="modUserProfile" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="Store" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="Remain" class="slStoresRemains" local="remain_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="Status" class="slDocsStatus" local="status" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
+
+    <object class="slCardRequestStatus" table="sl_card_request_status" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="color" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+            <column key="name" length="" collation="A" null="false"/>
+        </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+    </object>
+
+    <!-- Таблица файлов выгрузки ассортимента -->
+    <object class="slExportFiles" table="sl_export_files" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="categories" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="products" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="date" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="created_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="file" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
+            <column key="store_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="status" name="status" primary="false" unique="false" type="BTREE">
+            <column key="status" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date" name="date" primary="false" unique="false" type="BTREE">
+            <column key="date" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="CreatedUser" class="modUser" local="created_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="CreatedUserProfile" class="modUserProfile" local="created_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUser" class="modUser" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUserProfile" class="modUserProfile" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="Store" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="Status" class="slExportFileStatus" local="status" foreign="id" cardinality="one" owner="foreign"/>
+
+        <composite alias="Cats" class="slExportFilesCats" local="id" foreign="file_id" cardinality="many" owner="local"/>
+    </object>
+
+    <!-- Таблица категорий файлов выгрузки ассортимента -->
+    <object class="slExportFilesCats" table="sl_export_files_cats" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="export_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="export_parent_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="cat_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="file_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="export_id" name="export_id" primary="false" unique="false" type="BTREE">
+            <column key="export_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="export_parent_id" name="export_parent_id" primary="false" unique="false" type="BTREE">
+            <column key="export_parent_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="cat_id" name="cat_id" primary="false" unique="false" type="BTREE">
+            <column key="cat_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="file_id" name="file_id" primary="false" unique="false" type="BTREE">
+            <column key="file_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="UpdatedUser" class="modUser" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUserProfile" class="modUserProfile" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="File" class="slExportFiles" local="file_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="Resource" class="modResource" local="cat_id" foreign="id" cardinality="one" owner="foreign"/>
+
+        <composite alias="Options" class="slExportFilesCatsOptions" local="id" foreign="cat_id" cardinality="many" owner="local"/>
+    </object>
+
+    <!-- Таблица опций категорий файлов выгрузки ассортимента -->
+    <object class="slExportFilesCatsOptions" table="sl_export_files_cats_oprions" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="filter" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="option_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="cat_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="option_id" name="option_id" primary="false" unique="false" type="BTREE">
+            <column key="option_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="cat_id" name="cat_id" primary="false" unique="false" type="BTREE">
+            <column key="cat_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="UpdatedUser" class="modUser" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUserProfile" class="modUserProfile" local="updated_by" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="Option" class="msOption" local="option_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="Cat" class="slExportFilesCats" local="cat_id" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
+
+    <!-- Таблица статусов файлов выгрузки -->
+    <object class="slExportFileStatus" table="sl_export_file_status" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="color" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="has_submit" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="has_action" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+            <column key="name" length="" collation="A" null="false"/>
+        </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+        <index alias="has_submit" name="has_submit" primary="false" unique="false" type="BTREE">
+            <column key="has_submit" length="" collation="A" null="false"/>
+        </index>
+        <index alias="has_action" name="has_action" primary="false" unique="false" type="BTREE">
+            <column key="has_action" length="" collation="A" null="false"/>
         </index>
     </object>
 
@@ -617,11 +800,61 @@
     <object class="slReportsType" table="sl_reports_type" extends="xPDOSimpleObject">
         <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="toplan" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="created_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
         <index alias="name" name="name" primary="false" unique="false" type="BTREE">
             <column key="name" length="" collation="A" null="false"/>
         </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+        <index alias="toplan" name="toplan" primary="false" unique="false" type="BTREE">
+            <column key="toplan" length="" collation="A" null="false"/>
+        </index>
+
+        <composite alias="Fields" class="slReportsFields" local="id" foreign="type" cardinality="many" owner="local"/>
+    </object>
+
+    <object class="slReportsTypeFields" table="sl_reports_type_fields" extends="xPDOSimpleObject">
+        <field key="key" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="type" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="toplan" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="field_type" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="1"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="created_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+            <column key="name" length="" collation="A" null="false"/>
+        </index>
+        <index alias="key" name="key" primary="false" unique="false" type="BTREE">
+            <column key="key" length="" collation="A" null="false"/>
+        </index>
+        <index alias="field_type" name="field_type" primary="false" unique="false" type="BTREE">
+            <column key="field_type" length="" collation="A" null="false"/>
+        </index>
+        <index alias="type" name="type" primary="false" unique="false" type="BTREE">
+            <column key="type" length="" collation="A" null="false"/>
+        </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+        <index alias="toplan" name="toplan" primary="false" unique="false" type="BTREE">
+            <column key="toplan" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="Type" class="slReportsType" local="type" foreign="id" cardinality="one" owner="foreign"/>
     </object>
 
     <object class="slReportsRRCStores" table="sl_reports_rrc" extends="xPDOSimpleObject">
@@ -819,6 +1052,7 @@
         <aggregate alias="slStores" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
         <aggregate alias="msVendor" class="msVendor" local="brand_id" foreign="id" cardinality="one" owner="foreign"/>
         <composite alias="Connections" class="slBonusesConnection" local="id" foreign="bonus_id" cardinality="many" owner="local"/>
+        <composite alias="Plans" class="slBonusesPlans" local="id" foreign="bonus_id" cardinality="many" owner="local"/>
     </object>
 
     <object class="slBonusesConnection" table="sl_bonuses_connections" extends="xPDOSimpleObject">
@@ -840,6 +1074,73 @@
 
         <aggregate alias="slBonuses" class="slBonuses" local="bonus_id" foreign="id" cardinality="one" owner="foreign"/>
         <aggregate alias="slStores" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
+
+    <object class="slBonusesPlans" table="sl_bonuses_plans" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="reward" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="bonus_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="report_type_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="report_type_field_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="report_type_field_value" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="date_from" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="date_to" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="period" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="parent" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="report_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="created_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updated_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="fornew" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="complete" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
+            <column key="store_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="report_type_field_id" name="report_type_field_id" primary="false" unique="false" type="BTREE">
+            <column key="report_type_field_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date_from" name="date_from" primary="false" unique="false" type="BTREE">
+            <column key="date_from" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date_to" name="date_to" primary="false" unique="false" type="BTREE">
+            <column key="date_to" length="" collation="A" null="false"/>
+        </index>
+        <index alias="period" name="period" primary="false" unique="false" type="BTREE">
+            <column key="period" length="" collation="A" null="false"/>
+        </index>
+        <index alias="report_type_id" name="report_type_id" primary="false" unique="false" type="BTREE">
+            <column key="report_type_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="bonus_id" name="bonus_id" primary="false" unique="false" type="BTREE">
+            <column key="bonus_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="report_id" name="report_id" primary="false" unique="false" type="BTREE">
+            <column key="report_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+        <index alias="complete" name="complete" primary="false" unique="false" type="BTREE">
+            <column key="complete" length="" collation="A" null="false"/>
+        </index>
+        <index alias="parent" name="parent" primary="false" unique="false" type="BTREE">
+            <column key="parent" length="" collation="A" null="false"/>
+        </index>
+        <index alias="fornew" name="fornew" primary="false" unique="false" type="BTREE">
+            <column key="fornew" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="slBonuses" class="slBonuses" local="bonus_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="slBonusesPlans" class="slBonusesPlans" local="parent" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="slStores" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="slReportsType" class="slReportsType" local="report_type_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="slReportsTypeFields" class="slReportsTypeFields" local="report_type_field_id" foreign="id" cardinality="one" owner="foreign"/>
     </object>
 
     <!-- WILL BE CORRECTED!!! -->

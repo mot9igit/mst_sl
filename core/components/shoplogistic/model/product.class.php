@@ -509,7 +509,12 @@ class productHandler
             'products_info' => array()
         );
         $store = $this->getStore($data['key'], "date_docs_update");
-        foreach ($data['docs'] as $key => $doc) {
+        foreach ($data['docs'] as $k => $doc) {
+            if($doc['GUID']){
+                $key = $doc['GUID'];
+            }else{
+                $key = $k;
+            }
             // если удаление
             if ($doc['delete']) {
                 $criteria = array(

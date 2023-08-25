@@ -27,6 +27,16 @@ shopLogistic.panel.Settings = function (config) {
                     xtype: 'shoplogistic-grid-status',
                     cls: 'main-wrapper',
                 }]
+            },{
+                title: _('shoplogistic_reporttypes'),
+                layout: 'anchor',
+                items: [{
+                    html: _('shoplogistic_reporttypes_desc'),
+                    bodyCssClass: 'panel-desc',
+                }, {
+                    xtype: 'shoplogistic-grid-report-type',
+                    cls: 'main-wrapper',
+                }]
             }]
         }]
     });

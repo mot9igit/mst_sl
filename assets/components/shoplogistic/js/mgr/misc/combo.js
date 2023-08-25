@@ -375,6 +375,26 @@ shopLogistic.combo.balance_type = function(config) {
 Ext.extend(shopLogistic.combo.balance_type, MODx.combo.ComboBox);
 Ext.reg('combo-balance_type', shopLogistic.combo.balance_type);
 
+shopLogistic.combo.field_type = function(config) {
+    config = config || {};
+    Ext.applyIf(config,{
+        store: new Ext.data.ArrayStore({
+            id: 0
+            ,fields: ['type', 'display']
+            ,data: [
+                [1, 'Поле отчета']
+                ,[2, 'Параметр']
+            ]
+        })
+        ,mode: 'local'
+        ,displayField: 'display'
+        ,valueField: 'type'
+    });
+    shopLogistic.combo.field_type.superclass.constructor.call(this,config);
+};
+Ext.extend(shopLogistic.combo.field_type, MODx.combo.ComboBox);
+Ext.reg('combo-field_type', shopLogistic.combo.field_type);
+
 shopLogistic.combo.City = function (config) {
     config = config || {};
     Ext.applyIf(config, {
@@ -435,6 +455,42 @@ shopLogistic.combo.Product = function (config) {
 Ext.extend(shopLogistic.combo.Product, MODx.combo.ComboBox);
 Ext.reg('shoplogistic-combo-product', shopLogistic.combo.Product);
 
+shopLogistic.combo.Category = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/category/getlist',
+        },
+        name: 'category_id',
+        hiddenName: 'category_id',
+        fields: ['id', 'pagetitle'],
+        mode: 'remote',
+        displayField: 'pagetitle',
+        fieldLabel: _('shoplogistic_category'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{pagetitle}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.Category.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.Category, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-category', shopLogistic.combo.Category);
+
 shopLogistic.combo.ms2Status = function (config) {
     config = config || {};
     Ext.applyIf(config, {
@@ -470,6 +526,114 @@ shopLogistic.combo.ms2Status = function (config) {
 };
 Ext.extend(shopLogistic.combo.ms2Status, MODx.combo.ComboBox);
 Ext.reg('shoplogistic-combo-ms2status', shopLogistic.combo.ms2Status);
+
+shopLogistic.combo.docStatus = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/doc_status/getlist',
+        },
+        name: 'status',
+        hiddenName: 'status',
+        fields: ['id', 'name', 'description'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_doc_status_id'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.docStatus.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.docStatus, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-docstatus', shopLogistic.combo.docStatus);
+
+shopLogistic.combo.exportFileStatus = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/export_files_status/getlist',
+        },
+        name: 'status',
+        hiddenName: 'status',
+        fields: ['id', 'name', 'description'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_doc_status_id'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.exportFileStatus.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.exportFileStatus, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-exportfilestatus', shopLogistic.combo.exportFileStatus);
+
+shopLogistic.combo.cardRequestStatus = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/card_request_status/getlist',
+        },
+        name: 'status',
+        hiddenName: 'status',
+        fields: ['id', 'name', 'description'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_card_request_id'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.cardRequestStatus.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.cardRequestStatus, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-cardrequeststatus', shopLogistic.combo.cardRequestStatus);
 
 shopLogistic.combo.productField = function (config) {
     config = config || {};
@@ -542,3 +706,42 @@ shopLogistic.combo.orderField = function (config) {
 };
 Ext.extend(shopLogistic.combo.orderField, MODx.combo.ComboBox);
 Ext.reg('shoplogistic-combo-orderfield', shopLogistic.combo.orderField);
+
+shopLogistic.combo.Stores = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        xtype: 'superboxselect',
+        allowBlank: true,
+        allowAddNewData: true,
+        addNewDataOnBlur: false,
+        resizable: true,
+        name: config.name + '[]',
+        anchor: '100%',
+        minChars: 2,
+        store: new Ext.data.JsonStore({
+            id: (config.name || 'properties') + '-store',
+            root: 'results',
+            autoLoad: true,
+            autoSave: false,
+            totalProperty: 'total',
+            fields: ['name','id'],
+            url: shopLogistic.config.connector_url,
+            baseParams: {
+                action: 'mgr/store/getlist',
+            }
+        }),
+        mode: 'remote',
+        displayField: 'name',
+        displayFieldTpl: '{name} ({id})',
+        valueField: 'id',
+        triggerAction: 'all',
+        extraItemCls: 'x-tag',
+        expandBtnCls: 'x-form-trigger',
+        clearBtnCls: 'x-form-trigger',
+        renderTo: Ext.getBody(),
+    });
+    config.name += '[]';
+    shopLogistic.combo.Stores.superclass.constructor.call(this,config);
+};
+Ext.extend(shopLogistic.combo.Stores, Ext.ux.form.SuperBoxSelect);
+Ext.reg('shoplogistic-combo-stores', shopLogistic.combo.Stores);

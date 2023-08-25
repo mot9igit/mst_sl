@@ -40,13 +40,13 @@ class reportsHandler
     public function createFileBlock($id){
         $reports_tmp = $this->config['tmp_path'].'reports/'.$id.'/';
         if(!file_exists($reports_tmp)){
-            mkdir($reports_tmp, 0755);
+            mkdir($reports_tmp, 0755, true);
         }
         $data = array(
             "deadline" => time() + 7200 // по умолчанию ставим блокировку на 2 часа
         );
         $json = json_encode($data, JSON_UNESCAPED_UNICODE);
-        file_put_contents($reports_tmp . '/lock.file', $json);
+        file_put_contents($reports_tmp . 'lock.file', $json);
     }
 
     /**
@@ -339,16 +339,21 @@ class reportsHandler
                 }
             }
         }
-        if(count($regions) > 1){
-            $object = 'dartLocationRegion';
-            $name = "`dartLocationRegion`.`name` as name";
+        if($properties['region_id']){
+            $object = 'slStores';
+            $name = "`slStores`.`name` as name";
         }else{
-            if(count($cities) || $properties['filtersdata']['stores'] || $properties['filtersdata']['warehouses']){
-                $object = 'dartLocationCity';
-                $name = "`dartLocationCity`.`city` as name";
-            }else{
+            if(count($regions) > 1){
                 $object = 'dartLocationRegion';
                 $name = "`dartLocationRegion`.`name` as name";
+            }else{
+                if(count($cities) || $properties['filtersdata']['stores'] || $properties['filtersdata']['warehouses']){
+                    $object = 'dartLocationCity';
+                    $name = "`dartLocationCity`.`city` as name";
+                }else{
+                    $object = 'dartLocationRegion';
+                    $name = "`dartLocationRegion`.`name` as name";
+                }
             }
         }
         $q = $this->modx->newQuery('slStoresRemains');
@@ -361,6 +366,11 @@ class reportsHandler
         $q->where(array(
             "slStoresRemains.available:>" => 0
         ));
+        if($properties['filtersdata']['store_type']){
+            $q->where(array(
+                "slStores.type:=" => $properties['filtersdata']['store_type']
+            ));
+        }
         if(isset($properties['filtersdata']['catalog'])){
             $catalogs = array();
             foreach($properties['filtersdata']['catalog'] as $key => $val){
@@ -408,10 +418,15 @@ class reportsHandler
         $q->where(array(
             "`slStores`.`active`:=" => 1
         ));
+        if($properties['region_id']){
+            $q->where(array(
+                "`dartLocationCity`.`region`:=" => $properties['region_id']
+            ));
+        }
         // $stores = $this->getPreQueryTS($properties, 'slStores');
         // $where по фильтрам
         $q->select(
-            array("{$object}.*,{$name},COUNT(DISTINCT store_id) as available_dots,COALESCE(SUM(slStoresRemains.available),0) as count, COALESCE(SUM(slStoresRemains.available * slStoresRemains.price)) AS price")
+            array("{$object}.*,{$name}, dartLocationRegion.id as id,COUNT(DISTINCT store_id) as available_dots,COALESCE(SUM(slStoresRemains.available),0) as count, COALESCE(SUM(slStoresRemains.available * slStoresRemains.price)) AS price")
         );
         $q->groupby("{$object}.id");
         if(isset($properties['sort'])){
@@ -435,6 +450,12 @@ class reportsHandler
                 $output['regions_data'][$key]['price'] = number_format($region['price'], 2, '.', ' ');
                 $output['regions_data'][$key]['count'] = number_format($region['count'], 0, '.', ' ');
                 $output['regions_data'][$key]['population'] = number_format($region['population'], 0, '.', ' ');
+            }
+        }
+        if($properties['region_id']){
+            $obj = $this->modx->getObject("dartLocationRegion", $properties['region_id']);
+            if($obj){
+                $output['region'] = $obj->get("name");
             }
         }
         $output['total'] = count($output['regions_data']);
@@ -467,13 +488,18 @@ class reportsHandler
 
     public function getRRCReport($properties) {
         if($properties['elem_id']){
+            $results = array();
+            $store = $this->modx->getObject("slStores", $properties['elem_id']);
+            if($store){
+                $results['store'] = $store->toArray(); 
+            }
             // подробный отчет
             $q = $this->modx->newQuery("slReportsRRCProducts");
             $q->where(array("rrc_store_id:=" => $properties['elem_id']));
             $q->leftJoin("slStoresRemains", "slStoresRemains", "slStoresRemains.id = slReportsRRCProducts.remain_id");
             $q->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
             $q->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
-            $q->select(array("slReportsRRCProducts.*,slStoresRemains.price as price_now,msProductData.price_rrc as price_rrc,modResource.pagetitle as product_name,msProductData.image as product_image,msProductData.vendor_article as product_vendor_article"));
+            $q->select(array("slReportsRRCProducts.*, slStoresRemains.price as price_now,msProductData.price_rrc as price_rrc,modResource.pagetitle as product_name,msProductData.image as product_image,msProductData.vendor_article as product_vendor_article"));
             // фильтрация
             if ($properties['filter']) {
                 $words = explode(" ", $properties['filter']);
@@ -572,6 +598,8 @@ class reportsHandler
                     $report['date_from'] = date("d.m.Y", $date_from);
                     $date_to = strtotime($report['date_to']);
                     $report['date_to'] = date("d.m.Y", $date_to);
+                    $updatedon = strtotime($report['updatedon']);
+                    $report['updatedon'] = date("d.m.Y H:i", $updatedon);
                     if($report['file']){
                         $report['file'] = $this->modx->getOption("site_url").$report['file'];
                     }
@@ -629,6 +657,12 @@ class reportsHandler
                     if($results['items'][$key]['createdon']){
                         $createdon = strtotime($val['createdon']);
                         $results['items'][$key]['createdon'] = date("d.m.Y H:i", $createdon);
+                    }else{
+                        $results['items'][$key]['createdon'] = '-';
+                    }
+                    if($results['items'][$key]['updatedon']){
+                        $updatedon = strtotime($val['updatedon']);
+                        $results['items'][$key]['updatedon'] = date("d.m.Y H:i", $updatedon);
                     }else{
                         $results['items'][$key]['createdon'] = '-';
                     }
@@ -791,18 +825,27 @@ class reportsHandler
                         foreach($weeks[$key]["data"] as $item){
                             $stores[] = $item['store_id'];
                             $products[] = $item['product_id'];
+                        }
+                        $stores = array_unique($stores);
+                        $products = array_unique($products);
+                        foreach($weeks[$key]["data"] as $item){
                             // считаем показатели помагазинно
                             $find = 0;
                             $avg_speed_weeks = $item["sales"] / count($weeks);
                             $avg_speed_days = $item["sales"] / 7;
+                            $avg_speed_stores = $item["sales"] / count($stores);
+                            $avg_speed_products = $item["sales"] / count($products);
                             foreach($summary[0]["children"] as $k => $val){
                                 if($val["key"] == "0_{$item['store_id']}"){
                                     $find = 1;
                                     // summary data
                                     $summary[0]["children"][$k]["data"]["sales"] += $item["sales"];
-                                    $summary[0]["children"][$k]["data"]["remain"] += $item["remain"];
+                                    $summary[0]["children"][$k]["data"]["remain"] += round(($item["remain"] / count($stores)), 2);
                                     $summary[0]["children"][$k]["data"]["outofstock"] += $item["out_of_stock"];
-                                    $summary[0]["children"][$k]["data"]["speed_sales"] += round($avg_speed_weeks, 2);
+                                    $summary[0]["children"][$k]["data"]["speed_sales"] += round(($avg_speed_days / count($stores)), 2);
+                                    $summary[0]["children"][$k]["data"]["speed_sales"] = round($summary[0]["children"][$k]["data"]["speed_sales"], 2);
+                                    $summary[0]["children"][$k]["data"]["remain"] = round($summary[0]["children"][$k]["data"]["remain"], 2);
+
                                     if(isset($summary[0]["children"][$k]["data"][$week_prefix."sales"])) {
                                         $summary[0]["children"][$k]["data"][$week_prefix . "sales"] += $item["sales"];
                                     }else{
@@ -835,13 +878,13 @@ class reportsHandler
                                     "data" => array(
                                         "name" => $item["store_name"],
                                         "sales" => $item["sales"],
-                                        "speed_sales" => round($avg_speed_weeks, 2),
+                                        "speed_sales" => round(($avg_speed_days / count($stores)), 2),
                                         "remain" => $item["remain"],
                                         "outofstock" => $item["out_of_stock"],
                                         "{$week_prefix}sales" => $item["sales"],
                                         "{$week_prefix}speed_sales" => round($avg_speed_days, 2),
-                                        "{$week_prefix}outofstock" => $item["sales"],
-                                        "{$week_prefix}remain" => $item["sales"]
+                                        "{$week_prefix}outofstock" => $item["out_of_stock"],
+                                        "{$week_prefix}remain" => $item["remain"]
                                     )
                                 );
                                 $summary[0]["children"][] = $store_data;
@@ -876,6 +919,8 @@ class reportsHandler
                                     }else {
                                         $summary[1]["children"][$k]["data"][$week_prefix."remain"] = $item["remain"];
                                     }
+                                    $summary[1]["children"][$k]["data"][$week_prefix."speed_sales"] = round($summary[1]["children"][$k]["data"][$week_prefix."speed_sales"], 2);
+                                    $summary[1]["children"][$k]["data"]["speed_sales"] = round($summary[1]["children"][$k]["data"]["speed_sales"], 2);
                                     $ff = 0;
                                     foreach($summary[1]["children"][$k]["children"] as $kk => $v){
                                         if($v["key"] == "1_{$item['product_id']}_{$item['store_id']}"){
@@ -904,6 +949,8 @@ class reportsHandler
                                             }else {
                                                 $summary[1]["children"][$k]["children"][$kk]["data"][$week_prefix . "remain"] = $item["remain"];
                                             }
+                                            $summary[1]["children"][$k]["children"][$kk]["data"]["speed_sales"] = round($summary[1]["children"][$k]["children"][$kk]["data"]["speed_sales"], 2);
+                                            $summary[1]["children"][$k]["children"][$kk]["data"][$week_prefix . "speed_sales"] = round($summary[1]["children"][$k]["children"][$kk]["data"][$week_prefix . "speed_sales"], 2);
                                         }
                                     }
                                     if(!$ff){
@@ -922,6 +969,8 @@ class reportsHandler
                                                 "dd" => 0
                                             )
                                         );
+                                        $store_data['data'][$week_prefix."speed_sales"] = round($store_data['data'][$week_prefix."speed_sales"], 2);
+                                        $store_data['data']["speed_sales"] = round($store_data['data']["speed_sales"], 2);
                                         $summary[1]["children"][$k]["children"][] = $store_data;
                                     }
                                 }
@@ -942,10 +991,11 @@ class reportsHandler
                                         "dd" => 1
                                     )
                                 );
+                                $store_data['data'][$week_prefix."speed_sales"] = round($store_data['data'][$week_prefix."speed_sales"], 2);
                                 $product_data = array(
                                     "key" => "1_{$item['product_id']}",
                                     "data" => array(
-                                        "name" => $item["product_name"],
+                                        "name" => "{$item["product_name"]} (арт. {$item["vendor_article"]})",
                                         "sales" => $item["sales"],
                                         "speed_sales" => round($avg_speed_weeks, 2),
                                         "remain" => $item["remain"],
@@ -957,6 +1007,7 @@ class reportsHandler
                                     )
                                 );
                                 $product_data["children"][] = $store_data;
+                                $product_data['data'][$week_prefix."speed_sales"] = round($product_data['data'][$week_prefix."speed_sales"], 2);
                                 $summary[1]["children"][] = $product_data;
                             }
                             $summary[0]['data']["sales"] += $item["sales"];
@@ -965,6 +1016,7 @@ class reportsHandler
                             $summary[0]['data']["outofstock"] += $item["out_of_stock"];
                             $summary[0]['data'][$week_prefix."sales"] += $item["sales"];
                             $summary[0]['data'][$week_prefix."speed_sales"] += round($avg_speed_days, 2);
+                            $summary[0]['data'][$week_prefix."speed_sales"] = round($summary[0]['data'][$week_prefix."speed_sales"], 2);
                             $summary[0]['data'][$week_prefix."outofstock"] += $item["out_of_stock"];
                             $summary[0]['data'][$week_prefix."remain"] += $item["remain"];
                             $summary[1]['data']["sales"] += $item["sales"];
@@ -973,44 +1025,48 @@ class reportsHandler
                             $summary[1]['data']["outofstock"] += $item["out_of_stock"];
                             $summary[1]['data'][$week_prefix."sales"] += $item["sales"];
                             $summary[1]['data'][$week_prefix."speed_sales"] += round($avg_speed_days, 2);
+                            $summary[1]['data'][$week_prefix."speed_sales"] = round($summary[1]['data'][$week_prefix."speed_sales"], 2);
                             $summary[1]['data'][$week_prefix."outofstock"] += $item["out_of_stock"];
                             $summary[1]['data'][$week_prefix."remain"] += $item["remain"];
                         }
                     }
                 }
-                $stores = array_unique($stores);
-                $products = array_unique($products);
                 $avg_remain_stores = $summary[0]['data']["remain"] / count($stores);
                 $avg_remain_products = $summary[1]['data']["remain"] / count($products);
-                $avg_speed = $summary[0]['data']["speed_sales"] / count($stores);
+                $avg_speed_stores = $summary[0]['data']["speed_sales"] / count($stores);
+                $avg_remain_products = $summary[1]['data']["speed_sales"] / count($products);
                 $summary[0]['data']["remain"] = round($avg_remain_stores, 2);
                 $summary[1]['data']["remain"] = round($avg_remain_products, 2);
-                $summary[0]['data']["speed_sales"] = round($avg_speed, 2);
-                $summary[1]['data']["speed_sales"] = round($avg_speed, 2);
+                $summary[0]['data']["speed_sales"] = round($avg_speed_stores, 2);
+                $summary[1]['data']["speed_sales"] = round($avg_remain_products, 2);
+                $results["items"] = $summary;
                 $results["weeks"] = $weeks;
                 $count_weeks = count($results["weeks"]);
-                $html_head = "Период</th><th class=\"\" role=\"columnheader\" style=\"width: 600px;\"><!----><!----><span class=\"p-column-title\">colspan='4'>Сводная информация за период</span></th>";
+                $width = 950;
+                $html_head = "<div class='head-row'><div>Номер недели</div><div style=\"width: 600px;\"><span>Сводная информация за период</span></div>";
                 foreach($results["weeks"] as $index => $week){
                     $date_from = date("d.m.Y", strtotime($week['date_from']));
                     $date_to = date("d.m.Y", strtotime($week['date_to']));
                     $num = $index + 1;
-                    $html_head .= "<th class=\"\" role=\"columnheader\" style=\"width: 600px;\">{$num} нед.</th>";
+                    $html_head .= "<div style=\"width: 400px;\">{$num} нед.</div>";
+                    $width += 400;
                 }
-                $html_head .= "</tr><tr role=\"row\"><th>Номер недели </th><th class=\"\" role=\"columnheader\" style=\"width: 600px;\">{$count_weeks} нед.</th>";
+                $html_head .= "</div><div class='head-row'><div>Период</div><div style=\"width: 600px;\"><span class='lab'>{$count_weeks} нед.</span></div>";
                 foreach($results["weeks"] as $index => $week){
                     $date_from = date("d.m.Y", strtotime($week['date_from']));
                     $date_to = date("d.m.Y", strtotime($week['date_to']));
                     $num = $index + 1;
-                    $html_head .= "<th class=\"\" role=\"columnheader\" style=\"width: 600px;\">{$date_from} - {$date_to}</th>";
+                    $html_head .= "<div style=\"width: 400px;\"><span class='lab'>{$date_from} - {$date_to}</span></div>";
                 }
-                $html_head .= "</tr><tr role=\"row\"><th class=\"\" role=\"columnheader\" style=\"width: 350px;\">";
+                $html_head .= "</div>";
                 foreach($columns as $key => $column){
                     if($column['key']=="name"){
                         $columns[$key]["html"] = $html_head;
                     }
                 }
+                $results["head"] = $html_head;
+                $results["head_width"] = $width;
                 $results["columns"] = $columns;
-                $results["items"] = $summary;
                 $results["total"] = count($summary);
             }
         }
@@ -1217,6 +1273,10 @@ class reportsHandler
             $q->prepare();
             if ($q->prepare() && $q->stmt->execute()) {
                 $results['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($results['items'] as $key => $val){
+                    $date_from = strtotime($val['date_from']);
+                    $results['items'][$key]['date_from'] = date("d.m.Y", $date_from);
+                }
             }
         }
         return $results;
@@ -1238,9 +1298,11 @@ class reportsHandler
                     "slStoresRemains.product_id:>" => 0,
                     "AND:slStoreDocsProducts.type:=" => 1,
                     "AND:slStoreDocs.date:>=" => $report_data['date_from'],
-                    "AND:slStoreDocs.date:<=" => $report_data['date_to'],
+                    "AND:slStoreDocs.date:<=" => $report_data['date_to']
                 ));
-                $query->groupby("slStores.id,slStoresRemains.product_id");
+                $query->groupby("store_id,slStoresRemains.product_id");
+                $query->prepare();
+                $this->modx->log(1, $query->toSQL());
                 if($query->prepare() && $query->stmt->execute()) {
                     $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                     $this->modx->removeCollection("slReportsTopSales", array("report_id" => $report_id));
@@ -1275,13 +1337,18 @@ class reportsHandler
             $q->select(array(
                 'msProductData.*',
                 "Content.pagetitle as name",
-                "COALESCE(slReportsTopSales.sales, 0) as roz_sales"
+                "SUM(slReportsTopSales.sales) as roz_sales"
             ));
             // отсекаем по ID отчета
             $q->where(array(
                 "slReportsTopSales.report_id:=" => $properties['report_id']
             ));
             if($properties['filtersdata']){
+                if($properties['filtersdata']['store_type']){
+                    $q->where(array(
+                        "slStores.type:=" => $properties['filtersdata']['store_type']
+                    ));
+                }
                 if($properties['filtersdata']['vendor']){
                     $q->where(array(
                         "msProductData.vendor:=" => $properties['filtersdata']['vendor']
@@ -1347,8 +1414,9 @@ class reportsHandler
             }
             $q->groupby("slReportsTopSales.product_id");
             $result = array();
-            // Подсчитываем общее число записей
-            $result['total'] = $this->modx->getCount('slReportsTopSales', $q);
+
+            $q->prepare();
+            $pre_query = $q->toSQL();
 
             // Устанавливаем лимит 1/10 от общего количества записей
             // со сдвигом 1/20 (offset)
@@ -1367,12 +1435,21 @@ class reportsHandler
             }else{
                 $q->sortby('roz_sales', 'desc');
             }
+
             if ($q->prepare() && $q->stmt->execute()) {
                 $this->modx->log(1, $q->toSQL());
                 $result['products'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Подсчитываем общее число записей
+                $statement = $this->modx->query("SELECT COUNT(*) as count FROM ({$pre_query}) as temp");
+                $c = $statement->fetch(PDO::FETCH_ASSOC);
+                $result['total'] = $c['count'];
                 return $result;
             }
         }
+        return array(
+            "products" => array(),
+            "total" => 0
+        );
     }
 
     public function generateRRC($report_id){
@@ -1452,7 +1529,7 @@ class reportsHandler
                                 if($query->prepare() && $query->stmt->execute()) {
                                     $history = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                                     foreach($history as $h) {
-                                        if($h['price'] > $remain_info['price_rrc']){
+                                        if($h['price'] != $remain_info['price_rrc']){
                                             $remain_info['violation'] = 1;
                                             $report_store->set("violation", 1);
                                             $report_store->save();
