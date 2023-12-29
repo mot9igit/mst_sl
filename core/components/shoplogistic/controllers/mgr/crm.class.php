@@ -56,6 +56,7 @@ class ShoplogisticMgrCRMManagerController extends slManagerController
         </script>');
 
 		$this->shopLogistic->loadServices();
+        $this->shopLogistic->b24->initialize();
 
 		$this->modx->invokeEvent('slOnManagerCustomCssJs', array(
 			'controller' => $this,

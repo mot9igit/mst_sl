@@ -64,23 +64,26 @@ class eShopLogistic
 	public function add_toorder($data=[]){
 		if($data['data']){
 			if ($this->ms2Init()) {
-				//$this->modx->log(1, print_r($data, 1));
+
 				$dirty_data = json_decode($data['data'], 1);
 
-				//$this->modx->log(1, print_r($dirty_data, 1));
+				// $this->modx->log(1, print_r($dirty_data, 1));
 				$method = $dirty_data['service']['method'];
 				$service = $dirty_data['service']['main_key'];
 				$save_data = [
+                    'key' => $dirty_data['service']['main_key'],
+                    'method' => $dirty_data['service']['method'],
 					'price' => $dirty_data['service'][$service]['price'][$method]['price'],
 					'time' => $dirty_data['service'][$service]['price'][$method]['time'],
 					'service' => $dirty_data['service'][$service]['name'],
+                    'delivery' => $dirty_data['service']['delivery']
 				];
 				$save_data['mode'] = $this->modx->lexicon('shoplogistic_frontend_mode_' . $method);
 				if($method == 'terminal'){
 					$save_data['address'] = $dirty_data['pvz']['code'] . ' || ' . $dirty_data['pvz']['address'];
 				}
 				if($method == 'door' || $service == 'postrf'){
-					$save_data['address'] = $this->modx->lexicon('shoplogistic_frontend_no_address');
+					// $save_data['address'] = $this->modx->lexicon('shoplogistic_frontend_no_address');
 				}
 				//$this->modx->log(1, print_r($save_data, 1));
 				//$this->modx->log(1, json_encode($save_data, JSON_UNESCAPED_UNICODE));
@@ -157,7 +160,7 @@ class eShopLogistic
 		if(!count($from)){
 			$from = $this->sl->cart->getUserPosition();
 		}
-		$url = "https://b2b.taxi.yandex.net/b2b/cargo/integration/v1/check-price";
+		$url = "https://b2b.taxi.yandex.net/b2b/cargo/integration/v2/check-price";
 		if($product_id){
 			$from = $this->prepareYandexCoordinates($from);
 			$to = $this->prepareYandexCoordinates($to);
@@ -171,10 +174,10 @@ class eShopLogistic
 					"coordinates" => $to
 				)
 			);
-			$data['items'] = $items;
+            // $data['items'] = $items;
 			$ya_delivery_data = $this->yaDeliveryRequest($url, $data);
 			if(isset($ya_delivery_data['code'])){
-				$this->yaDeliveryReport($url.' '.$ya_delivery_data['code'].' '.$ya_delivery_data['message']);
+				$this->yaDeliveryReport($url.' '.print_r($ya_delivery_data, 1));
 				$this->yaDeliveryReport($data);
 				return false;
 			}else{
@@ -340,11 +343,13 @@ class eShopLogistic
 		$headers = array();
 		$headers[] = "Content-Type: application/json";
 		$headers[] = "Accept: application/json";
-		$headers[] = "Authorization: Bearer AQAAAABhRjNRAAVM1a9aVo-TC0-iuG7YqKTnWoA";
+		$headers[] = "Authorization: Bearer y0_AgAAAABwm_xpAAc6MQAAAADxNqBGDyYRjb1ET-a7TOQsyZCFYSerH-A";
 		$headers[] = "Accept-Language: ru";
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
 		$result = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $this->yaDeliveryReport($http_code);
 		if (curl_errno($ch)) {
 			$this->modx->log(xPDO::LOG_LEVEL_ERROR,  'YA Delivery Error:' . curl_error($ch));
 		}

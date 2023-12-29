@@ -322,6 +322,11 @@ class reportsHandler
         return $cities;
     }
 
+    // Берем товары с упущенной выручкой
+    public function getLostRevenue ($properties) {
+
+    }
+
     public function getAvailable($properties = array()){
         $output = array();
         if(isset($properties['filtersdata']['region'])) {
@@ -580,6 +585,17 @@ class reportsHandler
             $q->select(array("slReports.*"));
             if ($q->prepare() && $q->stmt->execute()) {
                 $report = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                $report['properties'] = json_decode($report['properties'], 1);
+                $this->modx->log(1, print_r($report, 1));
+                if($report['properties']['matrix']){
+                    $query = $this->modx->newQuery("slStoresMatrix");
+                    $query->where(array("slStoresMatrix.id" => $report['properties']['matrix']));
+                    $query->select(array("slStoresMatrix.*"));
+                    if ($query->prepare() && $query->stmt->execute()) {
+                        $it = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        $report["matrix"] = $it;
+                    }
+                }
                 if($properties['report_data']){
                     // если тип отчета Первичная представленность
                     if($report['type'] == 2) {
@@ -876,7 +892,7 @@ class reportsHandler
                                 $store_data = array(
                                     "key" => "0_{$item['store_id']}",
                                     "data" => array(
-                                        "name" => $item["store_name"],
+                                        "name" => $item["store_name"].', '.$item["city_name"],
                                         "sales" => $item["sales"],
                                         "speed_sales" => round(($avg_speed_days / count($stores)), 2),
                                         "remain" => $item["remain"],
@@ -957,7 +973,7 @@ class reportsHandler
                                         $store_data = array(
                                             "key" => "1_{$item['product_id']}_{$item['store_id']}",
                                             "data" => array(
-                                                "name" => $item["store_name"],
+                                                "name" => $item["store_name"].', '.$item["city_name"],
                                                 "sales" => $item["sales"],
                                                 "speed_sales" => round($avg_speed_weeks, 2),
                                                 "remain" => $item["remain"],
@@ -979,7 +995,7 @@ class reportsHandler
                                 $store_data = array(
                                     "key" => "1_{$item['product_id']}_{$item['store_id']}",
                                     "data" => array(
-                                        "name" => $item["store_name"],
+                                        "name" => $item["store_name"].', '.$item["city_name"],
                                         "sales" => $item["sales"],
                                         "speed_sales" => round($avg_speed_weeks, 2),
                                         "remain" => $item["remain"],
@@ -1031,14 +1047,25 @@ class reportsHandler
                         }
                     }
                 }
-                $avg_remain_stores = $summary[0]['data']["remain"] / count($stores);
-                $avg_remain_products = $summary[1]['data']["remain"] / count($products);
-                $avg_speed_stores = $summary[0]['data']["speed_sales"] / count($stores);
-                $avg_remain_products = $summary[1]['data']["speed_sales"] / count($products);
+                if(count($stores)){
+                    $avg_remain_stores = $summary[0]['data']["remain"] / count($stores);
+                    $avg_speed_stores = $summary[0]['data']["speed_sales"] / count($stores);
+                }else{
+                    $avg_remain_stores = 0;
+                    $avg_speed_stores = 0;
+                }
+                if(count($products)){
+                    $avg_remain_products = $summary[1]['data']["remain"] / count($products);
+                    $avg_speed_products = $summary[1]['data']["speed_sales"] / count($products);
+                }else{
+                    $avg_remain_products = 0;
+                    $avg_speed_products = 0;
+                }
+
                 $summary[0]['data']["remain"] = round($avg_remain_stores, 2);
                 $summary[1]['data']["remain"] = round($avg_remain_products, 2);
                 $summary[0]['data']["speed_sales"] = round($avg_speed_stores, 2);
-                $summary[1]['data']["speed_sales"] = round($avg_remain_products, 2);
+                $summary[1]['data']["speed_sales"] = round($avg_speed_products, 2);
                 $results["items"] = $summary;
                 $results["weeks"] = $weeks;
                 $count_weeks = count($results["weeks"]);
@@ -1075,7 +1102,14 @@ class reportsHandler
 
     public function getConnectedStores($store_id){
         $stores = array();
-        $connections = $this->modx->getCollection("slStoresConnection", array("vendor_id" => $store_id, "active" => 1));
+        $query = $this->modx->newQuery("slStoresConnection");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresConnection.store_id");
+        $query->where(array(
+            "slStoresConnection.vendor_id" => $store_id,
+            "slStoresConnection.active" => 1,
+            "slStores.active" => 1
+        ));
+        $connections = $this->modx->getCollection("slStoresConnection", $query);
         foreach($connections as $connection){
             $stores[] = $connection->get("store_id");
         }
@@ -1211,7 +1245,7 @@ class reportsHandler
             // фильтры
             $cities = array();
             $regions = array();
-            if(isset($properties['filtersdata']['region'])) {
+            if (isset($properties['filtersdata']['region'])) {
                 foreach ($properties['filtersdata']['region'] as $key => $val) {
                     if ($val['checked']) {
                         $k_r = explode("_", $key);
@@ -1224,21 +1258,21 @@ class reportsHandler
                     }
                 }
             }
-            if(count($regions)){
+            if (count($regions)) {
                 $q->where(array(
                     "`dartLocationCity`.`region`:IN" => $regions
                 ));
             }
-            if(count($cities)){
+            if (count($cities)) {
                 $q->where(array(
                     "`dartLocationCity`.`id`:IN" => $cities
                 ));
             }
-            if($properties['filter']){
+            if ($properties['filter']) {
                 $words = explode(" ", $properties['filter']);
-                foreach($words as $word){
+                foreach ($words as $word) {
                     $criteria = array();
-                    $criteria['slStores.name:LIKE'] = '%'.trim($word).'%';
+                    $criteria['slStores.name:LIKE'] = '%' . trim($word) . '%';
                     $q->where($criteria);
                 }
             }
@@ -1257,14 +1291,14 @@ class reportsHandler
             $results['total'] = $this->modx->getCount("slReportsPresent", $q);
             // Устанавливаем лимит 1/10 от общего количества записей
             // со сдвигом 1/20 (offset)
-            if($properties['page'] && $properties['perpage']){
+            if ($properties['page'] && $properties['perpage']) {
                 $limit = $properties['perpage'];
                 $offset = ($properties['page'] - 1) * $properties['perpage'];
                 $q->limit($limit, $offset);
             }
 
             // И сортируем по ID в обратном порядке
-            if($properties['sort']){
+            if ($properties['sort']) {
                 // $this->modx->log(1, print_r($properties, 1));
                 $keys = array_keys($properties['sort']);
                 // нужно проверить какому объекту принадлежит поле
@@ -1273,7 +1307,7 @@ class reportsHandler
             $q->prepare();
             if ($q->prepare() && $q->stmt->execute()) {
                 $results['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
-                foreach($results['items'] as $key => $val){
+                foreach ($results['items'] as $key => $val) {
                     $date_from = strtotime($val['date_from']);
                     $results['items'][$key]['date_from'] = date("d.m.Y", $date_from);
                 }

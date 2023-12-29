@@ -23,6 +23,18 @@ class slStoresGetProcessor extends modObjectGetProcessor
         return parent::process();
     }
 
+    public function beforeOutput() {
+        if($this->object->store){
+            $this->object->set('type', 1);
+        }
+        if($this->object->warehouse){
+            $this->object->set('type', 2);
+        }
+        if($this->object->vendor){
+            $this->object->set('type', 3);
+        }
+    }
+
 }
 
 return 'slStoresGetProcessor';

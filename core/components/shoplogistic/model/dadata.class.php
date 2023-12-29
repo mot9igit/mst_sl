@@ -80,17 +80,30 @@ class Dadata
 	}
 
 	/**
-	 * Detect city by IP service.
-	 * See https://dadata.ru/api/iplocate/ for details.
+	 * GET Organization by INN.
+	 * See https://dadata.ru/api/find-party/ for details.
 	 */
-	public function iplocate($ip)
+	public function getOrganization($inn)
 	{
-		$url = $this->suggest_url . "/iplocate/address";
+		$url = $this->suggest_url . "/findById/party";
 		$fields = array(
-			"ip" => $ip
+			"query" => $inn
 		);
 		return $this->executeRequest($url, $fields);
 	}
+
+    /**
+     * Detect city by IP service.
+     * See https://dadata.ru/api/iplocate/ for details.
+     */
+    public function iplocate($ip)
+    {
+        $url = $this->suggest_url . "/iplocate/address";
+        $fields = array(
+            "ip" => $ip
+        );
+        return $this->executeRequest($url, $fields);
+    }
 
 	/**
 	 * Suggest service.

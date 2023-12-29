@@ -6,6 +6,10 @@ $_lang['area_shoplogistic_city'] = 'Города и папки';
 $_lang['area_shoplogistic_requizites'] = 'Реквизиты';
 $_lang['area_shoplogistic_crm'] = 'CRM';
 $_lang['area_shoplogistic_products'] = 'Товары';
+$_lang['area_shoplogistic_order'] = 'Заказ';
+$_lang['area_shoplogistic_cdek'] = 'СДЭК';
+$_lang['area_shoplogistic_yandex'] = 'Yandex';
+$_lang['area_shoplogistic_postrf'] = 'Почта России';
 
 $_lang['setting_shoplogistic_frontend_css'] = 'СSS-файл для фронта';
 $_lang['setting_shoplogistic_frontend_css_desc'] = 'Можно указать тут свой файл или перенести стили в свой css-файл и очистить поле.';
@@ -26,6 +30,9 @@ $_lang['setting_shoplogistic_curier_delivery_desc'] = 'ID способа дос�
 
 $_lang['setting_shoplogistic_punkt_delivery'] = 'Способ доставки в пункт выдачи';
 $_lang['setting_shoplogistic_punkt_delivery_desc'] = 'ID способа доставки MS2 в пункт выдачи, у доставки нужен класс обработчик slHandler.';
+
+$_lang['setting_shoplogistic_blank_image'] = 'Изображение заглушка';
+$_lang['setting_shoplogistic_blank_image_desc'] = 'Укажите путь до изображения-заглушки относительно корня сайта';
 
 $_lang['setting_shoplogistic_post_delivery'] = 'Способ доставки почтой России';
 $_lang['setting_shoplogistic_post_delivery_desc'] = 'ID способа доставки MS2 почтой России, у доставки нужен класс обработчик slHandler.';
@@ -88,6 +95,58 @@ $_lang['setting_shoplogistic_default_stage_desc'] = '';
 
 $_lang['setting_shoplogistic_payment_stage'] = 'ID стадии оплаченного заказа';
 $_lang['setting_shoplogistic_payment_stage_desc'] = '';
+$_lang['setting_shoplogistic_assigned_by_id'] = 'ID ответственного за сделки';
+$_lang['setting_shoplogistic_assigned_by_id_desc'] = '';
+$_lang['setting_shoplogistic_type_id'] = 'Тип сделки';
+$_lang['setting_shoplogistic_type_id_desc'] = '';
 
 $_lang['setting_shoplogistic_debug_log'] = 'Вести лог расчетов?';
 $_lang['setting_shoplogistic_debug_log_desc'] = 'Вся информация будет в файле core/cache/logs/sl_calc.log';
+
+// СДЭК
+$_lang['setting_shoplogistic_cdek_test_url'] = 'URL тестового API';
+$_lang['setting_shoplogistic_cdek_test_url_desc'] = 'По умолчанию: https://api.edu.cdek.ru/v2/';
+$_lang['setting_shoplogistic_cdek_test_account'] = 'Client ID для тестовых запросов';
+$_lang['setting_shoplogistic_cdek_test_account_desc'] = 'По умолчанию: EMscd6r9JnFiQ3bLoyjJY6eM78JrJceI';
+$_lang['setting_shoplogistic_cdek_test_pass'] = 'Password для тестовых запросов';
+$_lang['setting_shoplogistic_cdek_test_pass_desc'] = 'По умолчанию: PjLZkKBHEiLK3YsjtNrt3TGNG0ahs3kG';
+$_lang['setting_shoplogistic_cdek_url'] = 'URL для боевых запросов';
+$_lang['setting_shoplogistic_cdek_url_desc'] = 'По умолчанию: https://api.cdek.ru/v2/';
+$_lang['setting_shoplogistic_cdek_account'] = 'Client ID';
+$_lang['setting_shoplogistic_cdek_account_desc'] = 'Смотреть в ЛК СДЭК';
+$_lang['setting_shoplogistic_cdek_pass'] = 'Password';
+$_lang['setting_shoplogistic_cdek_pass_desc'] = 'Смотреть в ЛК СДЭК';
+$_lang['setting_shoplogistic_cdek_test_mode'] = 'Тестовый режим';
+$_lang['setting_shoplogistic_cdek_test_mode_desc'] = '';
+$_lang['setting_shoplogistic_cdek_token'] = 'Токен';
+$_lang['setting_shoplogistic_cdek_token_desc'] = 'Заполняется автоматически';
+$_lang['setting_shoplogistic_cdek_token_expired_in'] = 'Токен истекает';
+$_lang['setting_shoplogistic_cdek_token_expired_in_desc'] = 'Заполняется автоматически';
+
+// Yandex
+$_lang['setting_shoplogistic_yandex_oauth_token'] = 'Токен';
+$_lang['setting_shoplogistic_yandex_oauth_token_desc'] = 'См. в ЛК Я.Доставки';
+$_lang['setting_shoplogistic_yandex_express_url'] = 'URL API для экспресс доставки';
+$_lang['setting_shoplogistic_yandex_express_url_desc'] = 'См. в <a href="https://yandex.ru/dev/logistics/api/about/access.html">документации</a>';
+$_lang['setting_shoplogistic_yandex_express_url_test'] = 'URL API TEST для экспресс доставки';
+$_lang['setting_shoplogistic_yandex_express_url_test_desc'] = 'См. в <a href="https://yandex.ru/dev/logistics/api/about/access.html">документации</a>';
+$_lang['setting_shoplogistic_yandex_delivery_url'] = 'URL API для доставки';
+$_lang['setting_shoplogistic_yandex_delivery_url_desc'] = 'См. в <a href="https://yandex.ru/dev/logistics/delivery-api/doc/about/access.html">документации</a>';
+$_lang['setting_shoplogistic_yandex_delivery_url_test'] = 'URL API TEST для доставки';
+$_lang['setting_shoplogistic_yandex_delivery_url_test_desc'] = 'См. в <a href="https://yandex.ru/dev/logistics/delivery-api/doc/about/access.html">документации</a>';
+$_lang['setting_shoplogistic_yandex_delivery_platform_id_test'] = 'ID тестовой платформы';
+$_lang['setting_shoplogistic_yandex_delivery_platform_id_test_desc'] = 'См. в <a href="https://yandex.ru/dev/logistics/delivery-api/doc/about/access.html">документации</a>';
+
+// Почта России
+$_lang['setting_shoplogistic_postrf_token'] = 'Токен';
+$_lang['setting_shoplogistic_postrf_token_desc'] = 'См. в ЛК <a href="https://otpravka.pochta.ru/">Почты России</a>';
+$_lang['setting_shoplogistic_postrf_url'] = 'URL API';
+$_lang['setting_shoplogistic_postrf_url_desc'] = 'См. в <a href="https://otpravka.pochta.ru/">ЛК</a>';
+$_lang['setting_shoplogistic_postrf_key'] = 'Ключ в Base64';
+$_lang['setting_shoplogistic_postrf_key_desc'] = 'Можно сгенерировать в <a href="https://otpravka.pochta.ru/specification#/authorization-key">документации</a>';
+
+// Заказ
+$_lang['setting_shoplogistic_code_live'] = 'Срок жизни кода выдачи';
+$_lang['setting_shoplogistic_code_live_desc'] = 'В секундах, 0 - не обновлять';
+$_lang['setting_shoplogistic_regenerate_code'] = 'Перегенерировать код?';
+$_lang['setting_shoplogistic_regenerate_code_desc'] = '';

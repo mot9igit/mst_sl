@@ -43,8 +43,20 @@ class slStoresGetListProcessor extends modObjectGetListProcessor
 
         $type = trim($this->getProperty('type'));
         if ($type) {
+            if($type == 1){
+                $field = 'store';
+                $value = 1;
+            }
+            if($type == 2){
+                $field = 'warehouse';
+                $value = 1;
+            }
+            if($type == 3){
+                $field = 'vendor';
+                $value = 1;
+            }
             $c->where([
-                'type:=' => $type
+                $field.':=' => $value
             ]);
         }
 
@@ -63,6 +75,16 @@ class slStoresGetListProcessor extends modObjectGetListProcessor
         $array['actions'] = [];
 
 		$array['city'] = $this->modx->shopLogistic->getCityNameById($array['city']);
+
+        if($array['store']){
+            $array['type'] = 1;
+        }
+        if($array['warehouse']){
+            $array['type'] = 2;
+        }
+        if($array['vendor']){
+            $array['type'] = 3;
+        }
 
         // Edit
         $array['actions'][] = [

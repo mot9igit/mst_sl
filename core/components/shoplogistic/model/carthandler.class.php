@@ -10,7 +10,7 @@ class cartDifficultHandler
 		$this->sl =& $sl;
 		$this->modx =& $modx;
 		$this->modx->lexicon->load('shoplogistic:default');
-		$this->config['our_services'] = array('postrf', 'yandex');
+		$this->config['our_services'] = array('postrf', 'yandex', 'cdek');
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
 			$ctx = 'web';
@@ -21,6 +21,181 @@ class cartDifficultHandler
 			}
 		}
 	}
+
+    /**
+     * Берем предложения по товару
+     *
+     * @param $product_id
+     * @param $ctx
+     * @return array
+     */
+    public function getOffers($product_id, $ctx = 'web'){
+        $output = array();
+        $location = $this->sl->getLocationData($ctx);
+        $output['location_store'] = $location['store'];
+        // проверяем остаток в выбранном магазине
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "product_id:=" => $product_id,
+            "AND:remains:>=" => 1,
+            "AND:price:>" => 0,
+            'AND:store_id:=' => $location['store']['id']
+        ));
+        $query->select(array("slStoresRemains.*,slStores.name as store_name,slStores.address as store_address"));
+        if($query->prepare() && $query->stmt->execute()){
+            $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            // $this->modx->log(1, print_r($remain, 1));
+            if($remain){
+                $output['selected_store'] = $remain;
+            }else{
+                // если остатка нет в магазине проверяем склад (если складов несколько, берем один с наименьшей ценой)
+                $whs = array();
+                $warehouses = $this->sl->store->getWarehouses($location['store']['id']);
+                // $this->modx->log(1, print_r($warehouses, 1));
+                // return $warehouses;
+                foreach($warehouses as $wh) {
+                    $whs[] = $wh['id'];
+                }
+                if($whs){
+                    $q = $this->modx->newQuery("slStoresRemains");
+                    $q->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+                    $q->where(array(
+                        "product_id:=" => $product_id,
+                        "AND:remains:>=" => 1,
+                        "AND:price:>" => 0,
+                        'AND:store_id:IN' => $whs
+                    ));
+                    $q->sortby("price", "ASC");
+                    $q->select(array("slStoresRemains.*,slStores.name as store_name,slStores.address as store_address"));
+                    $q->prepare();
+                    // echo '2 '.$q->toSQL();
+                    if($q->prepare() && $q->stmt->execute()) {
+                        $remains = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        if($remains){
+                            foreach($remains as $key => $remain){
+                                $remains[$key]['type'] = "slWarehouse";
+                            }
+                            $output['selected_store_warehouses'] = $remains;
+                        }
+                    }
+                }
+            }
+        }
+        // ищем все предложения из города, в котором находимся
+        $whs = array();
+        $warehouses = $this->sl->store->getWarehouses($location['store']['id']);
+        foreach($warehouses as $wh) {
+            $whs[] = $wh['id'];
+        }
+        $criteria = array(
+            "product_id:=" => $product_id,
+            "AND:remains:>=" => 1,
+            "AND:price:>" => 0,
+            "AND:slStores.active:=" => 1,
+            "AND:slStores.city:=" => $output['location_store']['city'],
+            "AND:slStores.id:!=" => $output['location_store']['id']
+        );
+        if(count($whs)){
+            $criteria["AND:slStores.id:NOT IN"] = $whs;
+        }
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where($criteria);
+        $query->sortby('price', 'ASC');
+        $query->select(array(
+            'slStoresRemains.*,slStores.name as store_name,slStores.address',
+        ));
+        if($query->prepare() && $query->stmt->execute()) {
+            $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            if($remains){
+                $output['stores_city'] = $remains;
+            }
+        }
+        // ищем все предложения из других городов
+        $criteria = array(
+            "product_id:=" => $product_id,
+            "AND:remains:>=" => 1,
+            "AND:price:>" => 0,
+            "AND:slStores.active:=" => 1,
+            "AND:slStores.city:!=" => $output['location_store']['city'],
+            "AND:slStores.id:!=" => $output['location_store']['id']
+        );
+        if(count($whs)){
+            $criteria["AND:slStores.id:NOT IN"] = $whs;
+        }
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where($criteria);
+        $query->sortby('price', 'ASC');
+        $query->select(array(
+            'slStoresRemains.*,slStores.name as store_name,slStores.address',
+        ));
+        if($query->prepare() && $query->stmt->execute()) {
+            $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            if($remains){
+                $output['stores'] = $remains;
+            }
+        }
+        // старое условие вывода.
+        if(!isset($output['selected_store']) && !isset($output['selected_store_warehouses'])){
+
+        }
+        return $output;
+    }
+
+    /**
+     * Считаем примерные сроки доставки
+     *
+     * @param $product_id
+     * @param $type
+     * @param $from_id
+     * @return array|false
+     */
+    public function getDeliveryInfoDays($product_id, $type = 'slStores', $from_id = 0){
+        $delivery_data = array();
+        // $this->modx->log(1, $product_id.' | '.$type.' | '.$from_id.' | ');
+        // Считаем примерные сроки доставки
+        // Вариант 1: считаем самовывоз + доставку от поставщика
+        $delivery_data = $this->getPickupPrice($product_id, $type, 1, $from_id);
+        // TODO: контекст!
+        $location = $this->sl->getLocationData('web');
+        $delivery_data['location'] = $location;
+        // игнорим второй режим
+        /*
+        if($this->modx->getOption('shoplogistic_cart_mode') == 2){
+            $delivery_data = $this->getPickupPrice($product_id, 1, $from_id);
+        }else{
+            $stores = $this->getNearbyStores($product_id);
+            if(count($stores)){
+                // если в наличии
+                $delivery_data['pickup']['store'] = $stores[0];
+                $delivery_data['pickup']['price'] = 0;
+                $delivery_data['pickup']['term'] = 'сегодня';
+                $delivery_data['pickup']['term_default'] = 0;
+            }else{
+                $default_store = $this->modx->getOption("shoplogistic_default_store");
+                if ($default_store) {
+                    $delivery_data['pickup']['price'] = 0;
+                    $delivery_data['pickup']['term'] = 'сегодня';
+                    $delivery_data['pickup']['term_default'] = 0;
+                    $def_store = $this->sl->getObject($default_store, "slStores");
+                    if ($def_store) {
+                        $delivery_data['pickup']['store'] = $def_store;
+                    }
+                }
+            }
+        }*/
+
+        $delivery = $this->getTKPrice($product_id, 1, $type, $from_id);
+        $delivery_data['delivery'] = $delivery['delivery'];
+        $express = $this->getYaDeliveryPrice($product_id, 1, $type, $from_id);
+        if($express['delivery']) {
+            $delivery_data['express'] = $express['delivery'];
+        }
+
+        return $delivery_data;
+    }
 
 	/**
 	 * Берем параметры товара, габариты в см, вес в кг, объем в куб.м.
@@ -96,7 +271,7 @@ class cartDifficultHandler
         return $offers;
     }
 
-    public function getStoresRemains($product_id, $type){
+    public function getStoresRemains($product_id, $type = 'slStores'){
         $output = array();
         if($type == 'slStores'){
             $object_r = "slStoresRemains";
@@ -300,237 +475,81 @@ class cartDifficultHandler
 		$tmp = array();
 		$new_cart = array();
 		$cart = $this->ms2->cart->get();
-		$cart_mode = $this->modx->getOption('shoplogistic_cart_mode');
+		// $cart_mode = $this->modx->getOption('shoplogistic_cart_mode');
+        // echo $cart_mode;
 		// если режим глобальный, то ищем среди всех магазинов. В данном случае, игнорируются дистрибьюторы.
-		if($cart_mode == 1){
-			// 1 - проверить все товары в наличии в магазине
-			// 2 - все товары у дистрибьютора
-			// 3 - отправить магазину по умолчанию
-			$product_ids = array();
-			$stores_ids = array();
-			$warehouse_ids = array();
-			// узнаем где товары есть в наличии
-			foreach($cart as $key => $item){
-				$product_ids[] = $item['id'];
-				$criteria = array(
-					"product_id:=" => $item['id'],
-					"AND:available:>=" => $item['count']
-				);
-				// остатки магазина
-				$remains = $this->modx->getCollection("slStoresRemains", $criteria);
-				foreach($remains as $remain){
-					$stores_ids[$remain->get('store_id')] = $item['id'];
-				}
-				// остатки склада
-				$remains = $this->modx->getCollection("slWarehouseRemains", $criteria);
-				foreach($remains as $remain){
-					$warehouse_ids[$remain->get('warehouse_id')] = $item['id'];
-				}
-			}
-			// отсечем лишнее в магазинах
-			foreach($stores_ids as $key => $store) {
-				if (count($cart) != count($store)) {
-					unset($stores_ids[$key]);
-				}
-			}
-			// если магазинов не нашлось ищем у дистров
-			if(!count($stores_ids)){
-				foreach($warehouse_ids as $key => $warehouse) {
-					if (count($cart) != count($warehouse)) {
-						unset($warehouse_ids[$key]);
-					}
-				}
-				// если разрешено отправлять к дистру
-				if($this->modx->getOption("shoplogistic_cart_to_warehouse") && count($warehouse_ids)){
-					$sts = array_keys($warehouse_ids);
-					$whs = implode(',', $sts);
-					$geo = $this->getUserPosition();
-					$lat = trim($geo['lat']);
-					$lng = trim($geo['lng']);
-					$sql = "SELECT 
-        			*,
-        			coordinats,
-        			(
-        			   6371 *
-        			   acos(cos(radians({$lat})) * 
-        			   cos(radians(lat)) * 
-        			   cos(radians(lng) - 
-        			   radians({$lng})) + 
-        			   sin(radians({$lat})) * 
-        			   sin(radians(lat)))
-        			) AS distance 
-        			FROM {$this->modx->getTableName('slWarehouse')} WHERE `active` = 1 AND `id` IN ({$whs}) ORDER BY distance LIMIT 999";
-
-					$query = $this->modx->query($sql);
-					if($query) {
-						$result = $query->fetchAll(PDO::FETCH_ASSOC);
-						if($result){
-							foreach($cart as $key => $item) {
-								$item['key'] = $key;
-								$product_data = $this->getProductData($item['id']);
-								$item = array_merge($item, $product_data);
-								$new_cart['slWarehouse_' . $result[0]['id']]['object'] = $result[0]['id'];
-								$new_cart['slWarehouse_' . $result[0]['id']]['type'] = 'slWarehouse';
-								$new_cart['slWarehouse_' . $result[0]['id']]['data'] = $result[0];
-								$new_cart['slWarehouse_' . $result[0]['id']]['products'][$key] = $item;
-							}
-						}
-					}
-				}else{
-					$this->modx->log(1, $this->modx->getOption("shoplogistic_default_store"));
-					$this->modx->log(1, print_r($warehouse_ids, 1));
-					// отправляем в магазин по умолчанию
-					$default_store = $this->modx->getOption("shoplogistic_default_store");
-					if($default_store){
-						$store = $this->modx->getObject("slStores", $default_store);
-						if($store){
-							$store_d = $store->toArray();
-							foreach($cart as $key => $item) {
-								$item['key'] = $key;
-								$product_data = $this->getProductData($item['id']);
-								$item = array_merge($item, $product_data);
-								$new_cart['slStores_' . $store_d['id']]['object'] = $store_d['id'];
-								$new_cart['slStores_' . $store_d['id']]['type'] = 'slStores';
-								$new_cart['slStores_' . $store_d['id']]['data'] = $store_d;
-								$new_cart['slStores_' . $store_d['id']]['products'][$key] = $item;
-							}
-						}
-					}
-				}
-			}else{
-				// отправляем в ближайший магазин
-				$sts = array_keys($stores_ids);
-				$stores = implode(',', $sts);
-				$geo = $this->getUserPosition();
-				$lat = trim($geo['lat']);
-				$lng = trim($geo['lng']);
-				$sql = "SELECT 
-        			*,
-        			coordinats,
-        			(
-        			   6371 *
-        			   acos(cos(radians({$lat})) * 
-        			   cos(radians(lat)) * 
-        			   cos(radians(lng) - 
-        			   radians({$lng})) + 
-        			   sin(radians({$lat})) * 
-        			   sin(radians(lat)))
-        			) AS distance 
-        			FROM {$this->modx->getTableName('slStores')} WHERE `active` = 1 AND `id` IN ({$stores}) ORDER BY distance LIMIT 999";
-
-				$query = $this->modx->query($sql);
-				if($query) {
-					$result = $query->fetchAll(PDO::FETCH_ASSOC);
-					if($result){
-						foreach($cart as $key => $item) {
-							$item['key'] = $key;
-							$product_data = $this->getProductData($item['id']);
-							$item = array_merge($item, $product_data);
-							$new_cart['slStores_' . $result[0]['id']]['object'] = $result[0]['id'];
-							$new_cart['slStores_' . $result[0]['id']]['type'] = 'slStores';
-							$new_cart['slStores_' . $result[0]['id']]['data'] = $result[0];
-							$new_cart['slStores_' . $result[0]['id']]['products'][$key] = $item;
-						}
-					}
-				}
-			}
-
-		}else{
-			// print_r($warehouse);
-			$warehouse = array();
-			$store = array();
-			foreach($cart as $key => $item){
-				$item['key'] = $key;
-				$product_data = $this->getProductData($item['id']);
-				$item = array_merge($product_data, $item);
-				$position = $this->getUserPosition();
-				if(isset($item['options']['type'])){
-					if($item['options']['type'] == 'slWarehouse'){
-						if(isset($item['options']['warehouse'])){
-							$warehouse = $this->sl->getObject($item['options']['warehouse'], 'slWarehouse');
-						}
-					}
-				}
-				if(isset($item['options']['store'])){
-					$store = $this->sl->getObject($item['options']['store']);
-				}else{
-					$store = $position['data']['store'];
-				}
-				if($store){
-					$new_cart['stores'][] = $store['id'];
-					// проверяем остаток у магазина
-					$remains = $this->getRemains('slStores', $store['id'], $item['id'], $item['count']);
-					if(!$remains){
-						// если остаток не пришел проверяем у дистра
-						$remains = $this->getRemains('slWarehouse', $store['id'], $item['id'], $item['count']);
-						if(!$remains){
-							// TODO: решить вопрос, если остатков нет в магазине и у дистра
-							$new_cart['not_found']['products'][$key] = $item;
-						}else{
-							$new_cart['slWarehouse_'.$remains['object_id']]['object'] = $remains['object_id'];
-							$new_cart['slWarehouse_'.$remains['object_id']]['type'] = 'slWarehouse';
-							$new_cart['slWarehouse_'.$remains['object_id']]['data'] = $warehouse;
-							$new_cart['slWarehouse_'.$remains['object_id']]['products'][$key] = $item;
-						}
-					}else{
-						$new_cart['slStores_'.$store['id']]['object'] = $store['id'];
-						$new_cart['slStores_'.$store['id']]['type'] = 'slStores';
-						$new_cart['slStores_'.$store['id']]['data'] = $store;
-						$new_cart['slStores_'.$store['id']]['products'][$key] = $item;
-					}
-				}
-                if($warehouse){
-                    $remains = $this->getRemains('slWarehouse', $warehouse['id'], $item['id'], $item['count']);
-                    if(!$remains){
-                        // TODO: решить вопрос, если остатков нет в магазине и у дистра
-                        $new_cart['not_found']['products'][$key] = $item;
-                    }else{
-                        $new_cart['slWarehouse_'.$remains['object_id']]['object'] = $remains['object_id'];
-                        $new_cart['slWarehouse_'.$remains['object_id']]['type'] = 'slWarehouse';
-                        $new_cart['slWarehouse_'.$remains['object_id']]['data'] = $warehouse;
-                        $new_cart['slWarehouse_'.$remains['object_id']]['products'][$key] = $item;
+        // print_r($warehouse);
+        $warehouse = array();
+        $store = array();
+        foreach($cart as $key => $item){
+            $item['key'] = $key;
+            $product_data = $this->getProductData($item['id']);
+            $item = array_merge($product_data, $item);
+            $location = $this->sl->getLocationData('web');
+            //if(isset($item['options']['type'])){
+                if($item['options']['type'] == 'slWarehouse'){
+                    if(isset($item['options']['warehouse'])){
+                        $warehouse = $this->sl->getObject($item['options']['warehouse']);
+                        if($warehouse){
+                            $remains = $this->getRemains('slStores', $warehouse['id'], $item['id'], $item['count']);
+                            $new_cart['stores'][] = $warehouse['id'];
+                            $new_cart['slWarehouse_'.$warehouse['id']]['object'] = $remains['object_id'];
+                            $new_cart['slWarehouse_'.$warehouse['id']]['type'] = 'slWarehouse';
+                            $new_cart['slWarehouse_'.$warehouse['id']]['data'] = $warehouse;
+                            $new_cart['slWarehouse_'.$warehouse['id']]['products'][$key] = $item;
+                        }
+                    }
+                }else{
+                    if(isset($item['options']['store'])) {
+                        // проверяем остаток в магазине
+                        $store = $this->sl->getObject($item['options']['store']);
+                        if($store){
+                            $new_cart['stores'][] = $store['id'];
+                            // проверяем остаток у магазина
+                            $remains = $this->getRemains('slStores', $store['id'], $item['id'], $item['count']);
+                            if ($remains) {
+                                $new_cart['slStores_' . $store['id']]['object'] = $store['id'];
+                                $new_cart['slStores_' . $store['id']]['type'] = 'slStores';
+                                $new_cart['slStores_' . $store['id']]['data'] = $store;
+                                $new_cart['slStores_' . $store['id']]['products'][$key] = $item;
+                            }
+                        }
                     }
                 }
-			}
-		}
+            //}
+        }
 		return $new_cart;
 	}
 
+
+    /**
+     * Берем остатки
+     *
+     * @param $type
+     * @param $object_id
+     * @param $product_id
+     * @param $count
+     * @return array|false
+     */
+
 	public function getRemains($type, $object_id, $product_id, $count = 1){
-		if($type == 'slStores'){
-			$object = "slStoresRemains";
-			$key = "store_id";
-		}
-		if($type == 'slWarehouse'){
-			$object = "slWarehouseRemains";
-			$key = "warehouse_id";
-			// находим дистра магазина
-			$criteria = array(
-				"store_id" => $object_id
-			);
-			$wh = $this->modx->getObject("slWarehouseStores", $criteria);
-			if($wh){
-				$object_id = $wh->get("warehouse_id");
-			}else{
-				return false;
-			}
-		}
-		$criteria = array(
-			"product_id" => $product_id,
-			$key => $object_id
-		);
-		$remains = $this->modx->getObject($object, $criteria);
-		if($remains){
-			$available = $remains->get("available");
-			$this->modx->log(1, print_r($remains->toArray(), 1));
-			if($count <= $available){
-				$tmp = array();
-				$tmp['remains'] = $remains->toArray();
-				$tmp['object_id'] = $object_id;
-				$tmp['type'] = $type;
-				return $tmp;
-			}
-		}
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "product_id:=" => $product_id,
+            "AND:available:>=" => 1,
+            "AND:price:>" => 0,
+            'AND:store_id:=' => $object_id
+        ));
+        $query->select(array("slStoresRemains.*,slStores.name as store_name,slStores.address as store_address"));
+        if($query->prepare() && $query->stmt->execute()){
+            $remains = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            $tmp = array();
+            $tmp['remains'] = $remains;
+            $tmp['object_id'] = $object_id;
+            $tmp['type'] = $type;
+            return $tmp;
+        }
 		return false;
 	}
 
@@ -560,84 +579,255 @@ class cartDifficultHandler
 		}
 	}
 
-	public function getNearShipWh($product_id, $count = 1, $whs_id = 0, $store_id = 0){
-		$criteria = array(
-			"warehouse_id" => $whs_id,
-			"product_id" => $product_id
-		);
-		$remain = $this->modx->getObject('slWarehouseRemains', $criteria);
-		if($remain){
-			$available = $remain->get("available");
-			if($available >= $count) {
-				// если есть необходимое количество товара у дистра
-				$query = $this->modx->newQuery("slWarehouseShipment");
-				$query->leftJoin('slWarehouseShip', 'slWarehouseShip', '`slWarehouseShipment`.`ship_id` = `slWarehouseShip`.`id`');
-				$query->where(array(
-					"date:>=" => date('Y-m-d H:i:s'),
-					"FIND_IN_SET({$store_id}, `slWarehouseShip`.`store_ids`) > 0"
-				));
-				$query->sortby('date', 'ASC');
-				// $query->prepare();
-				// $this->modx->log(1, print_r($query->toSQL(), 1));
-				$obj = $this->modx->getObject("slWarehouseShipment", $query);
-				if ($obj) {
-					// $this->modx->log(1, print_r($obj->toArray(), 1));
-					$nowDate = new DateTime();
-					$newDate = new DateTime($obj->get('date'));
-					$newDate->add(new DateInterval('P1D'));
-					$interval = $nowDate->diff($newDate);
-					$offset = $interval->format('%a');
-					return $offset;
-				}else{
-					// если вдруг отгрузка не назначена берем 10 дней
-					$offset = 10;
-					return $offset;
-				}
-			}else{
-				// остаток 0, закладываем 30 дней?
-				$offset = 30;
-				return $offset;
-			}
-		}else{
-			// остаток 0, закладываем 30 дней?
-			$offset = 30;
-			return $offset;
-		}
+    /**
+     * Проверяем ближайшие отгрузки
+     *
+     * @param $whs_id
+     * @param $store_id
+     * @param $create
+     * @return array
+     * @throws Exception
+     */
+    public function findNearShipment($whs_id = 0, $store_id = 0, $create = 1){
+        if($whs_id && $store_id) {
+            $ship = array();
+            $newDate = new DateTime();
+            $interval = 'P1D';
+            $newDate->add(new DateInterval($interval));
+            $newDate->setTime(0, 0, 0);
+            $date = $newDate->format('Y-m-d H:i:s');
+            $query = $this->modx->newQuery("slWarehouseShipment");
+            $query->leftJoin('slWarehouseShip', 'slWarehouseShip', '`slWarehouseShipment`.`ship_id` = `slWarehouseShip`.`id`');
+            $query->where(array(
+                "date:>=" => $date,
+                "store_id" => $store_id
+            ));
+            $query->sortby('date', 'ASC');
+            // $query->prepare();
+            // $this->modx->log(1, print_r($query->toSQL(), 1));
+            $obj = $this->modx->getObject("slWarehouseShipment", $query);
+            if ($obj) {
+                // $this->modx->log(1, print_r($obj->toArray(), 1));
+                $nowDate = new DateTime();
+                $newDate = new DateTime($obj->get('date'));
+                $newDate->add(new DateInterval('P1D'));
+                $interval = $nowDate->diff($newDate);
+                $offset = $interval->format('%a');
+                $ship = $obj->toArray();
+            } else {
+                // если вдруг отгрузка не назначена берем 10 дней и создаем отгрузку
+                $offset = 10;
+                if ($create) {
+                    // создаем отгрузку
+                    $start = new DateTime();
+                    $start->add(new DateInterval('P10D'));
+                    $start->setTime(00, 00);
+
+                    $ship = $this->modx->newObject('slWarehouseShip');
+                    $ship->set("warehouse_id", $whs_id);
+                    $ship->set("store_ids", $store_id);
+                    $ship->set("timing", '');
+                    $ship->set("date_from", $start->format('Y-m-d H:i:s'));
+                    $ship->set("date_to", $start->format('Y-m-d H:i:s'));
+                    $ship->set("createdon", time());
+                    $ship->set("active", 1);
+                    $ship->save();
+                    if ($ship->get('id')) {
+                        $shipping = $this->modx->newObject("slWarehouseShipment");
+                        $shipping->set("ship_id", $ship->get('id'));
+                        $shipping->set("store_id", $store_id);
+                        $shipping->set("date", $start->format('Y-m-d H:i:s'));
+                        if ($shipping->save()) {
+                            $ship = $shipping->toArray();
+                        }
+                    }
+                }
+            }
+            return $ship;
+        }
+    }
+
+    /**
+     * Смотрим ближайшие отгрузки и смещения по товарам
+     *
+     * @param $product_id
+     * @param $count
+     * @param $whs_id
+     * @param $store_id
+     * @return int|string
+     * @throws Exception
+     */
+	public function getNearShipWh($product_id, $count = 1, $whs_id = 0, $store_id = 0, $return = 'offsets', $create = 0)
+    {
+        $ship = array();
+        $criteria = array(
+            "store_id" => $whs_id,
+            "product_id" => $product_id
+        );
+        $remain = $this->modx->getObject('slStoresRemains', $criteria);
+        if ($remain) {
+            $available = $remain->get("remains");
+            if ($available >= $count) {
+                // если есть необходимое количество товара у дистра, доставка возможна на след рабочий день
+                $newDate = new DateTime();
+                $interval = 'P1D';
+                $newDate->add(new DateInterval($interval));
+                $newDate->setTime(0, 0, 0);
+                $date = $newDate->format('Y-m-d H:i:s');
+                $query = $this->modx->newQuery("slWarehouseShipment");
+                $query->leftJoin('slWarehouseShip', 'slWarehouseShip', '`slWarehouseShipment`.`ship_id` = `slWarehouseShip`.`id`');
+                $query->where(array(
+                    "date:>=" => $date,
+                    "store_id" => $store_id
+                ));
+                $query->sortby('date', 'ASC');
+                // $query->prepare();
+                // $this->modx->log(1, print_r($query->toSQL(), 1));
+                $obj = $this->modx->getObject("slWarehouseShipment", $query);
+                if ($obj) {
+                    // $this->modx->log(1, print_r($obj->toArray(), 1));
+                    $nowDate = new DateTime();
+                    $newDate = new DateTime($obj->get('date'));
+                    $newDate->add(new DateInterval('P1D'));
+                    $interval = $nowDate->diff($newDate);
+                    $offset = $interval->format('%a');
+                    $ship = $obj->toArray();
+                } else {
+                    // если вдруг отгрузка не назначена берем 10 дней и создаем отгрузку
+                    $offset = 10;
+                    if ($create) {
+                        // создаем отгрузку
+                        $start = new DateTime();
+                        $start->add(new DateInterval('P10D'));
+                        $start->setTime(00, 00);
+
+                        $ship = $this->modx->newObject('slWarehouseShip');
+                        $ship->set("warehouse_id", $whs_id);
+                        $ship->set("store_ids", $store_id);
+                        $ship->set("timing", '');
+                        $ship->set("date_from", $start->format('Y-m-d H:i:s'));
+                        $ship->set("date_to", $start->format('Y-m-d H:i:s'));
+                        $ship->set("createdon", time());
+                        $ship->set("active", 1);
+                        $ship->save();
+                        if ($ship->get('id')) {
+                            $shipping = $this->modx->newObject("slWarehouseShipment");
+                            $shipping->set("ship_id", $ship->get('id'));
+                            $shipping->set("store_id", $store_id);
+                            $shipping->set("date", $start->format('Y-m-d H:i:s'));
+                            if ($shipping->save()) {
+                                $ship = $shipping->toArray();
+                            }
+                        }
+                    }
+                }
+            }else{
+                // остаток 0, закладываем 999 дней?
+                $offset = 999;
+            }
+        } else {
+            // остаток 0, закладываем 999 дней?
+            $offset = 999;
+        }
+        if ($return == 'offsets') {
+            return $offset;
+        } else {
+            return $ship;
+        }
+    }
+
+    /**
+     * Ищем остаток у ближайшего оптовика, которы может доставить с помощью ТК в магазин
+     *
+     * @param $product_id
+     * @param $count
+     * @return false
+     */
+    public function getRemainsWarehouseTK($product_id, $count = 1){
+        $location = $this->sl->getLocationData('web');
+        $lat = $location['store']['lat'];
+        $lng = $location['store']['lng'];
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            'slStores.delivery_tk:=' => 1,
+            'AND:slStoresRemains.product_id:=' => $product_id,
+            'AND:slStoresRemains.remains:>=' => $count,
+            "AND:slStores.active:=" => 1
+        ));
+        $query->select(array("slStores.*,
+			(
+			   6371 *
+			   acos(cos(radians({$lat})) * 
+			   cos(radians(lat)) * 
+			   cos(radians(lng) - 
+			   radians({$lng})) + 
+			   sin(radians({$lat})) * 
+			   sin(radians(lat)))
+			) AS distance"));
+        $query->sortby("distance", "ASC");
+        $query->prepare();
+        echo $query->toSQL();
+        if($query->prepare() && $query->stmt->execute()){
+            $store = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            return $store;
+        }
+        return false;
+    }
+
+    /**
+     * Ищем остаток у магазина
+     *
+     * @param $product_id
+     * @param $count
+     * @param $store_id
+     * @return array|false
+     */
+	public function getStoreRemain($product_id, $count = 1, $store_id = 0){
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "slStoresRemains.store_id:=" => $store_id,
+            'AND:slStoresRemains.product_id:=' => $product_id,
+            'AND:slStoresRemains.remains:>=' => $count,
+            "AND:slStores.active:=" => 1
+        ));
+        $query->select(array("slStoresRemains.*"));
+        if($query->prepare() && $query->stmt->execute()){
+            $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            return $remain;
+        }
+        return false;
 	}
 
-	public function getStoreRemain($product_id, $count = 1, $store_id = 0, $type = 'slStores'){
-		if($type == 'slStores'){
-			$object = "slStoresRemains";
-			$key = "store_id";
-		}else{
-			$object = "slWarehouseRemains";
-			$key = "warehouse_id";
-		}
-		$object = $this->modx->getObject($object, array($key => $store_id, 'product_id' => $product_id, 'available:>=' => $count));
-		if($object){
-			return $object->toArray();
-		}
-		return false;
-	}
-
-	public function getPickupPrice($product_id, $count = 1, $type = 'slStores', $from_id = 0){
+    /**
+     * Узнаем сроки и стоимость доставки до магазина при самовывозе (в том числе учитывая отгрузки оптовика)
+     *
+     * @param $product_id
+     * @param $count
+     * @param $from_id
+     * @return array|false
+     * @throws Exception
+     */
+	public function getPickupPrice($product_id, $type = "slStores", $count = 1, $from_id = 0){
 		$delivery_data = array();
-		$loc = $this->getUserPosition();
-		if(!$from_id){
-			$from['store'] = $loc['data']['store'];
+        $location = $this->sl->getLocationData('web');
+		if(!$from_id || $type == "slWarehouse"){
+			$from['store'] = $location['store'];
 		}else{
-			$from['store'] = $this->sl->getObject($from_id, $type);
+			$from['store'] = $this->sl->store->getStore($from_id);
 		}
-		$from['store']['type'] = $type;
-		// $this->modx->log(1, print_r($from, 1));
-		$remain = $this->getStoreRemain($product_id, $count, $from['store']['id'], $from['store']['type']);
+		$remain = $this->getStoreRemain($product_id, $count, $from['store']['id']);
 		if($remain){
+            // если нашли возращаем остаток
+            $delivery_data['pickup']['store'] = $from['store'];
+            $delivery_data['pickup']['price'] = 0;
+            $delivery_data['pickup']['term'] = 'сегодня';
+            $delivery_data['pickup']['term_default'] = 0;
+
+            /*
 			if($type == 'slStores'){
-				// если тип магазин возращаем остаток
-				$delivery_data['pickup']['store'] = $from['store'];
-				$delivery_data['pickup']['price'] = 0;
-				$delivery_data['pickup']['term'] = 'сегодня';
-				$delivery_data['pickup']['term_default'] = 0;
+
 			}else{
 				// меняем адрес самовывоза
 				$from['store']['address'] = $loc['data']['store']['address'];
@@ -650,21 +840,36 @@ class cartDifficultHandler
 					$delivery_data['pickup']['store'] = $from['store'];
 					unset($delivery_data['delivery']);
 				}else{
-					// смотрим отгрузки
-					$shipment = $this->getNearShipWh($product_id, $count, $from['store']['id'], $loc['data']['store']['id']);
-					if($shipment){
-						$newDate = new DateTime();
-						$interval = 'P'.$shipment.'D';
-						$newDate->add(new DateInterval($interval));
-						$delivery_data['pickup']['term_default'] = $newDate->format('Y-m-d H:i:s');
-						$delivery_data['pickup']['term'] = $newDate->format('Y-m-d H:i:s');
-						$delivery_data['pickup']['price'] = 0;
-						$delivery_data['pickup']['store'] = $from['store'];
-					}
+
 				}
-			}
+			}*/
 			return $delivery_data;
-		}
+		}else{
+            // ищем у поставщиков, в приоритете поставщики, подключенные к магазину
+            // смотрим отгрузки
+            $warehouses = $this->sl->store->getWarehouses($from['store']['id']);
+            $shipment = 999;
+            foreach($warehouses as $warehouse){
+                $ship = $this->getNearShipWh($product_id, $count, $warehouse['id'], $from['store']['id']);
+                // $this->modx->log(1, $ship);
+                if($ship < $shipment){
+                    $newDate = new DateTime();
+                    $interval = 'P'.$ship.'D';
+                    $newDate->add(new DateInterval($interval));
+                    $delivery_data['pickup']['term_default'] = $newDate->format('Y-m-d H:i:s');
+                    $delivery_data['pickup']['term'] = $newDate->format('Y-m-d H:i:s');
+                    $delivery_data['pickup']['price'] = 0;
+                    $delivery_data['pickup']['store'] = $from['store'];
+                    // $this->modx->log(1, print_r($delivery_data, 1));
+                }
+            }
+
+            if($shipment == 999){
+                // смотрим поставщиков, которые могу доставить с помощью ТК
+                // TODO: прописать условия
+            }
+            return $delivery_data;
+        }
 		return false;
 	}
 
@@ -678,11 +883,13 @@ class cartDifficultHandler
 	 * @param int $to_id
 	 */
 	public function getTKPrice($product_id, $count = 1, $type = 'slStores', $from_id = 0, $to_id = 0){
-		$loc = $this->getUserPosition();
+		$loc = $this->getUserPosition('web');
 		if(!$from_id){
 			$from_id = $loc['data']['store']['id'];
 		}
 		$remain = $this->getStoreRemain($product_id, $count, $from_id, $type);
+        // TODO: перебивается значение типа
+        $type = 'slStores';
 		// print_r($remain);
 		if($remain){
 			// $sdek_price = $this->getSdekPrice($product_id, $count, $type, $from_id, $to_id);
@@ -696,7 +903,8 @@ class cartDifficultHandler
 	public function getPostRfPrice($product_id, $count = 1, $type = 'slStores', $from_id = 0, $to_id = 0){
 		// $this->modx->log(1, $product_id.', '.$count.', '.$type.', '.$from_id.', '.$to_id);
 		$delivery_data = array();
-		$loc = $this->getUserPosition();
+		$loc = $this->getUserPosition('web');
+        // $this->modx->log(1, print_r($loc, 1));
 		if($to_id){
 			$object = $this->sl->getObject($to_id);
 			if($object){
@@ -714,11 +922,14 @@ class cartDifficultHandler
 		}
 		if($from_id){
 			$object = $this->sl->getObject($from_id, $type);
+            //$this->modx->log(1, print_r($object, 1));
 			$properties = $this->getCityData($object['city']);
+            //$this->modx->log(1, print_r($properties, 1));
 			$from = $properties['postal_code'];
 		}else{
 			$object = $this->sl->getObject($loc['data']['store']['id'], $type);
 			$properties = $this->getCityData($object['city']);
+            //$this->modx->log(1, print_r($properties, 1));
 			$from = $properties['postal_code'];
 		}
 		$prs = array(
@@ -732,16 +943,16 @@ class cartDifficultHandler
 		// fix
 		//$to = $to + 10;
 		//$from = $from + 10;
-        $this->modx->log(1, $to.' '.$from.' '.print_r($prs, 1));
+        // $this->modx->log(1, $to.' '.$from.' '.print_r($prs, 1));
 		$arr = $this->sl->postrf->getPrice($to, $from, $prs, 0);
-		$this->modx->log(1, print_r($arr, 1));
+		// $this->modx->log(1, print_r($arr, 1));
 		$delivery_data['delivery']['price'] = round($arr['terminal']['price']);
 		$newDate = new DateTime();
 		// Смещение относительно доставки
 		if($type == 'slStores'){
             // проверим остаток на складе
             $remains = $this->getStoreRemain($product_id, 1, $from_id, 'slStores');
-            $this->modx->log(1, $loc['data']['store']['id'].' '.print_r($remains, 1));
+            // $this->modx->log(1, $loc['data']['store']['id'].' '.print_r($remains, 1));
             if(!$remains){
                 // иначе
                 $offset = $this->getNearShipment($product_id, $count, $loc['data']['store']['id']);
@@ -755,7 +966,7 @@ class cartDifficultHandler
 		}else{
 			$offset = $arr['terminal']['time'];
 		}
-        $this->modx->log(1, $offset);
+        // $this->modx->log(1, $offset);
 		$interval = 'P'.$offset.'D';
 		$newDate->add(new DateInterval($interval));
 		$delivery_data['delivery']['term_default'] = $newDate->format('Y-m-d H:i:s');
@@ -767,7 +978,7 @@ class cartDifficultHandler
 	public function getYaDeliveryPrice($product_id, $count = 1, $type = 'slStores', $from_id = 0, $to_id = 0){
 		$this->sl->esl = new eShopLogistic($this->sl, $this->modx);
 		$delivery_data = array();
-		$position = $this->getUserPosition();
+		$position = $this->getUserPosition('web');
 		if($to_id){
 			$object = $this->sl->getObject($to_id);
 			if($object){
@@ -790,14 +1001,16 @@ class cartDifficultHandler
 			);
 		}
 		if($from_id){
-			$object = $this->sl->getObject($from_id, $type);
+			$object = $this->sl->getObject($from_id);
 		}else{
-			$object = $this->sl->getObject($position['data']['store']['id'], $type);
+			$object = $this->sl->getObject($position['data']['store']['id']);
 		}
 		$from = array(
 			(float)$object['lng'],
 			(float)$object['lat']
 		);
+        $this->modx->log(1, print_r($from, 1));
+        $this->modx->log(1, print_r($to, 1));
 		$arr = $this->sl->esl->getYandexDeliveryPrice($product_id, $from, $to);
 		// проверяем наличие Я.Доставки
 		if($arr){
@@ -901,67 +1114,33 @@ class cartDifficultHandler
         }
 	}
 
-	public function getDeliveryInfoDays($product_id, $type = 'slStores', $from_id = 0){
-		$delivery_data = array();
-		$main_store = array();
-		$stores = array();
-		$loc = $this->sl->getLocationData();
-		$location = $loc['web'];
-		$checked_store = $location['store'];
-
-		if($this->modx->getOption('shoplogistic_cart_mode') == 2){
-			$delivery_data = $this->getPickupPrice($product_id, 1, $type, $from_id);
-		}else{
-			$stores = $this->getNearbyStores($product_id);
-			if(count($stores)){
-				// если в наличии
-				$delivery_data['pickup']['store'] = $stores[0];
-				$delivery_data['pickup']['price'] = 0;
-				$delivery_data['pickup']['term'] = 'сегодня';
-				$delivery_data['pickup']['term_default'] = 0;
-			}else{
-				$default_store = $this->modx->getOption("shoplogistic_default_store");
-				if ($default_store) {
-					$delivery_data['pickup']['price'] = 0;
-					$delivery_data['pickup']['term'] = 'сегодня';
-					$delivery_data['pickup']['term_default'] = 0;
-					$def_store = $this->sl->getObject($default_store, "slStores");
-					if ($def_store) {
-						$delivery_data['pickup']['store'] = $def_store;
-					}
-				}
-			}
-		}
-
-		$delivery = $this->getTKPrice($product_id, 1, $type, $from_id);
-        $delivery_data['delivery'] = $delivery['delivery'];
-        $express = $this->getYaDeliveryPrice($product_id, 1, $type, $from_id);
-        if($express['delivery']) {
-            $delivery_data['express'] = $express['delivery'];
-        }
-		return $delivery_data;
-	}
-
+    /**
+     * Считаем стоимость доставки определенной ТК
+     *
+     * @param $data
+     * @return array
+     */
 	public function getDeliveryPrice($data){
 		$services = array("main_key" => $data['service']);
 		$data['location'] = json_decode($data['address'], 1);
-		//$this->modx->log(1, print_r($data['location'], 1));
+		// $this->modx->log(1, print_r($data['service'], 1));
 		if ($data) {
 			$offset = $this->getDeliveryDateOffset('cart');
 			$cart = $this->checkCart();
 			if (in_array($data['service'], $this->config['our_services'])) {
+                // $this->modx->log(1, "Наша система");
 				if($data['service'] == 'yandex'){
 					if($offset){
-						$days = $this->decl($offset, "день|дня|дней", true);
+						$days = $this->sl->tools->decl($offset, "день|дня|дней", true);
 					}else{
 						$days = "сегодня";
 					}
 					$services['yandex'] = false;
 					foreach($cart as $item){
 						// магазины считаем сразу
-						if($item['type'] == 'slStores'){
+						if(!isset($item['type']) || $item['type'] == 'slStores'){
 							$data['cart'] = $item;
-							$ya_data = $this->sl->esl->getYaDeliveryPrice('cart', 0, $data);
+							$ya_data = $this->sl->yandex->getYaDeliveryPrice('cart', 0, $data);
 							if(isset($ya_data['price'])){
 								// складываем цену
 								if(isset($services['yandex']['door']['price'])){
@@ -971,17 +1150,20 @@ class cartDifficultHandler
 									"price" => array(
 										"door" => array(
 											"price" => $ya_data['price'],
-											"time" => $days
+											"time" => $days,
 										)
 									)
 								);
+                                // ADD price
+                                $services['delivery'][$item['object']]['yandex'] = $services['yandex']['price'];
 							}else{
 								$services['yandex'] = false;
 							}
 						}else{
+                            // TODO: will be corrected
 							// если у нас склад, отправляем пока отправляем как из магазина
 							$data['cart'] = $item;
-							$ya_data = $this->sl->esl->getYaDeliveryPrice('cart', 0, $data);
+							$ya_data = $this->sl->yandex->getYaDeliveryPrice('cart', 0, $data);
 							if(isset($ya_data['price'])){
 								// складываем цену
 								if(isset($services['yandex']['door']['price'])){
@@ -1009,9 +1191,10 @@ class cartDifficultHandler
 							$city = $object->getOne("City");
 							if ($city) {
 								$properties = $city->get('properties');
-								$this->modx->log(1, print_r($properties, 1));
+								// $this->modx->log(1, print_r($properties, 1));
 								if($properties['postal_code']){
-									$out = $this->sl->postrf->getPrice($properties['postal_code'], $data['location']['postal_code'], $item['products'], 0);
+									$out = $this->sl->postrf->getPrice($properties['postal_code'], $data['location']['postal_code'], $item['products']);
+                                    // $out = $this->sl->postrf->getPrice($properties['postal_code'], $data['location']['postal_code'], $item['products'], 0);
                                     $this->modx->log(1, print_r($out, 1));
 									$s = array('door', 'terminal');
 									foreach($s as $key){
@@ -1022,13 +1205,73 @@ class cartDifficultHandler
 											$services['postrf']['price'][$key]['price'] = $out[$key]['price'];
                                             $services['postrf']['price'][$key]['time'] = $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1);
 										}
+                                        $services['delivery'][$item['object']]['postrf'][$key] = array(
+                                            'price' => $out[$key]['price'],
+                                            'time' => $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1)
+                                        );
 									}
 								}
 							}
 						}
 					}
 				}
+                if($data['service'] == 'cdek'){
+                    // $this->modx->log(1, print_r($cart, 1));
+                    unset($cart['stores']);
+                    foreach($cart as $item) {
+                        if($item['type'] && $item['object']){
+                            $object = $this->modx->getObject($item['type'], $item['object']);
+                            if ($object) {
+                                $city = $object->getOne("City");
+                                if ($city) {
+                                    $properties = $city->get('properties');
+                                    if ($properties['postal_code']) {
+                                        $products = array();
+                                        foreach ($item['products'] as $product) {
+                                            // TODO: учесть кол-во
+                                            $tmp = array(
+                                                "id" => $product['id'],
+                                                "count" => $product['count']
+                                            );
+                                            $products[] = $product['id'];
+                                        }
+                                        $prods = $this->sl->cdek->prepareProducts($products);
+                                        $out = $this->sl->cdek->getCalcPrice($properties['postal_code'], $data['location']['postal_code'], $prods);
+                                        $s = array('door', 'terminal');
+                                        foreach($s as $key){
+                                            if(isset($services['cdek']['price'][$key]['price'])){
+                                                $services['cdek']['price'][$key]['price'] += $out[$key]['price'];
+                                                $services['cdek']['price'][$key]['time'] = $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1);
+                                            }else{
+                                                $services['cdek']['price'][$key]['price'] = $out[$key]['price'];
+                                                $services['cdek']['price'][$key]['time'] = $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1);
+                                            }
+                                            $services['delivery'][$item['object']]['cdek'][$key] = array(
+                                                'price' => $out[$key]['price'],
+                                                'time' => $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1)
+                                            );
+                                        }
+                                        if($out['terminals']){
+                                            $services['cdek']['price']['terminals'] = $out['terminals'];
+                                        }
+                                        // $this->modx->log(1, print_r($out, 1));
+                                    }else{
+                                        // $this->modx->log(1, print_r($properties, 1));
+                                    }
+                                }else{
+                                    // $this->modx->log(1, "Не нашел город '{$item['object']}' '{$item['type']}'");
+                                }
+                            }else{
+                                // $this->modx->log(1, "Не нашел объект '{$item['object']}' '{$item['type']}'");
+                            }
+                        }else{
+                            // $this->modx->log(1, "Пустые значения: '{$item['object']}' '{$item['type']}'");
+                        }
+
+                    }
+                }
 			}else {
+                // $this->modx->log(1, "Не наша система");
 				$this->esl = new eShopLogistic($this->sl, $this->modx);
 				$init = $this->esl->init();
 				$search_data = array(
@@ -1091,6 +1334,176 @@ class cartDifficultHandler
 		return $services;
 	}
 
+    /**
+     * Собираем информацию о заказе
+     *
+     * @param $order_id
+     * @return array
+     */
+    public function getOrderData($order_id){
+        $order = $this->modx->getObject("slOrder", $order_id);
+        if($order){
+            $result['order'] = $order->toArray();
+            $store_id = $order->get("store_id");
+            $store = $this->modx->getObject("slStores", $store_id);
+            if($store){
+                $result['store'] = $store->toArray();
+            }
+            $ms_order_id = $order->get("order_id");
+            $msOrder = $this->modx->getObject("msOrder", $ms_order_id);
+            if($msOrder){
+                $result['ms_order'] = $msOrder->toArray();
+                $msAddress = $msOrder->getOne('Address');
+                $result['address'] = $msAddress->toArray();
+                $msUserProfile = $msOrder->getOne('UserProfile');
+                $result['user'] = $msUserProfile->toArray();
+                $msStatus = $msOrder->getOne('Status');
+                $result['status'] = $msStatus->toArray();
+                $msDelivery = $msOrder->getOne('Delivery');
+                $result['delivery'] = $msDelivery->toArray();
+                $msPayment = $msOrder->getOne('Payment');
+                $result['payment'] = $msPayment->toArray();
+            }
+            $q = $this->modx->newQuery('slOrderProduct');
+            $q->leftJoin('msProductData', 'msProductData', 'msProductData.id = slOrderProduct.product_id');
+            $q->select(array(
+                'slOrderProduct.*',
+                'msProductData.*'
+            ));
+            $q->where(array(
+                'order_id' => $order_id
+            ));
+            if($q->prepare() && $q->stmt->execute()){
+                $products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $result['products'] = $products;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Берем ID сделки
+     *
+     * @param $crm_id
+     * @return void
+     */
+    public function getStageId($crm_id){
+        $st = $this->modx->getObject("slCRMStage", array("crm_id" => $crm_id));
+        if($st){
+            return $st->toArray();
+        }
+        return false;
+    }
+
+    /**
+     * Изменение стадии заказа (сделки)
+     *
+     * @param $order_id
+     * @param $stage_id
+     * @return void
+     */
+    public function changeOrderStage($order_id, $stage_id, $deal_update = true){
+        $order = $this->modx->getObject("slOrder", array("id" => $order_id));
+        if($order){
+            $order_data = $this->getOrderData($order_id);
+            $st = $this->modx->getObject("slCRMStage", array("id" => $stage_id));
+            if($st){
+                $order->set('status', $st->get("id"));
+                $order->save();
+                // обновляем сделку, если необходимо
+                if($deal_update){
+                    $this->sl->b24->initialize();
+                    $data = array(
+                        "STAGE_ID" => $st->get('crm_id')
+                    );
+                    $crm_id = $order->get('crm_id');
+                    $response = $this->sl->b24->updateDeal($crm_id, $data);
+                }
+                // генерируем код выдачи, если необходимо
+                if($st->get("check_code")){
+                    $code = $this->sl->tools->generate_code();
+                    $order->set("code", $code['code']);
+                    if($code['date_until']){
+                        $order->set("code_until", $code['date_until']);
+                    }
+                    $order->save();
+                }
+                // обработка заявки в ТК
+                if($st->get("to_tk")){
+                    $delivery = $order_data["ms_order"]["properties"]["sl"]["key"];
+                    // TODO: process shipping order
+                    if($delivery == "yandex"){
+                        $response = $this->sl->yandex->createRequest($order_data["order"]["id"]);
+                        if($response['id']){
+                            $order->set("tk_id", $response['id']);
+                            $properties = $order->get("properties");
+                            $properties["delivery_shipping_data"] = $response;
+                            $order->set("properties", $properties);
+                            $order->save();
+                            $to = $st->get("transition_to");
+                            if($to){
+                                $order->set('status', $to);
+                                $order->save();
+                                // обновляем сделку, если необходимо
+                                $to_st = $this->modx->getObject("slCRMStage", array("id" => $to));
+                                if($to_st){
+                                    $this->sl->b24->initialize();
+                                    $data = array(
+                                        "STAGE_ID" => $to_st->get('crm_id')
+                                    );
+                                    $crm_id = $order->get('crm_id');
+                                    $response = $this->sl->b24->updateDeal($crm_id, $data);
+                                }
+                            }
+                        }
+                    }
+                }
+                // выплата на баланс
+                if($st->get("pay")){
+                    $tax = $this->modx->getOption('shoplogistic_tax_percent') / 100;
+                    $cost = $order_data["order"]["cart_cost"] * (1 - $tax);
+                    $store_id = $order_data["store"]['id'];
+
+                    // add log
+                    $balance = $this->modx->newObject("slStoreBalance");
+                    $balance->set("store_id", $store_id);
+                    $balance->set("type", 1);
+                    $balance->set("value", $cost);
+                    $balance->set("createdon", date('Y-m-d H:i:s'));
+                    $balance->set("description", "Начисление за заказ №".$order_data["order"]['num']);
+                    $balance->save();
+
+                    //add money to store
+                    $store = $this->modx->getObject("slStores", $store_id);
+                    if($store){
+                        $b = $store->get('balance');
+                        $store->set('balance', $b + $cost);
+                        $store->save();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Смена статуса доставки
+     *
+     * @param $service
+     * @param $stage_id
+     * @return false|void
+     */
+    public function setDeliveryStage($tk_id){
+        $order = $this->modx->getObject("slOrder", array("tk_id" => $tk_id));
+        if($order){
+            $order_data = $order->toArray();
+            $stage = $this->sl->getObject($order_data["status"], "slCRMStage");
+            if($stage){
+                $response = $this->changeOrderStage($order_data["id"], $stage["transition_to"], true);
+                return $response;
+            }
+        }
+        return false;
+    }
 
 	public function prepareProductsList($service, $products){
 		$output = array();
@@ -1158,7 +1571,6 @@ class cartDifficultHandler
 		return $output;
 	}
 
-
 	public function getDeliveryDateOffset($mode, $id = 0){
 		$offset = 0;
 		return $offset;
@@ -1187,35 +1599,5 @@ class cartDifficultHandler
 		curl_close($ch);
 		$res = json_decode($res, true);
 		return $res;
-	}
-
-	public function decl($amount, $variants, $number = false, $delimiter = '|') {
-		$variants = explode($delimiter, $variants);
-		if (count($variants) < 2) {
-			$variants = array_fill(0, 3, $variants[0]);
-		} elseif (count($variants) < 3) {
-			$variants[2] = $variants[1];
-		}
-		$modulusOneHundred = $amount % 100;
-		switch ($amount % 10) {
-			case 1:
-				$text = $modulusOneHundred == 11
-					? $variants[2]
-					: $variants[0];
-				break;
-			case 2:
-			case 3:
-			case 4:
-				$text = ($modulusOneHundred > 10) && ($modulusOneHundred < 20)
-					? $variants[2]
-					: $variants[1];
-				break;
-			default:
-				$text = $variants[2];
-		}
-
-		return $number
-			? $amount . ' ' . $text
-			: $text;
 	}
 }

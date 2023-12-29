@@ -321,7 +321,7 @@ class slXSLX{
         ];
         if($report) {
             $report_data = $report->toArray();
-            $data = $this->sl->reports->getWeekSales(array("report_id" => 30));
+            $data = $this->sl->reports->getWeekSales(array("report_id" => $report_id));
             if ($data) {
                 // return $data["columns"];
                 // generate xlsx header

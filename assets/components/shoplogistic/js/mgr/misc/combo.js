@@ -115,6 +115,30 @@ shopLogistic.combo.Stage = function (config) {
 Ext.extend(shopLogistic.combo.Stage, shopLogistic.combo.ComboBoxDefault);
 Ext.reg('shoplogistic-combo-stage', shopLogistic.combo.Stage);
 
+shopLogistic.combo.Classes = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        id: 'shoplogistic-combo-classes',
+        fieldLabel: _('shoplogistic_class'),
+        name: 'class',
+        hiddenName: 'class',
+        displayField: 'class',
+        valueField: 'class',
+        pageSize: 20,
+        fields: ['type', 'class'],
+        url: miniShop2.config['connector_url'],
+        baseParams: {
+            action: 'mgr/settings/getclass',
+            type: config.type || '',
+        },
+        allowBlank: true,
+        editable: true,
+    });
+    shopLogistic.combo.Classes.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.Classes, shopLogistic.combo.ComboBoxDefault);
+Ext.reg('shoplogistic-combo-classes', shopLogistic.combo.Classes);
+
 shopLogistic.combo.Store = function (config) {
     config = config || {};
     Ext.applyIf(config, {
@@ -125,7 +149,7 @@ shopLogistic.combo.Store = function (config) {
         valueField: 'id',
         anchor: '99%',
         fields: ['id', 'name'],
-        pageSize: 20,
+        pageSize: 50,
         typeAhead: false,
         editable: true,
         allowBlank: false,
@@ -634,6 +658,42 @@ shopLogistic.combo.cardRequestStatus = function (config) {
 };
 Ext.extend(shopLogistic.combo.cardRequestStatus, MODx.combo.ComboBox);
 Ext.reg('shoplogistic-combo-cardrequeststatus', shopLogistic.combo.cardRequestStatus);
+
+shopLogistic.combo.balancePayRequestStatus = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/balance_pay_request_status/getlist',
+        },
+        name: 'status',
+        hiddenName: 'status',
+        fields: ['id', 'name', 'description'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_balance_pay_request_id'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.balancePayRequestStatus.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.balancePayRequestStatus, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-balancepayrequeststatus', shopLogistic.combo.balancePayRequestStatus);
 
 shopLogistic.combo.productField = function (config) {
     config = config || {};

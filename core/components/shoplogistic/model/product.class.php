@@ -68,6 +68,12 @@ class productHandler
         return false;
     }
 
+    /**
+     * Импорт остатка
+     *
+     * @param $data
+     * @return array|false
+     */
     public function importRemain($data){
         if($data['key']) {
             $store = $this->getStore($data['key'], "date_remains_update");
@@ -76,6 +82,24 @@ class productHandler
                 $response = array();
                 $response['success_info'] = array();
                 $response['failed_info'] = array();
+                if($data['isFull']){
+                    // обнуляем остатки
+                    $table = $this->modx->getTableName("slStoresRemains");
+                    if($table){
+                        // TODO: проверить полную выгрузку
+                        /*
+                        $sql = "UPDATE {$table} SET `price` = 0, `remains` = 0, `reserved` = 0, `available` = 0 WHERE `store_id` = {$store['id']};";
+                        $stmt = $this->modx->prepare($sql);
+                        if(!$stmt){
+                            $this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                        }
+                        if (!$stmt->execute($data)) {
+                            $this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                        }
+                        */
+                    }
+                    // $this->sl->api->update("slStoresRemains", );
+                }
                 foreach ($data['products'] as $key => $product) {
                     $error = false;
                     $message = '';
@@ -130,92 +154,11 @@ class productHandler
                             'message' => $message
                         );
                     } else {
-                        // проверяем товар на дублирование по GUID
-                        $criteria = array(
-                            'guid' => $guid,
-                            'store_id' => $store['id']
-                        );
-                        $o = $this->modx->getObject('slStoresRemains', $criteria);
-                        if (!$o) {
-                            $o = $this->modx->newObject('slStoresRemains');
-                            if ($message) {
-                                $message = "Product created! Info: " . $message;
-                            } else {
-                                $message = "Product created!";
-                            }
-                        } else {
-                            if ($message) {
-                                $message = "Product updated! Info: " . $message;
-                            } else {
-                                $message = "Product updated!";
-                            }
-                        }
-                        $o->set("guid", $guid);
-                        if($data['base_GUID']){
-                            $o->set("base_guid", $data['base_GUID']);
-                        }
-                        if($product['barcode']){
-                            $o->set("barcode", implode(",", $product['barcode']));
-                        }
-                        $o->set("article", $product['article']);
-                        $o->set("remains", $product['count_current']);
-                        $o->set("catalog", $product['catalog']);
-                        $reserved = $o->get('reserved');
-                        if ($reserved > 0) {
-                            $available = $product['count_free'] - $reserved;
-                        } else {
-                            $available = $product['count_free'];
-                        }
-                        if ($available < 0) {
-                            $o->set("available", 0);
-                        } else {
-                            $o->set("available", $available);
-                        }
-                        $o->set("price", $product['price']);
-                        $o->set('store_id', $store['id']);
-                        if ($product['name']) {
-                            $o->set("name", $product['name']);
-                        }
-                        if ($o->save()) {
-                            // линкуем товар
-                            if(!$o->get('product_id') && $o->get('autolink')){
-                                $this->linkProduct($o->get('id'), $store['type']);
-                            }
-                            // синхронизация, если необходима
-                            $stores = $this->modx->getCollection("slWarehouseStores", array("warehouse_id" => $store['id'], "sync" => 1));
-                            if (count($stores)) {
-                                $remain = $o->toArray();
-                                foreach ($stores as $store) {
-                                    unset($remain['warehouse_id']);
-                                    $remain["store_id"] = $store->get("store_id");
-                                    $settings = array(
-                                        // Здесь указываем где лежат наши процессоры (по умолчанию стандартный каталог)
-                                        'processors_path' => $this->modx->getOption('core_path') . 'components/shoplogistic/processors/'
-                                    );
-                                    // проверяем существование остатка
-                                    $obj = $this->modx->getObject('slStoresRemains', array('store_id' => $remain['store_id'], 'guid' => $remain['guid']));
-                                    if ($obj) {
-                                        $action = 'update';
-                                        $remain['id'] = $obj->get('id');
-                                    } else {
-                                        $action = 'create';
-                                    }
-                                    $response = $this->modx->runProcessor('mgr/storeremains/' . $action, $remain, $settings);
-                                    if ($response->isError()) {
-                                        $this->modx->log(xPDO::LOG_LEVEL_ERROR, "Ошибка синхронизации остатков: " . $response->getMessage());
-                                    }
-                                    $this->modx->error->reset();
-                                }
-                            }
-                            $response['success_info'][] = array(
-                                'guid' => $guid,
-                                'message' => $message
-                            );
-                        } else {
-                            $response['failed_info'][] = array(
-                                'guid' => $guid,
-                                'message' => 'Product save filed, check API!'
-                            );
+                        $resp = $this->importRemainSingle($store['id'], $product);
+                        if($response){
+                            $response['success_info'][] = $resp;
+                        }else{
+                            $response['failed_info'][] = $resp;
                         }
                     }
                 }
@@ -227,6 +170,78 @@ class productHandler
         return false;
     }
 
+    /**
+     * Импорт остатка из 1С
+     *
+     * @param $store_id
+     * @param $data
+     * @return int
+     */
+    public function importRemainSingle($store_id, $data){
+        $message = "";
+        // проверяем товар на дублирование по GUID
+        $criteria = array(
+            'guid' => $data["GUID"],
+            'store_id' => $store_id
+        );
+        $o = $this->modx->getObject('slStoresRemains', $criteria);
+        if (!$o) {
+            $o = $this->modx->newObject('slStoresRemains');
+        }
+        $o->set("guid", $data["GUID"]);
+        if($data['base_GUID']){
+            $o->set("base_guid", $data['base_GUID']);
+        }
+        if($data['barcode']){
+            $o->set("barcode", implode(",", $data['barcode']));
+        }
+        $o->set("article", $data['article']);
+        $o->set("remains", $data['count_current']);
+        $o->set("catalog", $data['catalog']);
+        $reserved = $o->get('reserved');
+        if ($reserved > 0) {
+            $available = $data['count_free'] - $reserved;
+        } else {
+            $available = $data['count_free'];
+        }
+        if ($available < 0) {
+            $o->set("available", 0);
+        } else {
+            $o->set("available", $available);
+        }
+        $o->set("price", $data['price']);
+        $o->set('store_id', $store_id);
+        if ($data['name']) {
+            $o->set("name", $data['name']);
+        }
+        if ($o->save()) {
+            // линкуем товар
+            // if (!$o->get('product_id') && $o->get('autolink')) {
+            if (!$o->get('product_id')) {
+                $product_id = $this->linkProduct($o->get('id'));
+            }
+            $product_id = $o->get('product_id');
+            if($product_id){
+                $store = $this->sl->getObject($store_id);
+                if($o->get("remains") && $store['active']){
+                    $status = 1;
+                }else{
+                    $status = 99;
+                }
+                $this->setProductStatus($product_id, $status);
+            }
+            return $o->get("id");
+        }
+        return 0;
+    }
+
+    /**
+     * Берем магазин и записываем последние пинги API
+     *
+     * @param $key
+     * @param $type
+     * @return void
+     */
     public function getStore($key, $type = "date_api_ping") {
         $store = $this->modx->getObject("slStores", array('apikey' => $key));
         if($store){
@@ -234,9 +249,7 @@ class productHandler
             $store->set($type, time());
             $store->set("date_api_ping", time());
             $store->save();
-            $resp = array(
-                'id' => $store->get('id')
-            );
+            $resp = $store->toArray();
             return $resp;
         }
     }
@@ -251,24 +264,18 @@ class productHandler
      */
 
     public function linkProduct($remain_id, $type = 'slStores'){
-        If($type == 'slStores'){
-            $object = 'slStoresRemains';
-        }
-        if($type == 'slWarehouse'){
-            $object = 'slWarehouseRemains';
-        }
-        $remain = $this->sl->objects->getObject($object, $remain_id);
+        $remain = $this->sl->getObject($remain_id, "slStoresRemains");
         if($remain){
             $vendor = $this->searchVendor($remain['name']);
             if(!$vendor){
                 $vendor = $this->searchVendor($remain['catalog']);
             }
-            if($vendor){
-                // если известен производитель ищем по артикулу
+            if($vendor && $remain['article']){
+                // бренд найден
                 $query = $this->modx->newQuery("modResource");
                 $query->leftJoin("msProductData", "Data");
                 $query->where(array(
-                    "`Data`.`vendor_article`:=" => $remain['article'],
+                    "`Data`.`vendor_article`:=" => trim($remain['article']),
                     "`Data`.`vendor`:=" => $vendor['id']
                 ));
                 $query->select(array(
@@ -279,27 +286,50 @@ class productHandler
                 if ($query->prepare() && $query->stmt->execute()) {
                     // нашли товар
                     $product = $query->stmt->fetch(PDO::FETCH_ASSOC);
-                    if($product){
-                        // линкуем товар, если цена не отличается более чем на процент из кофигурации
-                        $percent = abs((($product['price'] - $remain['price']) * 100) / $product['price']);
-                        if($percent <= $this->config['product_price_percent']){
-                            $this->sl->api->update($object, array("product_id" => $product['id']), $remain_id);
-                        }else{
-                            // TODO: уведомление + пометка о расхождении цены на 20%
-                            return 3;
-                        }
-                        return true;
+                    if ($product) {
+                        $update_data = array(
+                            "status" => 3,
+                            "brand_id" => $vendor['id'],
+                            "product_id" => $product['id']
+                        );
                     }else{
-                        // TODO: уведомление о том, что товары бренда есть, а данного нет
-                        return 2;
+                        $update_data = array(
+                            "status" => 4,
+                            "brand_id" => $vendor['id'],
+                            "product_id" => 0
+                        );
                     }
+                }else{
+                    $update_data = array(
+                        "status" => 4,
+                        "brand_id" => $vendor['id'],
+                        "product_id" => 0
+                    );
                 }
             }else{
-                // ничего не делаем, производитель не найден
-                return 4;
+                if(!$vendor && $remain['article']) {
+                    // если не найден бренд выставляем статус
+                    $update_data = array(
+                        "status" => 1,
+                        "brand_id" => 0,
+                        "product_id" => 0
+                    );
+                }
+                if($vendor && !$remain['article']) {
+                    // если не найден бренд выставляем статус
+                    $update_data = array(
+                        "status" => 2,
+                        "brand_id" => 0,
+                        "product_id" => 0
+                    );
+                }
             }
+            if(count($update_data)){
+                $this->sl->api->update("slStoresRemains", $update_data, $remain['id']);
+            }
+            return $update_data;
         }
-        return false;
+        return 0;
     }
 
     /**
@@ -483,10 +513,20 @@ class productHandler
             }
             $prod->set('createdon', time());
             // check exist product
-            $criteria = array(
-                "guid" => $product['guid']
-            );
-            $remain = $this->modx->getObject('slStoresRemains', $criteria);
+            $guid = '';
+            if($product['guid']){
+                $guid = $product['guid'];
+            }
+            if($product['GUID']){
+                $guid = $product['GUID'];
+            }
+            $remain = false;
+            if($guid){
+                $criteria = array(
+                    "guid" => $guid
+                );
+                $remain = $this->modx->getObject('slStoresRemains', $criteria);
+            }
             if ($remain) {
                 $prod->set("remain_id", $remain->get('id'));
                 $p = $remain->get("price");
@@ -613,6 +653,578 @@ class productHandler
             }
         }
         return $response;
+    }
+
+    public function getRemain ($store_id, $guid) {
+        $criteria = array(
+            'guid' => $guid,
+            'store_id' => $store_id
+        );
+        $o = $this->modx->getObject('slStoresRemains', $criteria);
+        if($o){
+            return $o->get("id");
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * Смена статусов наличия при манипуляциях с магазином
+     *
+     * @param $store_id
+     * @param $available
+     * @return void
+     */
+    public function changeAvailableStatus ($store_id, $available) {
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->where(array(
+            "slStoresRemains.store_id:=" => $store_id,
+            "AND:slStoresRemains.product_id:>" => 0
+        ));
+        $query->select(array("slStoresRemains.product_id"));
+        if($query->prepare() && $query->stmt->execute()){
+            $products = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($products as $product){
+                // проверяем остаток в других магазинах, если нужно проставить НЕ в наличии
+                if(($available == 99) || ($product['remains'] == 0 && $product['price'] == 0)){
+                    if($this->getAvailableStatus($product['product_id'])){
+                        $status = 1;
+                    }else{
+                        $status = 99;
+                    }
+                }else{
+                    $status = 1;
+                }
+                $this->setProductStatus($product['product_id'], $status);
+            }
+        }
+    }
+
+    /**
+     * Генерация отчета о сопоставлении
+     *
+     * @param $store_id
+     * @return void
+     */
+    public function generateCopoReport($store_id, $generate = false){
+        $store = $this->sl->getObject($store_id);
+        if($store){
+            $copoReport = $this->modx->getObject("slStoresRemainsReports", array("store_id" => $store_id));
+            if(!$copoReport){
+                $copoReport = $this->modx->newObject("slStoresRemainsReports");
+                $copoReport->set("store_id", $store_id);
+                $copoReport->set("createdon", time());
+            }else{
+                $copoReport->set("updatedon", time());
+            }
+            $copoReport->set("name", "Отчет по сопоставлению магазина {$store['name']}");
+        }
+        if($generate){
+            $copoReport->save();
+            $this->generateCopoVendorsReport($copoReport->get("id"));
+        }
+        return $copoReport->toArray();
+    }
+
+    /**
+     * Генерация отчета по сопоставлению побрендово
+     *
+     * @param $report_id
+     * @return void
+     */
+    public function generateCopoVendorsReport($report_id){
+        $output = array();
+        $copoReport = $this->sl->getObject($report_id, "slStoresRemainsReports");
+        if($copoReport){
+            $brands = array();
+            $store_id = $copoReport["store_id"];
+            $query = $this->modx->newQuery("slStoresRemains");
+            $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+            $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
+            $query->select(array("DISTINCT(slStoresRemains.brand_id) AS vendor"));
+            $query->where(array("slStoresRemains.store_id:=" => $store_id));
+            // $query->limit(30, 10);
+            if($query->prepare() && $query->stmt->execute()){
+                $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($results as $v){
+                    $criteria = array(
+                        "vendor_id:=" => $v["vendor"],
+                        "report_id:=" => $report_id
+                    );
+                    $vendor = $this->modx->getObject("slStoresRemainsVendorReports", $criteria);
+                    if(!$vendor){
+                        $vendor = $this->modx->newObject("slStoresRemainsVendorReports");
+                        $vendor->set("vendor_id", $v["vendor"]);
+                        $vendor->set("report_id", $report_id);
+                        $vendor->set("createdon", time());
+                    }else{
+                        $vendor->set("updatedon", time());
+                    }
+
+                    // кол-во найденных
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->where(array(
+                        "slStoresRemains.store_id:=" => $store_id,
+                        "slStoresRemains.brand_id:=" => $v["vendor"],
+                    ));
+                    $find_count = $this->modx->getCount("slStoresRemains", $query);
+                    $query->where(array("slStoresRemains.remains:>" => 0));
+                    $find_count_in_stock = $this->modx->getCount("slStoresRemains", $query);
+                    $vendor->set("find", $find_count);
+                    $vendor->set("find_in_stock", $find_count_in_stock);
+
+                    // кол-во идентифицированных
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->where(array(
+                        "slStoresRemains.store_id:=" => $store_id,
+                        "slStoresRemains.brand_id:=" => $v["vendor"],
+                        "slStoresRemains.product_id:>" => 0,
+                    ));
+                    $ident_count = $this->modx->getCount("slStoresRemains", $query);
+                    $query->where(array("slStoresRemains.remains:>" => 0));
+                    $ident_in_stock = $this->modx->getCount("slStoresRemains", $query);
+                    $vendor->set("identified", $ident_count);
+                    $vendor->set("identified_in_stock", $ident_in_stock);
+
+                    // Процент найденных
+                    if ($find_count) {
+                        $percent = $ident_count / $find_count * 100;
+                        $vendor->set("percent_identified", $percent);
+                    }
+                    if ($find_count_in_stock) {
+                        $percent = $ident_in_stock / $find_count_in_stock * 100;
+                        $vendor->set("percent_identified_in_stock", $percent);
+                    }
+
+                    if($v["vendor"]){
+                        // кол-во карточек
+                        $q = $this->modx->newQuery("msProductData");
+                        $q->where(array("vendor:=" => $v["vendor"]));
+                        $total = $this->modx->getCount('msProductData', $q);
+                        $vendor->set("cards", $total);
+                    }else{
+                        $vendor->set("identified", 0);
+                        $vendor->set("percent_identified", 0);
+                        $vendor->set("identified_in_stock", 0);
+                        $vendor->set("percent_identified_in_stock", 0);
+                    }
+
+                    $vendor->save();
+                    $output[$v["vendor"]] = $vendor->toArray();
+                    $brands[] = $v["vendor"];
+                }
+                // очистка от брендов, которые мы не нашли
+                $query = $this->modx->newQuery("slStoresRemainsVendorReports");
+                $query->where(array(
+                    "slStoresRemainsVendorReports.vendor_id:NOT IN" => $brands,
+                    "slStoresRemainsVendorReports.report_id:=" => $report_id
+                ));
+                $query->select(array("slStoresRemainsVendorReports.id"));
+                if($query->prepare() && $query->stmt->execute()){
+                    $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach($results as $brand) {
+                        $obj = $this->modx->getObject('slStoresRemainsVendorReports', $brand["id"]);
+                        if (!$obj->remove()) {
+                            $this->modx->log(1, "Ошибка удаления объекта slStoresRemainsVendorReports {$brand["id"]}");
+                        }
+                    }
+                }
+            }
+        }
+        return $output;
+    }
+
+    /**
+     * Установка значения наличия
+     *
+     * @param $product_id
+     * @param $available
+     * @return void
+     */
+    public function setProductStatus($product_id, $available){
+        $data = array(
+            "available" => $available
+        );
+        $this->sl->api->update("msProductData", $data, $product_id);
+    }
+
+    /**
+     * Проверка остатка в активных магазинах
+     *
+     * @param $product_id
+     * @return bool
+     */
+    public function getAvailableStatus($product_id){
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "slStoresRemains.product_id:=" => $product_id,
+            "slStoresRemains.remains:>" => 0,
+            "slStoresRemains.price:>" => 0,
+            "slStores.active:=" => 1
+        ));
+        $query->select(array("slStoresRemains.*"));
+        if($query->prepare() && $query->stmt->execute()){
+            $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            if($remain["remains"] > 0){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Импорт остатков на определенный день
+     *
+     * @param $data
+     * @return int[]
+     * @throws Exception
+     */
+    public function importRemainsCheckpoints($data) {
+        $response = array(
+            'created' => 0,
+            'failed' => 0,
+            'updated' => 0
+        );
+        $store = $this->getStore($data['key'], "remains_checkpoint_update");
+        if($store){
+            foreach ($data['product_archive'] as $k => $archive) {
+                $today = new DateTime($archive['date']);
+                $dd = $today->getTimestamp();
+                $today->setTime(0,0,0);
+                $date_from = $today->getTimestamp();
+                $today->setTime(23,59,59);
+                $date_to = $today->getTimestamp();
+                foreach($archive['products'] as $product){
+                    $remain_id = $this->getRemain($store['id'], $product['GUID']);
+                    if(!$remain_id){
+                        $remain_id = $this->importRemainSingle($store['id'], $product);
+                    }
+                    // если дата сегодня
+                    if($dd >= $date_from && $dd <= $date_to){
+                        $remain = $this->modx->getObject("slStoresRemains", $remain_id);
+                        $remain->set("updatedon", time());
+                        $remain->set("count", $product['count_current']);
+                        $remain->set("price", $product['price']);
+                        $remain->set("remains", $product['count_current']);
+                        $remain->set("reserved", 0);
+                        $remain->set("available",$product['count_free']);
+                        $remain->save();
+                    }
+                    if($remain_id){
+                        $criteria = array(
+                            "remain_id" => $remain_id,
+                            "date:>=" => date('Y-m-d H:i:s', $date_from),
+                            "date:<=" => date('Y-m-d H:i:s', $date_to),
+                        );
+                        $setter = $this->modx->getObject("slStoresRemainsHistory", $criteria);
+                        if(!$setter){
+                            $setter = $this->modx->newObject("slStoresRemainsHistory");
+                            $setter->set("remain_id", $remain_id);
+                            $setter->set("createdon", time());
+                            $setter->set("date", $dd);
+                            $response['created']++;
+                        }else{
+                            $setter->set("updatedon", time());
+                            $response['updated']++;
+                        }
+                        $setter->set("count", $product['count_current']);
+                        $setter->set("price", $product['price']);
+                        $setter->set("remains", $product['count_current']);
+                        $setter->set("reserved", 0);
+                        $setter->set("available",$product['count_free']);
+                        $setter->save();
+                    }
+                }
+            }
+        }
+        return $response;
+    }
+
+    /**
+     * считаем скорость продаж за последний месяц
+     *
+     * @param $remain_id
+     * @return array
+     */
+    public function getPurchaseSpeed($remain_id){
+        $remain = $this->sl->getObject($remain_id, "slStoresRemains");
+        $today = date_create();
+        $month_ago = date_create("-1 MONTH");
+        date_time_set($month_ago, 00, 00);
+        $query = $this->modx->newQuery("slStoreDocsProducts");
+        $query->leftJoin("slStoreDocs", "slStoreDocs", "slStoreDocs.id = slStoreDocsProducts.doc_id");
+        $query->where(array(
+            "slStoreDocsProducts.remain_id" => $remain_id,
+            "slStoreDocs.date:>=" => date_format($month_ago, 'Y-m-d H:i:s'),
+            "slStoreDocs.date:<=" => date_format($today, 'Y-m-d H:i:s'),
+        ));
+        $query->select("slStoreDocsProducts.remain_id, SUM(slStoreDocsProducts.count) as sales");
+        $query->groupby("slStoreDocsProducts.remain_id");
+        if($query->prepare() && $query->stmt->execute()){
+            $result = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            if($result){
+                if($result["sales"]){
+                    $query = $this->modx->newQuery("slStoresRemainsHistory");
+                    $query->where(array(
+                        "slStoresRemainsHistory.remain_id" => $remain_id,
+                        "slStoresRemainsHistory.date:>=" => date_format($month_ago, 'Y-m-d H:i:s'),
+                        "slStoresRemainsHistory.date:<=" => date_format($today, 'Y-m-d H:i:s'),
+                        "slStoresRemainsHistory.remains:>" => 0,
+                    ));
+                    $query->select(array("slStoresRemainsHistory.*"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $times = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        $result['times'] = count($times);
+                        if($times){
+                            $result['speed'] = $result['sales'] / count($times);
+                            $result['speed'] = round($result['speed'], 2);
+                        }else{
+                            $result['speed'] = 0;
+                        }
+                    }
+                }else{
+                    $result['speed'] = 0;
+                }
+            }else{
+                $result['remain_id'] = $remain_id;
+                $result['sales'] = 0;
+                $result['speed'] = 0;
+            }
+            $result['price'] = $remain['price'];
+            // дополнительно выставляем дней с out of stock, если кол-во равно нулю
+            $today = date_create();
+            $month_ago = date_create("-1 MONTH");
+            date_time_set($month_ago, 00, 00);
+
+            $date_from = date_format($month_ago, 'Y-m-d H:i:s');
+            $date_to = date_format($today, 'Y-m-d H:i:s');
+            $sql = "SELECT (SELECT count(1) FROM `gewn5fer4GqeR_sl_stores_remains_history` t2 WHERE t2.`remain_id` = {$remain_id} AND t2.`date` >= '{$date_from}' AND t2.`date` <= '{$date_to}' AND t2.remains = `gewn5fer4GqeR_sl_stores_remains_history`.remains AND not exists (SELECT 1 FROM `gewn5fer4GqeR_sl_stores_remains_history` t3 WHERE t3.`remain_id` = '{$remain_id}' AND t3.`date` >= '{$date_from}' AND t3.`date` <= '{$date_to}' AND t3.id between least(`gewn5fer4GqeR_sl_stores_remains_history`.id, t2.id) AND greatest(`gewn5fer4GqeR_sl_stores_remains_history`.id, t2.id) AND t3.remains <> t2.remains)) AS repeats FROM `gewn5fer4GqeR_sl_stores_remains_history` WHERE `remains` = 0 AND `remain_id` = {$remain_id} AND `date` >= '{$date_from}' AND `date` <= '{$date_to}' LIMIT 1";
+            $statement = $this->modx->prepare($sql);
+            if($statement->execute()){
+                $repeats = $statement->fetch(PDO::FETCH_ASSOC);
+                if($repeats['repeats'] && $remain['remains'] == 0){
+                    $result['out_of_stock_days'] = $repeats['repeats'];
+                    $result['no_money'] = $remain['price'] * $repeats['repeats'] * $result['speed'];
+                }else{
+                    $result['out_of_stock_days'] = 0;
+                    $result['no_money'] = 0;
+                }
+            }else{
+                $result['out_of_stock_days'] = 0;
+                $result['no_money'] = 0;
+            }
+
+            return $result;
+        }
+    }
+
+    /**
+     * Берем актуальное дерево категорий (рекурсивно)
+     *
+     * @param $parent
+     * @return array
+     */
+    public function getActualProductCategories($parent){
+        $categories = array();
+        $query = $this->modx->newQuery("modResource");
+        $query->select(array("modResource.id, modResource.pagetitle, modResource.parent"));
+        $query->where(array(
+            "modResource.class_key:=" => "msCategory",
+            "modResource.deleted:=" => 0,
+            "modResource.published:=" => 1,
+            "modResource.parent:=" => $parent
+        ));
+        if ($query->prepare() && $query->stmt->execute()) {
+            $cats = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            if($cats){
+                $categories = array_merge($categories, $cats);
+                foreach($cats as $cat){
+                    $categories = array_merge($categories, $this->getActualProductCategories($cat["id"]));
+                }
+            }
+        }
+        return $categories;
+    }
+
+    /**
+     * Генерация YML файлов магазина
+     *
+     * @param $store_id
+     * @return array[]
+     */
+    public function generateStoreYML($store_id){
+        $this->modx->query( '
+          SET `low_priority_updates` = `ON`
+        ' );
+        $output = array(
+            'categories' => array(),
+            'vendors' => array(),
+            'products' => array()
+        );
+        $store = $this->sl->store->getStore($store_id);
+        if($store){
+            // проверяем остатки магазина
+            $query = $this->modx->newQuery("slStoresRemains");
+            $query->select(array("slStoresRemains.*"));
+            $query->where(array("store_id:=" => $store_id));
+            $all_data = $this->modx->getCount("slStoresRemains", $query);
+            if($all_data){
+                $file_path = $this->modx->getOption("base_path").'assets/files/organization/'.$store['id'].'/ymls/';
+                $filename = $file_path.'remains.yml';
+                $file_url = '/assets/files/organization/'.$store['id'].'/ymls/remains.yml';
+                if(!file_exists($file_path)){
+                    mkdir($file_path, 0755, true);
+                }
+                $fd = fopen($filename, 'w');
+                $base_content = $this->sl->pdoTools->getChunk("@FILE chunks/catalog_yml_base.tpl", $output);
+                fwrite($fd, $base_content);
+                fseek($fd, 0, SEEK_END);
+                $limit = 500;
+                for($i = 0; $i <= $all_data; $i += $limit) {
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->select(array("slStoresRemains.*"));
+                    $query->where(array("store_id:=" => $store_id));
+                    $query->limit($limit, $i);
+                    if ($query->prepare() && $query->stmt->execute()) {
+                        $products = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($products as $key => $product) {
+                            // записываем в файл
+                            $offer_content = "\r\n" . $this->sl->pdoTools->getChunk("@FILE chunks/catalog_yml_remain.tpl", $products[$key]) . "\r\n";
+                            fwrite($fd, $offer_content);
+                        }
+                    }
+                }
+                $end_file = "</offers>\r\n</shop>\r\n</yml_catalog>";
+                fwrite($fd, $end_file);
+                fclose($fd);
+                $st = $this->modx->getObject("slStores", $store['id']);
+                if($st){
+                    $st->set("yml_file", $file_url);
+                    $st->save();
+                }
+            }
+        }
+        $this->modx->query( '
+           SET `low_priority_updates` = `OFF`
+        ' );
+        return $output;
+    }
+
+    /**
+     * Генерация YML файлов каталога товаров по брендам
+     *
+     * @return array[]
+     */
+    public function generateVendorsYMLs(){
+        $this->modx->query( '
+          SET `low_priority_updates` = `ON`
+        ' );
+        $output = array(
+            'categories' => array(),
+            'vendors' => array(),
+            'products' => array()
+        );
+        $output['categories'] = $this->getActualProductCategories(2);
+        $cats = array();
+        foreach($output['categories'] as $c){
+            $cats[] = $c['id'];
+        }
+        $query = $this->modx->newQuery("msVendor");
+        $query->select(array("msVendor.id as id, msVendor.name as name"));
+        $all_data = $this->modx->getCount("msVendor", $query);
+        // ограничение на память
+        $limit = 500;
+        for($i = 0; $i <= $all_data; $i += $limit) {
+            $query = $this->modx->newQuery("msVendor");
+            $query->select(array("msVendor.id as id, msVendor.name as name"));
+            $query->limit($limit, $i);
+            if ($query->prepare() && $query->stmt->execute()) {
+                $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $output['vendors'] = array_merge($output['vendors'], $vendors);
+                // получили производителей, создаем файл и записываем туда товары
+                foreach($vendors as $vendor){
+                    $products_data = 0;
+                    $query = $this->modx->newQuery("msProductData");
+                    $query->leftJoin("modResource", "modResource", "modResource.id = msProductData.id");
+                    $query->select(array("COUNT(*) as count"));
+                    $query->where(array(
+                        "msProductData.vendor:=" => $vendor['id'],
+                        "AND:modResource.parent:IN" => $cats
+                    ));
+                    if ($query->prepare() && $query->stmt->execute()) {
+                        $prods = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        $products_data = $prods['count'];
+                    }
+                    $limit = 500;
+                    // проверяем есть ли товары и начинаем собирать файл
+                    if($products_data){
+                        // assets/files/ymls/
+                        $res = $this->modx->newObject("modResource");
+                        $name = $res->cleanAlias($vendor['name']);
+                        $file_path = $this->modx->getOption("base_path").'assets/files/ymls/';
+                        $filename = $file_path.$name.'_'.$vendor['id'].'.yml';
+                        if(!file_exists($file_path)){
+                            mkdir($file_path, 0755, true);
+                        }
+                        // if (!file_exists($filename)) {
+                            // открываем файл и пишем данные
+                            $fd = fopen($filename, 'w');
+                            $base_content = $this->sl->pdoTools->getChunk("@FILE chunks/catalog_yml_base.tpl", $output);
+                            fwrite($fd, $base_content);
+                            fseek($fd, 0, SEEK_END);
+                            for ($i = 0; $i <= $products_data; $i += $limit) {
+                                $query = $this->modx->newQuery("msProductData");
+                                $query->leftJoin("modResource", "modResource", "modResource.id = msProductData.id");
+                                $query->select(array("modResource.pagetitle, modResource.introtext, modResource.content, modResource.parent, msProductData.*"));
+                                $query->where(array(
+                                    "msProductData.vendor:=" => $vendor['id'],
+                                    "AND:modResource.parent:IN" => $cats
+                                ));
+                                $query->limit($limit, $i);
+                                if ($query->prepare() && $query->stmt->execute()) {
+                                    $products = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                    foreach ($products as $key => $product) {
+                                        $file_url = "assets/files/products/" . $product['id'] . '/';
+                                        $dir = $this->modx->getOption("base_path") . $file_url;
+                                        $files = array();
+                                        if ($handle = opendir($dir)) {
+                                            $index = 1;
+                                            while (false !== ($file = readdir($handle))) {
+                                                if ($file != "." && $file != "..") {
+                                                    $path_parts = pathinfo($file_url . $file);
+                                                    $file_data = array(
+                                                        "url" => $file_url . $file,
+                                                        "name" => $product['pagetitle'],
+                                                        "product_id" => $product['id'],
+                                                        "file_id" => $product['id'] . '_' . $index
+                                                    );
+                                                    $files[$path_parts['filename']] = $file_data;
+                                                    $index++;
+                                                }
+                                            }
+                                        }
+                                        $products[$key]["images"] = $files;
+                                        $products[$key]["vendor_name"] = $vendor['name'];
+                                        // записываем в файл
+                                        $offer_content = "\r\n" . $this->sl->pdoTools->getChunk("@FILE chunks/catalog_yml_product.tpl", $products[$key]) . "\r\n";
+                                        fwrite($fd, $offer_content);
+                                    }
+                                    // $output['products'] = array_merge($output['products'], $products);
+                                }
+                            }
+                            $end_file = "</offers>\r\n</shop>\r\n</yml_catalog>";
+                            fwrite($fd, $end_file);
+                            fclose($fd);
+                        // }
+                    }
+                }
+            }
+        }
+        $this->modx->query( '
+           SET `low_priority_updates` = `OFF`
+        ' );
+        return $output;
     }
 
     public function isJson($string) {

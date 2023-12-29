@@ -205,6 +205,47 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 }]
             }]
         },{
+            title: 'Роли',
+            cls: 'def-panel',
+            layout: 'column',
+            items: [{
+                columnWidth: .3,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
+                    xtype: 'xcheckbox',
+                    fieldLabel: _('shoplogistic_store_store'),
+                    name: 'store',
+                    id: config.id + '-store',
+                    anchor: '99%',
+                    checked: true
+                }]
+            },{
+                columnWidth: .3,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
+                    xtype: 'xcheckbox',
+                    fieldLabel: _('shoplogistic_store_warehouse'),
+                    name: 'warehouse',
+                    id: config.id + '-warehouse',
+                    anchor: '99%',
+                    checked: false
+                }]
+            },{
+                columnWidth: .3,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
+                    xtype: 'xcheckbox',
+                    fieldLabel: _('shoplogistic_store_vendor'),
+                    name: 'vendor',
+                    id: config.id + '-vendor',
+                    anchor: '99%',
+                    checked: false
+                }]
+            }]
+        },{
             title: 'Реквизиты',
             cls: 'def-panel',
             layout: 'column',
@@ -238,6 +279,12 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 defaults: {msgTarget: 'under'},
                 items: [{
                     xtype: 'textfield',
+                    fieldLabel: _('shoplogistic_store_ogrn'),
+                    name: 'ogrn',
+                    id: config.id + '-ogrn',
+                    anchor: '99%'
+                },{
+                    xtype: 'textfield',
                     fieldLabel: _('shoplogistic_store_inn'),
                     name: 'inn',
                     id: config.id + '-inn',
@@ -260,6 +307,12 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 layout: 'form',
                 defaults: {msgTarget: 'under'},
                 items: [{
+                    xtype: 'textfield',
+                    fieldLabel: _('shoplogistic_store_kpp'),
+                    name: 'kpp',
+                    id: config.id + '-kpp',
+                    anchor: '99%'
+                },{
                     xtype: 'textfield',
                     fieldLabel: _('shoplogistic_store_bank_number'),
                     name: 'bank_number',
@@ -441,7 +494,16 @@ Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
                     xtype: 'shoplogistic-grid-stores-docs',
                     record: config.record,
                 }]
-            })
+            },{
+                title: _('shoplogistic_vendorbrands'),
+                items: [{
+                    html: 'Укажите бренды, за которыми нужно следить',
+                    cls: 'panel-desc'
+                }, {
+                    xtype: 'shoplogistic-grid-vendorbrands',
+                    record: config.record,
+                }]
+            },)
         }
         if(config.type == 2){
             default_tabs.push({

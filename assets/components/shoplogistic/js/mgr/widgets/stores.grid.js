@@ -72,7 +72,16 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
         });
         w.reset();
         w.setValues({active: true});
-        w.setValues({type: this.config.baseParams.type});
+        if(this.config.baseParams.type == 1){
+            w.setValues({store: true});
+        }
+        if(this.config.baseParams.type == 2){
+            w.setValues({warehouse: true});
+        }
+        if(this.config.baseParams.type == 3){
+            w.setValues({vendor: true});
+        }
+
         w.show(e.target);
     },
 
@@ -204,7 +213,12 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
             'ur_address',
             'city',
             'description',
+            'store',
+            'warehouse',
+            'vendor',
             'active',
+            'check_remains',
+            'check_docs',
             'actions'
         ];
     },
@@ -217,7 +231,11 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
             'city',
             'description'
         ];
-        var checks = [];
+        var checks = [
+            'active',
+            'check_remains',
+            'check_docs'
+        ];
         console.log(config.type)
         if(config.type === 1){
             // fields.push('elem1', 'elem2')

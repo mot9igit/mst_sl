@@ -24,6 +24,12 @@ return [
         'menuindex' => 1,
         'action' => 'mgr/cardrequest',
     ),
+    'shoplogistic_balance_pay_request' => array(
+        'description' => 'shoplogistic_balance_pay_request_desc',
+        'parent' => 'shoplogistic',
+        'menuindex' => 1,
+        'action' => 'mgr/balancepayrequest',
+    ),
 	'shoplogistic_orders' => array(
 		'description' => 'shoplogistic_orders_desc',
 		'parent' => 'shoplogistic',

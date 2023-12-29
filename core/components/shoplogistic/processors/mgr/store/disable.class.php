@@ -5,8 +5,16 @@ class slStoresDisableProcessor extends modObjectProcessor
     public $objectType = 'slStores';
     public $classKey = 'slStores';
     public $languageTopics = ['shoplogistic'];
+    public $checkViewPermission = false;
     //public $permission = 'save';
 
+    public function initialize(){
+        return true;
+    }
+
+    public function checkPermissions() {
+        return true;
+    }
 
     /**
      * @return array|string
@@ -30,6 +38,15 @@ class slStoresDisableProcessor extends modObjectProcessor
 
             $object->set('active', false);
             $object->save();
+
+            $corePath = $this->modx->getOption('shoplogistic_core_path', array(), $this->modx->getOption('core_path') . 'components/shoplogistic/');
+            $shopLogistic = $this->modx->getService('shopLogistic', 'shopLogistic', $corePath . 'model/');
+            if ($shopLogistic) {
+                $shopLogistic->loadServices("web");
+                // Ставим на товар статус НЕ в наличии
+                $shopLogistic->product->changeAvailableStatus($id, 99);
+            }
+
         }
 
         return $this->success();

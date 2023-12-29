@@ -133,12 +133,21 @@ class shopLogistic
 			require_once dirname(__FILE__) . '/eshoplogistic.class.php';
 		}
 		if (!class_exists('postrf')) {
-			require_once dirname(__FILE__) . '/postrf.class.php';
+			require_once dirname(__FILE__) . '/delivery/postrf.class.php';
 			$this->postrf = new postrf($this, $this->modx);
 		}
-		if (!class_exists('Dadata')) {
-			require_once dirname(__FILE__) . '/dadata.class.php';
-		}
+        if (!class_exists('tools')) {
+            require_once dirname(__FILE__) . '/tools.class.php';
+            $this->tools = new slTools($this, $this->modx);
+        }
+        if (!class_exists('cdek')) {
+            require_once dirname(__FILE__) . '/delivery/cdek.class.php';
+            $this->cdek = new cdek($this, $this->modx);
+        }
+        if (!class_exists('Yandex')) {
+            require_once dirname(__FILE__) . '/delivery/yandex.class.php';
+            $this->yandex = new Yandex($this, $this->modx);
+        }
 		if (!class_exists('slXSLX')) {
 			require_once dirname(__FILE__) . '/xslx.class.php';
 			$this->xslx = new slXSLX($this, $this->modx);
@@ -154,6 +163,21 @@ class shopLogistic
         if (!class_exists('objectsHandler')) {
             require_once dirname(__FILE__) . '/objects.class.php';
             $this->objects = new objectsHandler($this, $this->modx);
+        }
+        // Основной обработчик организаций
+        if (!class_exists('storeHandler')) {
+            require_once dirname(__FILE__) . '/store.class.php';
+            $this->store = new storeHandler($this, $this->modx);
+        }
+        // Основной обработчик программ
+        if (!class_exists('programHandler')) {
+            require_once dirname(__FILE__) . '/program.class.php';
+            $this->program = new programHandler($this, $this->modx);
+        }
+        // Работа с очередью
+        if (!class_exists('queueHandler')) {
+            require_once dirname(__FILE__) . '/queue.class.php';
+            $this->queue = new queueHandler($this, $this->modx);
         }
         if (!class_exists('reportsHandler')) {
             require_once dirname(__FILE__) . '/reports.class.php';
@@ -476,7 +500,7 @@ class shopLogistic
             }
             return $res;
         }else{
-            return false;
+            return array();
         }
     }
 
@@ -502,7 +526,16 @@ class shopLogistic
         }
     }
 
+    /**
+     * Берем объект
+     *
+     * @param $id
+     * @param $type
+     * @return array
+     */
+
 	public function getObject($id, $type = 'slStores'){
+        // $this->modx->log(1, $type.' '.$id );
 		$output = array();
 		if($id){
 			$sql = "SELECT * FROM {$this->modx->getTableName($type)} WHERE `id` = {$id} LIMIT 1";
@@ -512,18 +545,51 @@ class shopLogistic
 			if($str) {
 				$output = $str;
 			}
+            // $this->modx->log(1, print_r($output, 1));
 		}
 		return $output;
 	}
 
-	public function getLocationData($ctx = false){
-		if($ctx){
-			return $_SESSION['dartlocation'][$ctx];
-		}else{
-			return $_SESSION['dartlocation'];
-		}
+    /**
+     * Берем текущую позицию
+     *
+     * @param $ctx
+     * @return array
+     */
+    public function getLocationData($ctx = false){
+        if($ctx){
+            $fias_id = '';
+            if(!empty($_SESSION['dartlocation'][$ctx]['settlement_fias_id'])){
+                $fias_id = $_SESSION['dartlocation'][$ctx]['settlement_fias_id'];
+            }else{
+                $fias_id = $_SESSION['dartlocation'][$ctx]['city_fias_id'];
+            }
+
+            $query = $this->modx->newQuery("dartLocationCity");
+            $query->where(array("dartLocationCity.fias_id:=" => $fias_id));
+            $query->select(array("dartLocationCity.*"));
+            $query->prepare();
+
+            if($query->prepare() && $query->stmt->execute()){
+                $result = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                $dartlocation = $_SESSION['dartlocation'][$ctx];
+                $dartlocation['city_id'] = $result['id'];
+                //$this->modx->log(1, print_r($dartlocation, 1));
+            }
+
+
+            return $dartlocation;
+        }else{
+            return $_SESSION['dartlocation'];
+        }
 	}
 
+    /**
+     * Строим карту магазинов
+     *
+     * @param $data
+     * @return array|string|void
+     */
 	public function buildStoresMap($data){
 		$output = array();
 		$location = $this->getLocationData($data['ctx']);
@@ -535,18 +601,27 @@ class shopLogistic
 			);
 			$output['center'] = $coords_data;
 			if($data['filter']){
-				$stores = $this->get_nearby('slStores', $coords_data, 30, $data['filter']);
+				$stores = $this->dartLocation->get_nearby('slStores', $coords_data, 9999, $data['filter']);
 			}else{
-				$stores = $this->get_nearby('slStores', $coords_data, 30);
+				$stores = $this->dartLocation->get_nearby('slStores', $coords_data, 9999);
 			}
 
 			$output['html_stores'] = '';
-			foreach($stores as $key => $store){
-				$store['redirect'] = $this->modx->makeURL(2);
-				$store['data'] = json_encode($store);
-				$stores[$key]['data'] = json_encode($store);
-				$stores[$key]['text'] = $this->pdoTools->getChunk("@FILE chunks/sl_store_baloon.tpl", $store);
-				$output['html_stores'] .= $this->pdoTools->getChunk("@FILE chunks/sl_store_list.tpl", $store);
+			foreach($stores as $key => $store) {
+                // TODO: ID убрать в переменную
+                $store['redirect'] = $this->modx->makeURL(2);
+                $store['data'] = json_encode($store);
+                $stores[$key]['data'] = json_encode($store);
+                $stores[$key]['text'] = $this->pdoTools->getChunk("@FILE chunks/sl_store_baloon.tpl", $store);
+                if ($data['type'] == 'modal'){
+                    $output['html_stores'] .= $this->pdoTools->getChunk("@FILE chunks/sl_modal_store_list.tpl", $store);
+                }else {
+                    if ($data['type'] == 'list'){
+                        $output['html_stores'] .= $this->pdoTools->getChunk("@FILE chunks/sl_store_list_all.tpl", $store);
+                    }else{
+                        $output['html_stores'] .= $this->pdoTools->getChunk("@FILE chunks/sl_store_list.tpl", $store);
+                    }
+                }
 			}
 			if($stores){
 				$output['stores'] = $stores;
@@ -559,6 +634,12 @@ class shopLogistic
 		}
 	}
 
+    /**
+     * Берем по AJAX доставку
+     *
+     * @param $data
+     * @return array|string
+     */
 	public function getDelivery($data){
 		$output = '';
 		if($data['id']){
@@ -568,9 +649,7 @@ class shopLogistic
 				"from_id" => $data['from_id'],
 				"tpl" => "@FILE chunks/tpl_delivery_card.tpl"
 			);
-			// $this->modx->log(1, print_r($props, 1));
 			$output = $this->modx->runSnippet("sl.get_delivery_data", $props);
-			//$output = $this->pdoTools->getChunk("@FILE chunks/sl_delivery_data.tpl", ["id" => $data["id"]]);
 		}
 		return $this->success("", array("selector_id" => "#delivery_".$data["id"]."_".$data['from_id'], "html_delivery" => $output));
 	}
@@ -898,10 +977,14 @@ class shopLogistic
 		$this->modx->controller->addJavascript($this->config['jsUrl'] . 'mgr/shoplogistic.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/misc/utils.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/misc/combo.js?v='.$this->config['version']);
+        $this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/misc/default.grid.js?v='.$this->config['version']);
+        $this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/misc/default.window.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.tab.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.panel.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.grid.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/resource.windows.js?v='.$this->config['version']);
+        $this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/prices/grid.js?v='.$this->config['version']);
+        $this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/prices/windows.js?v='.$this->config['version']);
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/order.info.js');
 		$this->modx->controller->addLastJavascript($this->config['jsUrl'] . 'mgr/widgets/order.tab.js');
 

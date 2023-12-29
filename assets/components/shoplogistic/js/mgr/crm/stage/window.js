@@ -60,6 +60,30 @@ Ext.extend(shopLogistic.window.UpdateStage, MODx.Window, {
             id: config.id + '-transition_anchor',
             anchor: '99%'
         },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_crm_deal_stage_user_description'),
+            name: 'user_description',
+            id: config.id + '-user_description',
+            anchor: '99%'
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_crm_deal_stage_to_tk'),
+            name: 'to_tk',
+            id: config.id + '-to_tk',
+            checked: false,
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_crm_deal_stage_pay'),
+            name: 'pay',
+            id: config.id + '-pay',
+            checked: false,
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_crm_deal_stage_check_code'),
+            name: 'check_code',
+            id: config.id + '-check_code',
+            checked: false,
+        },{
             xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_crm_deal_stage_stores_available'),
             name: 'stores_available',

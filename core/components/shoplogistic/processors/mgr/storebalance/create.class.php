@@ -26,7 +26,11 @@ class slStoreBalanceCreateProcessor extends modObjectCreateProcessor
 			if((int)$type == 2){
 				$bal = (float) $b - (float) $value;
 			}
-			$store->set('balance', $bal);
+            if($bal){
+                $store->set('balance', $bal);
+            }else{
+                $store->set('balance', 0);
+            }
 			$store->save();
 		}
         return parent::beforeSet();

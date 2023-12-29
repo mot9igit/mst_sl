@@ -14,27 +14,29 @@ class b24Handler
 		$this->sl =& $sl;
 		$this->modx =& $modx;
 		$this->modx->lexicon->load('shoplogistic:default');
-
-		// define B24
-		$webhook = $this->modx->getOption("shoplogistic_crm_webhook");
-		if($webhook){
-			define('C_REST_WEB_HOOK_URL', $webhook);
-			$this->crest = new CRest;
-			// link ms2
-			if (is_dir($this->modx->getOption('core_path') . 'components/minishop2/model/minishop2/')) {
-				$ctx = 'web';
-				$this->ms2 = $this->modx->getService('miniShop2');
-				if ($this->ms2 instanceof miniShop2) {
-					$this->ms2->initialize($ctx);
-				}
-			}
-			$response = $this->updateFields();
-			return true;
-		}else{
-			$this->modx->log(MODX_LOG_LEVEL_ERROR, 'shopLogistic :: CRM - Не заполнен Webhook в системных настройках');
-			return false;
-		}
 	}
+
+    public function initialize(){
+        // define B24
+        $webhook = $this->modx->getOption("shoplogistic_crm_webhook");
+        if($webhook){
+            define('C_REST_WEB_HOOK_URL', $webhook);
+            $this->crest = new CRest;
+            // link ms2
+            if (is_dir($this->modx->getOption('core_path') . 'components/minishop2/model/minishop2/')) {
+                $ctx = 'web';
+                $this->ms2 = $this->modx->getService('miniShop2');
+                if ($this->ms2 instanceof miniShop2) {
+                    $this->ms2->initialize($ctx);
+                }
+            }
+            $response = $this->updateFields();
+            return true;
+        }else{
+            $this->modx->log(MODX_LOG_LEVEL_ERROR, 'shopLogistic :: CRM - Не заполнен Webhook в системных настройках');
+            return false;
+        }
+    }
 
 	/**
 	 * Функция проверки полей (сделка и контакт) и обновления
@@ -94,16 +96,18 @@ class b24Handler
 				$existFields[] = $obj->get('id');
 			}
 			// удаляем поля, которых нет в CRM
-			$query = $this->modx->newQuery("slCRMFields");
-			$query->where(array(
-				"AND:type:=" => $type,
-				"AND:id:NOT IN" => $existFields
-			));
-			$query->prepare();
-			$objects = $this->modx->getCollection("slCRMFields", $query);
-			foreach($objects as $object){
-				$object->remove();
-			}
+            if(count($existFields)){
+                $query = $this->modx->newQuery("slCRMFields");
+                $query->where(array(
+                    "type:=" => $type,
+                    "AND:id:NOT IN" => $existFields
+                ));
+                $query->prepare();
+                $objects = $this->modx->getCollection("slCRMFields", $query);
+                foreach($objects as $object){
+                    $object->remove();
+                }
+            }
 		}
 		// добавляем категории
 		$response = $this->request('crm.category.list', array("entityTypeId" => 2));
@@ -141,6 +145,9 @@ class b24Handler
 						);
 						$stage = $this->modx->getObject("slCRMStage", $criteria);
 						if(!$stage){
+                            $this->toLog(print_r($obj->toArray(), 1));
+                            $this->toLog(print_r($stagen, 1));
+                            $this->toLog(print_r($criteria, 1));
 							// если поле не найдено - создаем
 							$stage = $this->modx->newObject("slCRMStage");
 							$stage->set("crm_id", $stagen['STATUS_ID']);
@@ -162,25 +169,29 @@ class b24Handler
 		}
         // TODO: проверить очистку. Чистит лишнего много
 		// чистим категории
-		$query = $this->modx->newQuery("slCRMCategory");
-		$query->where(array(
-			"AND:id:NOT IN" => $existCats
-		));
-		$query->prepare();
-		$objects = $this->modx->getCollection("slCRMCategory", $query);
-		foreach($objects as $object){
-			// $object->remove();
-		}
+        if(count($existCats)) {
+            $query = $this->modx->newQuery("slCRMCategory");
+            $query->where(array(
+                "id:NOT IN" => $existCats
+            ));
+            $query->prepare();
+            $objects = $this->modx->getCollection("slCRMCategory", $query);
+            foreach ($objects as $object) {
+                // $object->remove();
+            }
+        }
 		// чистим стадии
-		$query = $this->modx->newQuery("slCRMStage");
-		$query->where(array(
-			"AND:id:NOT IN" => $existStages
-		));
-		$query->prepare();
-		$objects = $this->modx->getCollection("slCRMStage", $query);
-		foreach($objects as $object){
-			// $object->remove();
-		}
+        if(count($existStages)) {
+            $query = $this->modx->newQuery("slCRMStage");
+            $query->where(array(
+                "id:NOT IN" => $existStages
+            ));
+            $query->prepare();
+            $objects = $this->modx->getCollection("slCRMStage", $query);
+            foreach ($objects as $object) {
+                // $object->remove();
+            }
+        }
 		return true;
 	}
 
@@ -202,37 +213,39 @@ class b24Handler
 					$key = 'order';
 					$ff = $farr[0];
 				}
-				if($order_data[$key][$ff]) {
-					if ($field['properties']) {
-						$props = json_decode($field['properties'], 1);
-						// $this->modx->log(1, print_r($props, 1));
-						foreach($props as $prop){
-							if($prop['filter']){
-								switch ($prop['filter']){
-									case 'striptags':
-										$order_data[$key][$ff] = strip_tags($order_data[$key][$ff]);
-										break;
-									case 'image':
-										$order_data[$key][$ff] = array(
-											basename($order_data[$key][$ff]),
-											$this->base64Encode($order_data[$key][$ff])
-										);;
-										break;
-								}
-							}
-							// ENUMS
-							if($prop['enums']){
-								// $this->modx->log(1, print_r($prop['enums'], 1));
-								foreach($prop['enums'] as $k => $enum){
-									if($k == $order_data[$key][$ff]){
-										$order_data[$key][$ff] = $enum;
-									}
-								}
-							}
-						}
-					}
-					$custom_values[$field['crm_id']] = $order_data[$key][$ff];
-				}
+                if(isset($order_data[$key])){
+                    if($order_data[$key][$ff]) {
+                        if ($field['properties']) {
+                            $props = json_decode($field['properties'], 1);
+                            // $this->modx->log(1, print_r($props, 1));
+                            foreach($props as $prop){
+                                if($prop['filter']){
+                                    switch ($prop['filter']){
+                                        case 'striptags':
+                                            $order_data[$key][$ff] = strip_tags($order_data[$key][$ff]);
+                                            break;
+                                        case 'image':
+                                            $order_data[$key][$ff] = array(
+                                                basename($order_data[$key][$ff]),
+                                                $this->base64Encode($order_data[$key][$ff])
+                                            );;
+                                            break;
+                                    }
+                                }
+                                // ENUMS
+                                if($prop['enums']){
+                                    // $this->modx->log(1, print_r($prop['enums'], 1));
+                                    foreach($prop['enums'] as $k => $enum){
+                                        if($k == $order_data[$key][$ff]){
+                                            $order_data[$key][$ff] = $enum;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        $custom_values[$field['crm_id']] = $order_data[$key][$ff];
+                    }
+                }
 			}
 		}
 		return $custom_values;
@@ -260,14 +273,14 @@ class b24Handler
 					$product->set("b24id", $response['result']);
 					$product->save();
 				}
-				return $response;
+				return $response['result'];
 			}else{
 				// товар уже есть в системе - обновляем
 				if($double['result'][0]["ID"]){
 					$product->set("b24id", $double['result'][0]["ID"]);
 					$product->save();
 					$response = $this->updateProduct($double['result'][0]["ID"], $fields);
-					return $response;
+					return $double['result'][0]["ID"];
 				}
 			}
 		}
@@ -457,7 +470,7 @@ class b24Handler
 		return false;
 	}
 
-	public function addDeal($data){
+	public function addDeal($data, $send_data = array()){
 		$contact_data = array(
 			"NAME" => $data['address']['receiver'],
 			"email" => $data['user']['email']
@@ -468,9 +481,12 @@ class b24Handler
 			$contact_data['phone'] = $data['address']['phone'];
 		}
 		$contact_id = $this->addContact($contact_data);
-		$deal_data = $this->getCustomValues($data, 1);
+        $custom_values = $this->getCustomValues($data, 1);
+		$deal_data = array_merge($send_data, $custom_values);
 		$deal_data["TITLE"] = "Заказ #".$data['order']['num'];
 		$deal_data["CURRENCY_ID"] = "RUB";
+        $deal_data["ASSIGNED_BY_ID"] = $this->modx->getOption("shoplogistic_assigned_by_id");
+        $deal_data["TYPE_ID"] = $this->modx->getOption("shoplogistic_type_id");
 		$deal_data["OPPORTUNITY"] = $data['order']['cart_cost'];
 		$deal_data["CONTACT_ID"] = $contact_id;
 		// $deal_data["STAGE_ID"] = "RUB";
@@ -480,7 +496,6 @@ class b24Handler
 		if(isset($data['order']['warehouse_id'])) {
 			$deal_data["UF_CRM_1678043469"] = $data['order']['warehouse_id'];
 		}
-		// TODO: стартовые стадии пока заглушка
 		if(isset($data['STAGE_ID'])){
 			if(is_numeric($data['STAGE_ID'])){
 				$stage = $this->prepareStage($data['STAGE_ID']);
@@ -488,7 +503,9 @@ class b24Handler
 			}
 		}
 		$method = "crm.deal.add";
+        $this->modx->log(1, print_r($deal_data, 1));
 		$response = $this->request($method, array("fields" => $deal_data));
+        $this->modx->log(1, print_r($response, 1));
 		if($response['result']){
 			$deal_id = $response['result'];
 			$order = $this->modx->getObject('slOrder', array("num" => $data['order']["num"]));
@@ -497,6 +514,7 @@ class b24Handler
 				$order->save();
 				if(count($data['products'])){
 					if($this->modx->getOption("shoplogistic_crm_link_products")){
+                        // TODO: написать создание товара
 						$response = $this->linkProducts($deal_id, $data['products']);
 					}else{
 						$response = $this->addComment($deal_id, $data['products']);
@@ -566,4 +584,13 @@ class b24Handler
 		$response = $this->crest->call($method, $data);
 		return $response;
 	}
+
+    public function tolog($data) {
+        $this->modx->log(xPDO::LOG_LEVEL_ERROR, print_r($data, 1), array(
+            'target' => 'FILE',
+            'options' => array(
+                'filename' => 'bitrix24.log'
+            )
+        ));
+    }
 }

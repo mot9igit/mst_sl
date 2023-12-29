@@ -47,6 +47,21 @@ setTimeout(function () {
                                     anchor: '99%',
                                     record: config.record
                                 }]
+                            }, {
+                                id: 'shoplogistic-resource-tab-prices'
+                                , autoHeight: true
+                                , title: _('shoplogistic_resource_tab_prices')
+                                , layout: 'anchor'
+                                , anchor: '100%'
+                                , items: [{
+                                    html: '<p>' + _('shoplogistic_resource_tab_prices_desc') + '</p>'
+                                    , bodyCssClass: 'panel-desc'
+                                    , border: false
+                                }, {
+                                    xtype: 'shoplogistic-panel-resource-prices',
+                                    anchor: '99%',
+                                    record: config.record
+                                }]
                             });
                         }
                     }

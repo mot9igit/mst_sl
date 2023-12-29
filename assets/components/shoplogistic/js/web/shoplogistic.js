@@ -157,9 +157,9 @@ var sl_delivery = {
             $(sl_delivery.options.choosed_pvz).removeClass('active');
             var d = $('input[type=radio][name=delivery]:checked').val();
             if(d == shoplogisticConfig['punkt_delivery'] || d == shoplogisticConfig['curier_delivery']){
-                var fias = $(sl_delivery.options.hidden_address).find("input[name=fias]").val();
-                if (fias){
-                    sl_delivery.getDeliveryPrices(fias);
+                var geo_data = $(sl_delivery.options.hidden_address).find("input[name=geo_data]").val();
+                if (geo_data){
+                    sl_delivery.getDeliveryPrices(geo_data);
                 }
             }
         });
@@ -325,6 +325,7 @@ var sl_delivery = {
         this.send(data);
     },
     setData: function(data){
+        console.log(data)
         $(sl_delivery.options.services).find('.service_info_'+data.main_key).hide();
         var d = $('input[type=radio][name=delivery]:checked').val();
         if(d == shoplogisticConfig['punkt_delivery']){

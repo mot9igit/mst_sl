@@ -96,7 +96,25 @@ Ext.extend(shopLogistic.grid.Stage, MODx.grid.Grid, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'transition_to', 'transition_anchor', 'category_id', 'active', 'crm_id', 'sort', 'properties', 'stores_available', 'warehouses_available','actions'];
+        return [
+            'id',
+            'name',
+            'check_code',
+            'user_description',
+            'transition_to',
+            'transition_anchor',
+            'category_id',
+            'active',
+            'to_tk',
+            'pay',
+            'check_code',
+            'crm_id',
+            'sort',
+            'properties',
+            'stores_available',
+            'warehouses_available',
+            'actions'
+        ];
     },
 
     getColumns: function () {
@@ -131,6 +149,30 @@ Ext.extend(shopLogistic.grid.Stage, MODx.grid.Grid, {
             sortable: false,
             width: 250,
         }, {
+            header: _('shoplogistic_crm_deal_stage_create_delivery_order'),
+            dataIndex: 'create_delivery_order',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: false,
+            width: 250,
+        },{
+            header: _('shoplogistic_crm_deal_stage_check_code'),
+            dataIndex: 'check_code',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: false,
+            width: 250,
+        },{
+            header: _('shoplogistic_crm_deal_stage_to_tk'),
+            dataIndex: 'to_tk',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: false,
+            width: 250,
+        },{
+            header: _('shoplogistic_crm_deal_stage_pay'),
+            dataIndex: 'pay',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: false,
+            width: 250,
+        },{
             header: _('shoplogistic_crm_deal_stage_stores_available'),
             dataIndex: 'stores_available',
             renderer: shopLogistic.utils.renderBoolean,

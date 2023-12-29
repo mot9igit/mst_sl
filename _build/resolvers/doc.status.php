@@ -92,22 +92,164 @@ if ($transport->xpdo) {
                 $status_name = $properties['name'];
             }
 
-        // Статусы заявок
+            // Статусы заявок
+            $statuses = [
+                [
+                    'name' => 'Новая',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'В обработке',
+                    'color' => '003366',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Обработана',
+                    'color' => '008000',
+                    'active' => 1,
+                    'id' => 3
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slCardRequestStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slCardRequestStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
+            // Статусы подключений к программам
+            $statuses = [
+                [
+                    'name' => 'Заявка на рассмотрении',
+                    'color' => '000000',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'Заявка одобрена',
+                    'color' => '003366',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Отказ от программы',
+                    'color' => '008000',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 3
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slBonusesConnectionStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slBonusesConnectionStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
+            // Статусы отгрузок
+            $statuses = [
+                [
+                    'name' => 'Ожидается',
+                    'color' => '000000',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'В пути',
+                    'color' => '003366',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Выполнен',
+                    'color' => '993300',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 3
+                ],
+                [
+                    'name' => 'Выполнен частично',
+                    'color' => '333300',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 4,
+
+                ],
+                [
+                    'name' => 'Просрочен',
+                    'color' => '003300',
+                    'anchor' => '',
+                    'anchor_description' => '',
+                    'active' => 1,
+                    'id' => 5
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slWarehouseShipmentStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slWarehouseShipmentStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
+        // Статусы баланса
         $statuses = [
             [
-                'name' => 'Новая',
+                'name' => 'На рассмотрении',
                 'color' => '000000',
                 'active' => 1,
                 'id' => 1
             ],[
-                'name' => 'В обработке',
+                'name' => 'Выполнена',
                 'color' => '003366',
                 'active' => 1,
                 'id' => 2
             ],
             [
-                'name' => 'Обработана',
-                'color' => '008000',
+                'name' => 'Отклонена',
+                'color' => '003300',
                 'active' => 1,
                 'id' => 3
             ]
@@ -117,12 +259,54 @@ if ($transport->xpdo) {
             $id = $properties['id'];
             unset($properties['id']);
 
-            $level = $modx->getObject('slCardRequestStatus', [
+            $level = $modx->getObject('slStoreBalancePayRequestStatus', [
                 'id' => $id,
                 'OR:name:=' => $properties['name']
             ]);
             if (!$level) {
-                $level = $modx->newObject('slCardRequestStatus', $properties);
+                $level = $modx->newObject('slStoreBalancePayRequestStatus', $properties);
+            }
+            $level->save();
+
+            $status_id = $level->get('id');
+            $status_name = $properties['name'];
+        }
+
+        // Статусы карточек товара
+        $statuses = [
+            [
+                'name' => 'Укажите бренд',
+                'color' => '000000',
+                'active' => 1,
+                'id' => 1
+            ],[
+                'name' => 'Укажите артикул',
+                'color' => 'C0C0C0',
+                'active' => 1,
+                'id' => 2
+            ],[
+                'name' => 'Сопоставлен',
+                'color' => '00FF00',
+                'active' => 1,
+                'id' => 4
+            ],[
+                'name' => 'Нет карточки товара',
+                'color' => 'FF0000',
+                'active' => 1,
+                'id' => 5
+            ]
+        ];
+
+        foreach ($statuses as $properties) {
+            $id = $properties['id'];
+            unset($properties['id']);
+
+            $level = $modx->getObject('slStoresRemainsStatus', [
+                'id' => $id,
+                'OR:name:=' => $properties['name']
+            ]);
+            if (!$level) {
+                $level = $modx->newObject('slStoresRemainsStatus', $properties);
             }
             $level->save();
 
@@ -135,6 +319,10 @@ if ($transport->xpdo) {
             $modx->removeCollection('slDocsStatus', []);
             $modx->removeCollection('slExportFileStatus', []);
             $modx->removeCollection('slCardRequestStatus', []);
+            $modx->removeCollection('slBonusesConnectionStatus', []);
+            $modx->removeCollection('slWarehouseShipmentStatus', []);
+            $modx->removeCollection('slStoreBalancePayRequestStatus', []);
+            $modx->removeCollection('slStoresRemainsStatus', []);
             break;
     }
 }

@@ -600,7 +600,7 @@ class minishop2_fast_api{
 	}
 
 	// обновление данных
-	public function update($object, $data, $id){
+	public function update($object, $data, $id = 0){
 		if($this->config['show_metrics']){
 			$this->checkprogress("Обновляю");
 		}
