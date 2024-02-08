@@ -962,9 +962,9 @@ class cartDifficultHandler
 		}
 		// TODO: решить door или terminal
 		if($offset){
-			$offset = $offset + $arr['terminal']['time'];
+			$offset = $offset + $arr['door']['time'];
 		}else{
-			$offset = $arr['terminal']['time'];
+			$offset = $arr['door']['time'];
 		}
         // $this->modx->log(1, $offset);
 		$interval = 'P'.$offset.'D';
@@ -1014,7 +1014,7 @@ class cartDifficultHandler
 		$arr = $this->sl->esl->getYandexDeliveryPrice($product_id, $from, $to);
 		// проверяем наличие Я.Доставки
 		if($arr){
-			$delivery_data['delivery']['price'] = $arr['price'];
+			$delivery_data['delivery']['price'] = round($arr['price']);
 			$newDate = new DateTime();
 			$delivery_data['delivery']['term_default'] = $newDate->format('Y-m-d H:i:s');
 			$delivery_data['delivery']['term'] = 0;
@@ -1144,18 +1144,18 @@ class cartDifficultHandler
 							if(isset($ya_data['price'])){
 								// складываем цену
 								if(isset($services['yandex']['door']['price'])){
-									$services['yandex']['door']['price'] = $services['yandex']['door']['price'] + $ya_data['price'];
+									$services['yandex']['door']['price'] = round($services['yandex']['door']['price'] + $ya_data['price']);
 								}
 								$services['yandex'] = array(
 									"price" => array(
 										"door" => array(
-											"price" => $ya_data['price'],
+											"price" => round($ya_data['price']),
 											"time" => $days,
 										)
 									)
 								);
                                 // ADD price
-                                $services['delivery'][$item['object']]['yandex'] = $services['yandex']['price'];
+                                $services['delivery'][$item['object']]['yandex'] = round($services['yandex']['price']);
 							}else{
 								$services['yandex'] = false;
 							}
@@ -1167,12 +1167,12 @@ class cartDifficultHandler
 							if(isset($ya_data['price'])){
 								// складываем цену
 								if(isset($services['yandex']['door']['price'])){
-									$services['yandex']['door']['price'] = $services['yandex']['door']['price'] + $ya_data['price'];
+									$services['yandex']['door']['price'] = round($services['yandex']['door']['price'] + $ya_data['price']);
 								}
 								$services['yandex'] = array(
 									"price" => array(
 										"door" => array(
-											"price" => $ya_data['price'],
+											"price" => round($ya_data['price']),
 											"time" => $days
 										)
 									)
@@ -1199,14 +1199,14 @@ class cartDifficultHandler
 									$s = array('door', 'terminal');
 									foreach($s as $key){
 										if(isset($services['postrf']['price'][$key]['price'])){
-											$services['postrf']['price'][$key]['price'] += $out[$key]['price'];
+											$services['postrf']['price'][$key]['price'] += round($out[$key]['price']);
                                             $services['postrf']['price'][$key]['time'] = $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1);
 										}else{
-											$services['postrf']['price'][$key]['price'] = $out[$key]['price'];
+											$services['postrf']['price'][$key]['price'] = round($out[$key]['price']);
                                             $services['postrf']['price'][$key]['time'] = $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1);
 										}
                                         $services['delivery'][$item['object']]['postrf'][$key] = array(
-                                            'price' => $out[$key]['price'],
+                                            'price' => round($out[$key]['price']),
                                             'time' => $this->sl->num_word($out[$key]['time'], array('день', 'дня', 'дней'), 1)
                                         );
 									}

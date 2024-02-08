@@ -61,47 +61,55 @@ class reportsHandler
         // берем отчеты со статусом 1
         $reports = $this->modx->getCollection('slReports', array('status' => 1));
         foreach($reports as $report){
-            // так как отчет собирается относительно медленно, нужно предусмотреть блокировку дублей
-            $id = $report->get('id');
-            if(!$this->checkFileBlock($id)){
-                $this->createFileBlock($id);
-            }
-            // теперь запускаем формирование отчетов
-            if($report->get("type") == 1){
-                $report->set("status", 2);
-                $report->save();
-                if($this->generateTopSales($id)){
-                    $report->set("status", 3);
-                    $report->save();
-                    $this->deleteFileBlock($id);
+            try {
+                // так как отчет собирается относительно медленно, нужно предусмотреть блокировку дублей
+                $id = $report->get('id');
+                if (!$this->checkFileBlock($id)) {
+                    $this->createFileBlock($id);
                 }
-            }
-            if($report->get("type") == 2){
-                $report->set("status", 2);
-                $report->save();
-                if($this->generatePresent($id)) {
-                    $report->set("status", 3);
+                // теперь запускаем формирование отчетов
+                if ($report->get("type") == 1) {
+                    $report->set("status", 2);
                     $report->save();
-                    $this->deleteFileBlock($id);
+                    if ($this->generateTopSales($id)) {
+                        $report->set("status", 3);
+                        $report->save();
+                        $this->deleteFileBlock($id);
+                    }
                 }
-            }
-            if($report->get("type") == 3){
-                $report->set("status", 2);
-                $report->save();
-                if($this->generateRRC($id)){
-                    $report->set("status", 3);
+                if ($report->get("type") == 2) {
+                    $report->set("status", 2);
                     $report->save();
-                    $this->deleteFileBlock($id);
+                    if ($this->generatePresent($id)) {
+                        $report->set("status", 3);
+                        $report->save();
+                        $this->deleteFileBlock($id);
+                    }
                 }
-            }
-            if($report->get("type") == 4){
-                $report->set("status", 2);
-                $report->save();
-                if($this->generateWeekSales($id)){
-                    $report->set("status", 3);
+                if ($report->get("type") == 3) {
+                    $report->set("status", 2);
                     $report->save();
-                    $this->deleteFileBlock($id);
+                    if ($this->generateRRC($id)) {
+                        $report->set("status", 3);
+                        $report->save();
+                        $this->deleteFileBlock($id);
+                    }
                 }
+                if ($report->get("type") == 4) {
+                    $report->set("status", 2);
+                    $report->save();
+                    if ($this->generateWeekSales($id)) {
+                        $report->set("status", 3);
+                        $report->save();
+                        $this->deleteFileBlock($id);
+                    }
+                }
+            } catch (Exception $e) {
+                $report->set("status", 4);
+                $properties = $report->get("properties");
+                $properties["error"] = $e->getMessage();
+                $report->set("properties", json_encode($properties, JSON_UNESCAPED_UNICODE));
+                $report->save();
             }
         }
     }
@@ -1316,6 +1324,12 @@ class reportsHandler
         return $results;
     }
 
+    /**
+     * Генерируем отчет ТОПЫ продаж
+     *
+     * @param $report_id
+     * @return bool|void
+     */
     public function generateTopSales ($report_id) {
         $report = $this->modx->getObject("slReports", $report_id);
         if($report) {
@@ -1329,14 +1343,16 @@ class reportsHandler
                 $query->leftJoin("modResource", "modResource", "modResource.id = msProductData.id");
                 $query->select(array("modResource.id as product_id, slStoresRemains.store_id as store_id, slStoresRemains.id as remain_id, SUM(slStoreDocsProducts.count) as sales"));
                 $query->where(array(
-                    "slStoresRemains.product_id:>" => 0,
                     "AND:slStoreDocsProducts.type:=" => 1,
                     "AND:slStoreDocs.date:>=" => $report_data['date_from'],
                     "AND:slStoreDocs.date:<=" => $report_data['date_to']
                 ));
-                $query->groupby("store_id,slStoresRemains.product_id");
-                $query->prepare();
-                $this->modx->log(1, $query->toSQL());
+                if(isset($report_data['properties']['all_products'][0])) {
+                    if($report_data['properties']['all_products'][0] == 0){
+                        $query->where(array("slStoresRemains.product_id:>" => 0));
+                    }
+                }
+                $query->groupby("store_id,remain_id");
                 if($query->prepare() && $query->stmt->execute()) {
                     $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                     $this->modx->removeCollection("slReportsTopSales", array("report_id" => $report_id));
@@ -1350,7 +1366,11 @@ class reportsHandler
                         $topsales->set("sales", $remain['sales']);
                         $topsales->save();
                     }
-                    $report->set("createdon", time());
+                    if(!$report_data["createdon"]){
+                        $report->set("createdon", time());
+                    }else{
+                        $report->set("updatedon", time());
+                    }
                     $report->save();
                     return true;
                 }
@@ -1358,8 +1378,16 @@ class reportsHandler
         }
     }
 
+    /**
+     * Берем отчет ТОПЫ продаж, скорректировано до последних изменений на 16.01.24 в slStores
+     *
+     * @param $properties
+     * @return array
+     */
     public function getTopSales($properties = array()){
-        if($properties['report_id']){
+        $report = $this->modx->getObject("slReports", $properties['report_id']);
+        if($report) {
+            $report_data = $report->toArray();
             $q = $this->modx->newQuery('slReportsTopSales');
             $q->leftJoin('msProductData', 'msProductData', 'msProductData.id = slReportsTopSales.product_id');
             $q->leftJoin('modResource', 'Content', 'msProductData.id = Content.id');
@@ -1368,20 +1396,25 @@ class reportsHandler
             $q->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slReportsTopSales.remain_id');
             $q->leftJoin('dartLocationCity', 'dartLocationCity', 'dartLocationCity.id = slStores.city');
             $q->leftJoin('dartLocationRegion', 'dartLocationRegion', 'dartLocationRegion.id = dartLocationCity.region');
-            $q->select(array(
-                'msProductData.*',
-                "Content.pagetitle as name",
-                "SUM(slReportsTopSales.sales) as roz_sales"
-            ));
-            // отсекаем по ID отчета
+
+            // отсекаем по ID отчета и активности магазина
             $q->where(array(
-                "slReportsTopSales.report_id:=" => $properties['report_id']
+                "slReportsTopSales.report_id:=" => $properties['report_id'],
+                // "slStores.active:=" => 1
             ));
             if($properties['filtersdata']){
                 if($properties['filtersdata']['store_type']){
-                    $q->where(array(
-                        "slStores.type:=" => $properties['filtersdata']['store_type']
-                    ));
+                    if($properties['filtersdata']['store_type'] == 1){
+                        $q->where(array(
+                            "slStores.store:=" => 1
+                        ));
+                    }
+                    if($properties['filtersdata']['store_type'] == 2){
+                        $q->where(array(
+                            "slStores.warehouse:=" => 1,
+                            "OR:slStores.vendor:=" => 1
+                        ));
+                    }
                 }
                 if($properties['filtersdata']['vendor']){
                     $q->where(array(
@@ -1412,28 +1445,16 @@ class reportsHandler
                     ));
                 }
                 if(isset($properties['filtersdata']['region'])){
-                    $cities = array();
-                    $regions = array();
-                    foreach($properties['filtersdata']['region'] as $key => $val){
-                        if($val['checked']){
-                            $k_r = explode("_", $key);
-                            if($k_r[0] == 'region'){
-                                $regions[] = $k_r[1];
-                            }
-                            if($k_r[0] == 'city') {
-                                $cities[] = $k_r[1];
-                            }
-                        }
+                    $geo_data = $this->sl->objects->parseRegions($properties['filtersdata']['region']);
+                    $criteria = array();
+                    if ($geo_data["cities"]) {
+                        $criteria["dartLocationCity.id:IN"] = $geo_data["cities"];
                     }
-                    if(count($regions)){
-                        $q->where(array(
-                            "`dartLocationRegion`.`id`:IN" => $regions
-                        ));
+                    if ($geo_data["regions"]) {
+                        $criteria["dartLocationRegion.id:IN"] = $geo_data["regions"];
                     }
-                    if(count($cities)){
-                        $q->where(array(
-                            "`dartLocationCity`.`id`:IN" => $cities
-                        ));
+                    if($criteria){
+                        $q->where($criteria, xPDOQuery::SQL_OR);
                     }
                 }
             }
@@ -1443,15 +1464,41 @@ class reportsHandler
                     $criteria = array();
                     $criteria['Content.pagetitle:LIKE'] = '%'.trim($word).'%';
                     $criteria['OR:msProductData.vendor_article:LIKE'] = '%'.trim($word).'%';
+                    $criteria['OR:slStoresRemains.name:LIKE'] = '%'.trim($word).'%';
+                    $criteria['OR:slStoresRemains.catalog:LIKE'] = '%'.trim($word).'%';
                     $q->where($criteria);
                 }
             }
-            $q->groupby("slReportsTopSales.product_id");
+            if(isset($report_data['properties']['all_products'][0])) {
+                if($report_data['properties']['all_products'][0] == 0){
+                    $q->select(array(
+                        "msProductData.*",
+                        "Content.pagetitle as name",
+                        "SUM(slReportsTopSales.sales) as roz_sales"
+                    ));
+                    $q->groupby("slReportsTopSales.product_id");
+                }else{
+                    $q->select(array(
+                        "slStoresRemains.*",
+                        "slStoresRemains.article as vendor_article",
+                        "SUM(slReportsTopSales.sales) as roz_sales"
+                    ));
+                    $q->groupby("slReportsTopSales.remain_id");
+                }
+            }else{
+                $q->select(array(
+                    "msProductData.*",
+                    "Content.pagetitle as name",
+                    "SUM(slReportsTopSales.sales) as roz_sales"
+                ));
+                $q->groupby("slReportsTopSales.product_id");
+            }
+
             $result = array();
 
             $q->prepare();
             $pre_query = $q->toSQL();
-
+            $this->modx->log(1, $q->toSQL());
             // Устанавливаем лимит 1/10 от общего количества записей
             // со сдвигом 1/20 (offset)
             if($properties['page'] && $properties['perpage']){
@@ -1471,12 +1518,15 @@ class reportsHandler
             }
 
             if ($q->prepare() && $q->stmt->execute()) {
-                $this->modx->log(1, $q->toSQL());
                 $result['products'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                 // Подсчитываем общее число записей
-                $statement = $this->modx->query("SELECT COUNT(*) as count FROM ({$pre_query}) as temp");
-                $c = $statement->fetch(PDO::FETCH_ASSOC);
-                $result['total'] = $c['count'];
+                $query = "SELECT COUNT(*) as count FROM ({$pre_query}) as temp";
+                $this->modx->log(1, $query);
+                $statement = $this->modx->query($query);
+                if($statement){
+                    $c = $statement->fetch(PDO::FETCH_ASSOC);
+                    $result['total'] = $c['count'];
+                }
                 return $result;
             }
         }

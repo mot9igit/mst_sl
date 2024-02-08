@@ -29,6 +29,12 @@ if ($transport->xpdo) {
                     'color' => '003366',
                     'active' => 1,
                     'id' => 3
+                ],
+                [
+                    'name' => 'Ошибка',
+                    'color' => 'FF0000',
+                    'active' => 1,
+                    'id' => 5
                 ]
             ];
 

@@ -36,6 +36,8 @@ class ShoplogisticMgrSettingsManagerController extends slManagerController
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/combo.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.window.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/settings/association/grid.js');
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/settings/association/window.js');
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/delivery/grid.js');
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/delivery/windows.js');
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/connection_statuses/grid.js');

@@ -3,26 +3,22 @@ shopLogistic.window.CreateExportFile = function (config) {
 
     Ext.applyIf(config, {
         title: _('shoplogistic_files_docs_create'),
-        width: 600,
+        width: 900,
         baseParams: {
-            action: 'mgr/export_files/create',
+            action: 'mgr/export_files/create'
         },
+        bodyCssClass: 'tabs',
     });
     shopLogistic.window.CreateExportFile.superclass.constructor.call(this, config);
 };
 Ext.extend(shopLogistic.window.CreateExportFile, shopLogistic.window.Default, {
 
     getFields: function (config) {
+        console.log(config)
         return [{
             xtype: 'hidden',
             name: 'id',
             id: config.id + '-id',
-        }, {
-            xtype: 'shoplogistic-combo-store',
-            fieldLabel: _('shoplogistic_export_files_store_id'),
-            name: 'store_id',
-            anchor: '99%',
-            id: config.id + '-store_id'
         }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_export_files_name'),
@@ -42,6 +38,12 @@ Ext.extend(shopLogistic.window.CreateExportFile, shopLogistic.window.Default, {
             id: config.id + '-description',
             anchor: '99%'
         }, {
+            xtype: 'shoplogistic-combo-vendor',
+            fieldLabel: _('shoplogistic_export_files_vendor'),
+            name: 'vendor',
+            id: config.id + '-vendor',
+            anchor: '99%'
+        }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_export_files_file'),
             name: 'file',
@@ -59,7 +61,25 @@ Ext.extend(shopLogistic.window.CreateExportFile, shopLogistic.window.Default, {
             name: 'products',
             id: config.id + '-products',
             anchor: '99%'
-        }];
+        }, {
+            xtype: 'statictextfield',
+            fieldLabel: _('shoplogistic_export_files_created'),
+            name: 'created',
+            id: config.id + '-created',
+            anchor: '99%'
+        }, {
+            xtype: 'statictextfield',
+            fieldLabel: _('shoplogistic_export_files_updated'),
+            name: 'updated',
+            id: config.id + '-updated',
+            anchor: '99%'
+        }, {
+            xtype: 'statictextfield',
+            fieldLabel: _('shoplogistic_export_files_error'),
+            name: 'error',
+            id: config.id + '-error',
+            anchor: '99%'
+        },];
     },
 });
 Ext.reg('shoplogistic-window-export-files-create', shopLogistic.window.CreateExportFile);
@@ -70,9 +90,9 @@ shopLogistic.window.UpdateExportFile = function (config) {
 
     Ext.applyIf(config, {
         title: _('shoplogistic_files_docs_update'),
+        width: 900,
         baseParams: {
-            action: 'mgr/export_files/update',
-            width: 900,
+            action: 'mgr/export_files/update'
         },
         bodyCssClass: 'tabs',
     });

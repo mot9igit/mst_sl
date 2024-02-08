@@ -4,8 +4,59 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a68ce168cd747e78b793f2d2d0bb89b9",
+    "content-hash": "7662651570dc457ff1a1e8330d2b5bb1",
     "packages": [
+        {
+            "name": "k-samuel/faceted-search",
+            "version": "3.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/k-samuel/faceted-search.git",
+                "reference": "d582dea688f7d2e06da8fd6fb2bc6384a646e63f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/k-samuel/faceted-search/zipball/d582dea688f7d2e06da8fd6fb2bc6384a646e63f",
+                "reference": "d582dea688f7d2e06da8fd6fb2bc6384a646e63f",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4.0"
+            },
+            "require-dev": {
+                "codacy/coverage": "dev-master",
+                "phpbench/phpbench": "^1.2",
+                "phpstan/phpstan": "^1",
+                "phpunit/phpunit": "^9"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "KSamuel\\FacetedSearch\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Kirill Yegorov",
+                    "role": "Developer"
+                }
+            ],
+            "description": "PHP Faceted search",
+            "homepage": "https://github.com/k-samuel/faceted-search",
+            "keywords": [
+                "faceted search",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/k-samuel/faceted-search/issues",
+                "source": "https://github.com/k-samuel/faceted-search"
+            },
+            "time": "2023-12-04T20:48:02+00:00"
+        },
         {
             "name": "markbaker/complex",
             "version": "1.5.0",
@@ -319,5 +370,6 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
-    "platform-dev": []
+    "platform-dev": [],
+    "plugin-api-version": "2.3.0"
 }

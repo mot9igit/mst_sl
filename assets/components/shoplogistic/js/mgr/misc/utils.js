@@ -16,6 +16,33 @@ shopLogistic.utils.renderBoolean = function (value) {
         : String.format('<span class="red">{0}</span>', _('no'));
 };
 
+shopLogistic.utils.renderParserFieldType = function (value) {
+    if(value == 1){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_blue">{0}</span>', _('shoplogistic_parser_config_fields_type_1'))
+    }
+    if(value == 2){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_green">{0}</span>', _('shoplogistic_parser_config_fields_type_2'))
+    }
+};
+
+shopLogistic.utils.renderParserFieldSource = function (value) {
+    if(value == 'field'){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_black">{0}</span>', _('shoplogistic_parser_config_fields_source_field'))
+    }
+    if(value == 'attribute'){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_brown">{0}</span>', _('shoplogistic_parser_config_fields_source_attribute'))
+    }
+    if(value == 'withhtml'){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_grey">{0}</span>', _('shoplogistic_parser_config_fields_source_withhtml'))
+    }
+    if(value == 'css'){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_brown_2">{0}</span>', _('shoplogistic_parser_config_fields_source_css'))
+    }
+    if(value == 'table'){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_grey_2">{0}</span>', _('shoplogistic_parser_config_fields_source_table'))
+    }
+};
+
 shopLogistic.utils.renderFieldType = function (value) {
     if(value == 1){
         return 'Поле отчета'

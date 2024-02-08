@@ -30,7 +30,7 @@ class minishop2_fast_api{
 				//'tvs' => 1
 			),
 			'defaults_new_products' => array(
-				'template' => 11,
+				'template' => 4,
 				'published' => 1,
 				'class_key' => 'msProduct',
 				'show_in_tree' => 0
@@ -412,12 +412,19 @@ class minishop2_fast_api{
 			// $this->checkprogress($filename);
 			// $this->checkprogress(print_r($images, 1));
 			if (!file_exists($filename)) {
-				mkdir($filename, 0755);
-			}
+				mkdir($filename, 0755, 1);
+			}else{
+                $files = glob($filename.'*');
+                foreach($files as $file){
+                    if(is_file($file)) {
+                        unlink($file);
+                    }
+                }
+            }
 			$check = 0;
-			foreach($images as $img){
+            $image_thumb = '';
+			foreach($images as $key => $img){
 				$file = basename($img);
-				$imageurl = $img;
 				$path = $filename.$file;
 				$path = explode("?", $path);
 				$ch = curl_init($img);
@@ -429,14 +436,19 @@ class minishop2_fast_api{
 				fclose($fp);
 				if(!$check){
 					if(file_exists($path[0])){
-						$data = array(
-							"image" => $url.$file,
-							"thumb" => $url.$file
-						);
-						$this->update("msProductData", $data, $id);
+                        if($key == 0){
+                            $image_thumb = $url.$file;
+                        }
 					}
 				}
 			}
+            if($image_thumb) {
+                $data = array(
+                    "image" => $image_thumb,
+                    "thumb" => $image_thumb
+                );
+                $this->update("msProductData", $data, $id);
+            }
 		}
 	}
 
@@ -486,7 +498,10 @@ class minishop2_fast_api{
 				// обновление товара только msProductData
 				$this->update("msProductData", $data, $product_id);
 			}
-			return $product_id;
+			return array(
+                "mode" => "update",
+                "resource" => $product_id
+            );
 		}else{
 			$options = array();
 			$tvs = array();
@@ -511,13 +526,21 @@ class minishop2_fast_api{
 			if($id){
 				$data['id'] = $id;
 				$id = $this->create("msProductData", $data);
-				$this->setTVs($tvs, $id);
-				$this->setOptions($options, $id);
+                if(count($tvs)){
+                    $this->setTVs($tvs, $id);
+                }
+                if(count($options)) {
+                    $this->setOptions($options, $id);
+                }
 				if($images){
 					$this->setImages($images, $id);
 				}
 			}
 			$this->checkprogress("Создан товар {$data['pagetitle']} ({$id})");
+            return array(
+                "mode" => "create",
+                "resource" => $id
+            );
 		}
 	}
 

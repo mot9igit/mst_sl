@@ -515,6 +515,43 @@ shopLogistic.combo.Category = function (config) {
 Ext.extend(shopLogistic.combo.Category, MODx.combo.ComboBox);
 Ext.reg('shoplogistic-combo-category', shopLogistic.combo.Category);
 
+shopLogistic.combo.Options = function (config) {
+    config = config || {};
+    // console.log(config);
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/options/getlist',
+        },
+        name: 'option_id',
+        hiddenName: 'option_id',
+        fields: ['id', 'caption'],
+        mode: 'remote',
+        displayField: 'caption',
+        fieldLabel: _('shoplogistic_options'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{caption}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.Options.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.Options, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-options', shopLogistic.combo.Options);
+
 shopLogistic.combo.ms2Status = function (config) {
     config = config || {};
     Ext.applyIf(config, {
@@ -805,3 +842,138 @@ shopLogistic.combo.Stores = function (config) {
 };
 Ext.extend(shopLogistic.combo.Stores, Ext.ux.form.SuperBoxSelect);
 Ext.reg('shoplogistic-combo-stores', shopLogistic.combo.Stores);
+
+shopLogistic.combo.parser_field_type = function(config) {
+    config = config || {};
+    Ext.applyIf(config,{
+        store: new Ext.data.ArrayStore({
+            id: 0
+            ,fields: ['type', 'display']
+            ,data: [
+                ['1', 'Внешний']
+                ,['2', 'Внутренний']
+            ]
+        })
+        ,mode: 'local'
+        ,displayField: 'display'
+        ,valueField: 'type'
+    });
+    shopLogistic.combo.parser_field_type.superclass.constructor.call(this,config);
+};
+Ext.extend(shopLogistic.combo.parser_field_type, MODx.combo.ComboBox);
+Ext.reg('combo-parser_field_type', shopLogistic.combo.parser_field_type);
+
+shopLogistic.combo.parser_field_source = function(config) {
+    config = config || {};
+    Ext.applyIf(config,{
+        store: new Ext.data.ArrayStore({
+            id: 0
+            ,fields: ['source', 'display']
+            ,data: [
+                ['field', 'Поле']
+                ,['attribute', 'Атрибут']
+                ,['withhtml', 'Поле вместе с HTML']
+                ,['css', 'CSS']
+                ,['table', 'Таблица']
+            ]
+        })
+        ,mode: 'local'
+        ,displayField: 'display'
+        ,valueField: 'source'
+    });
+    shopLogistic.combo.parser_field_source.superclass.constructor.call(this,config);
+};
+Ext.extend(shopLogistic.combo.parser_field_source, MODx.combo.ComboBox);
+Ext.reg('combo-parser_field_source', shopLogistic.combo.parser_field_source);
+
+shopLogistic.combo.parser_field_object = function(config) {
+    config = config || {};
+    Ext.applyIf(config,{
+        store: new Ext.data.ArrayStore({
+            id: 0
+            ,fields: ['type', 'display']
+            ,data: [
+                ['1', 'Категория']
+                ,['2', 'Товар']
+            ]
+        })
+        ,mode: 'local'
+        ,displayField: 'display'
+        ,valueField: 'type'
+    });
+    shopLogistic.combo.parser_field_object.superclass.constructor.call(this,config);
+};
+Ext.extend(shopLogistic.combo.parser_field_object, MODx.combo.ComboBox);
+Ext.reg('combo-parser_field_object', shopLogistic.combo.parser_field_object);
+
+shopLogistic.combo.parserTaskStatus = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/parser/status/getlist',
+        },
+        name: 'status',
+        hiddenName: 'status',
+        fields: ['id', 'name', 'description'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_parser_tasks_status'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.parserTaskStatus.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.parserTaskStatus, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-parser-task-status', shopLogistic.combo.parserTaskStatus);
+
+shopLogistic.combo.parserTaskConfig = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        url: shopLogistic.config.connector_url,
+        baseParams: {
+            action: 'mgr/system/parser/config/getlist',
+        },
+        name: 'config_id',
+        hiddenName: 'config_id',
+        fields: ['id', 'name', 'description'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: _('shoplogistic_parser_tasks_config_id'),
+        valueField: 'id',
+        editable: true,
+        anchor: '99%',
+        allowBlank: false,
+        autoLoad: true,
+        tpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+    });
+    shopLogistic.combo.parserTaskConfig.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.parserTaskConfig, MODx.combo.ComboBox);
+Ext.reg('shoplogistic-combo-parser-config', shopLogistic.combo.parserTaskConfig);

@@ -33,6 +33,7 @@ class slExportFilesGetListProcessor extends modObjectGetListProcessor
     public function prepareQueryBeforeCount(xPDOQuery $c)
     {
         $c->leftJoin('slExportFileStatus', 'Status');
+        $c->leftJoin('msVendor', 'Vendor');
         $query = trim($this->getProperty('query'));
         if ($query) {
             $c->where([
@@ -42,7 +43,7 @@ class slExportFilesGetListProcessor extends modObjectGetListProcessor
         }
         $c->select(
             $this->modx->getSelectColumns('slExportFiles', 'slExportFiles', '', array(), true) . ',
-            Status.name as status_name, Status.color as color'
+            Status.name as status_name, Status.color as color, Vendor.name as vendor_name'
         );
         return $c;
     }

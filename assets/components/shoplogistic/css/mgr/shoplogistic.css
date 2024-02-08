@@ -10,6 +10,9 @@
 .x-color-palette{
     width: 100%;
 }
+.x-window-body.tabs{
+    max-height: calc(100vh - 120px);
+}
 .shoplogistic-row-badge {
     padding: 4px 10px;
     border-radius: 3px;
@@ -21,6 +24,31 @@
 .action-blue { color: cadetblue !important; }
 .action-yellow { color: goldenrod !important; }
 .action-gray { color: dimgray !important; }
+.shoplogistic_badge{
+    border-radius: 3px;
+    padding: 3px 5px;
+    display: inline-block;
+}
+.shoplogistic_badge_green{
+    color: #fff;
+    background: #3c763d;
+}
+.shoplogistic_badge_black{
+    color: #fff;
+    background: #333333;
+}
+.shoplogistic_badge_brown{
+    color: #fff;
+    background: #66512c;
+}
+.shoplogistic_badge_grey{
+    color: #fff;
+    background: #696969;
+}
+.shoplogistic_badge_blue{
+    color: #fff;
+    background: #0000FF;
+}
 ul.shoplogistic-row-actions { margin: 0; padding: 0; list-style: none; }
 ul.shoplogistic-row-actions li { float: left; }
 ul.shoplogistic-row-actions .shoplogistic-btn { padding: 5px; margin-right: 2px; min-width: 26px; font-size: inherit; }

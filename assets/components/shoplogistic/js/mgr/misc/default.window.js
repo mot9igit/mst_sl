@@ -4,7 +4,7 @@ shopLogistic.window.Default = function (config) {
     Ext.applyIf(config, {
         title: '',
         url: shopLogistic.config['connector_url'],
-        cls: 'shoplogistic-window ' || config['cls'],
+        cls: 'shoplogistic-window' || config['cls'],
         width: 600,
         autoHeight: true,
         allowDrop: false,

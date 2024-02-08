@@ -46,6 +46,8 @@ class ShoplogisticMgrExportFilesManagerController extends slManagerController
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/export_files/status.windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/export_files/cats.grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/export_files/cats.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/export_files/options.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/export_files/options.windows.js?v='.$this->shopLogistic->config['version']);
 
         $this->addHtml('<script type="text/javascript">
 			shopLogistic.config = ' . json_encode($this->shopLogistic->config) . ';

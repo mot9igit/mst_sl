@@ -264,6 +264,7 @@ class productHandler
      */
 
     public function linkProduct($remain_id, $type = 'slStores'){
+        $update_data = array();
         $remain = $this->sl->getObject($remain_id, "slStoresRemains");
         if($remain){
             $vendor = $this->searchVendor($remain['name']);
@@ -341,15 +342,49 @@ class productHandler
      */
 
     public function searchVendor($name){
-        $where = array();
-        $name = trim(preg_replace('/\s+/', ' ', preg_replace('/[^ a-zа-яё\d]/ui', ' ', $name)));
+        $output = array();
+        $search_name = trim(mb_strtolower(str_replace('.', '', $name)));
+        $name = trim(preg_replace('/\s+/', ' ', preg_replace('/[^ a-zа-яё\d]/ui', ' ', $search_name)));
         $words = explode(" ", $name);
+        $crit_name = array();
+        $crit_assoc = array();
         foreach($words as $key => $word){
-            $words[$key] = preg_replace('/[^ a-zа-яё\d]/ui', '', trim($word));
+            $w = preg_replace('/[^ a-zа-яё\d]/ui', '', trim($word));
+            $words[$key] = $w;
+            $crit_name[]["name:LIKE"] = "%{$w}%";
+            $crit_assoc[]["association:LIKE"] = "%{$w}%";
         }
-        $where["name:IN"] = $words;
-        $vendor = $this->sl->objects->getObject("msVendor", 0, $where);
-        return $vendor;
+        // сначала пробегаем по ассоциациям
+        $query = $this->modx->newQuery("slBrandAssociation");
+        $query->select(array("slBrandAssociation.*, LENGTH(association) as lenght_name"));
+        $query->where($crit_assoc, xPDOQuery::SQL_OR);
+        $query->sortby('LENGTH(association)', 'DESC');
+        if ($query->prepare() && $query->stmt->execute()) {
+            $associations = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($associations as $association){
+                $pos = strpos($search_name, mb_strtolower($association["association"]));
+                if($pos !== false){
+                    $output = $this->sl->objects->getObject("msVendor", $association['brand_id']);
+                }
+            }
+        }
+        if(!$output) {
+            // берем бренды
+            $query = $this->modx->newQuery("msVendor");
+            $query->select(array("msVendor.*, LENGTH(name) as lenght_name"));
+            $query->where($crit_name, xPDOQuery::SQL_OR);
+            $query->sortby('LENGTH(name)', 'DESC');
+            if ($query->prepare() && $query->stmt->execute()) {
+                $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($vendors as $vendor) {
+                    $pos = strpos($search_name, mb_strtolower($vendor["name"]));
+                    if ($pos !== false) {
+                        $output = $vendor;
+                    }
+                }
+            }
+        }
+        return $output;
     }
 
     public function getCategories () {
@@ -709,6 +744,7 @@ class productHandler
     public function generateCopoReport($store_id, $generate = false){
         $store = $this->sl->getObject($store_id);
         if($store){
+            $name = "Отчет по сопоставлению магазина {$store['name']}";
             $copoReport = $this->modx->getObject("slStoresRemainsReports", array("store_id" => $store_id));
             if(!$copoReport){
                 $copoReport = $this->modx->newObject("slStoresRemainsReports");
@@ -717,7 +753,7 @@ class productHandler
             }else{
                 $copoReport->set("updatedon", time());
             }
-            $copoReport->set("name", "Отчет по сопоставлению магазина {$store['name']}");
+            $copoReport->set("name", $name);
         }
         if($generate){
             $copoReport->save();
@@ -737,6 +773,10 @@ class productHandler
         $copoReport = $this->sl->getObject($report_id, "slStoresRemainsReports");
         if($copoReport){
             $brands = array();
+            $criteria = array(
+                "report_id:=" => $report_id
+            );
+            $this->modx->removeCollection("slStoresRemainsVendorReports", $criteria);
             $store_id = $copoReport["store_id"];
             $query = $this->modx->newQuery("slStoresRemains");
             $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
@@ -794,6 +834,35 @@ class productHandler
                     if ($find_count_in_stock) {
                         $percent = $ident_in_stock / $find_count_in_stock * 100;
                         $vendor->set("percent_identified_in_stock", $percent);
+                    }
+
+                    // сумма товара
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->where(array(
+                        "slStoresRemains.store_id:=" => $store_id,
+                        "slStoresRemains.brand_id:=" => $v["vendor"],
+                    ));
+                    $query->select(array("SUM(slStoresRemains.remains * slStoresRemains.price) as summ"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $summ = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        if($summ["summ"]){
+                            $vendor->set("summ", $summ["summ"]);
+                        }
+                    }
+
+                    // сумма товара сопоставленного
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->where(array(
+                        "slStoresRemains.store_id:=" => $store_id,
+                        "slStoresRemains.brand_id:=" => $v["vendor"],
+                        "slStoresRemains.product_id:>" => 0
+                    ));
+                    $query->select(array("SUM(slStoresRemains.remains * slStoresRemains.price) as summ"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $summ = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        if($summ["summ"]){
+                            $vendor->set("summ_copo", $summ["summ"]);
+                        }
                     }
 
                     if($v["vendor"]){
@@ -1025,22 +1094,22 @@ class productHandler
      * @param $parent
      * @return array
      */
-    public function getActualProductCategories($parent){
+    public function getActualProductCategories($vendor){
         $categories = array();
-        $query = $this->modx->newQuery("modResource");
-        $query->select(array("modResource.id, modResource.pagetitle, modResource.parent"));
+        $query = $this->modx->newQuery("msProductData");
+        $query->leftJoin("modResource", "modResource", "modResource.id = msProductData.id");
+        $query->select(array("DISTINCT(modResource.parent) as id"));
         $query->where(array(
-            "modResource.class_key:=" => "msCategory",
-            "modResource.deleted:=" => 0,
-            "modResource.published:=" => 1,
-            "modResource.parent:=" => $parent
+            "msProductData.vendor:=" => $vendor
         ));
         if ($query->prepare() && $query->stmt->execute()) {
             $cats = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             if($cats){
-                $categories = array_merge($categories, $cats);
                 foreach($cats as $cat){
-                    $categories = array_merge($categories, $this->getActualProductCategories($cat["id"]));
+                    $cat = $this->sl->getObject($cat["id"], "modResource");
+                    if($cat){
+                        $categories[] = $cat;
+                    }
                 }
             }
         }
@@ -1132,12 +1201,14 @@ class productHandler
         }
         $query = $this->modx->newQuery("msVendor");
         $query->select(array("msVendor.id as id, msVendor.name as name"));
+        $query->where(array("msVendor.id:=" => 1355));
         $all_data = $this->modx->getCount("msVendor", $query);
         // ограничение на память
         $limit = 500;
         for($i = 0; $i <= $all_data; $i += $limit) {
             $query = $this->modx->newQuery("msVendor");
             $query->select(array("msVendor.id as id, msVendor.name as name"));
+            $query->where(array("msVendor.id:=" => 1355));
             $query->limit($limit, $i);
             if ($query->prepare() && $query->stmt->execute()) {
                 $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);

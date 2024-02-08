@@ -32,12 +32,27 @@ class slExportFilesCatsGetListProcessor extends modObjectGetListProcessor
      */
     public function prepareQueryBeforeCount(xPDOQuery $c)
     {
+        $c->leftJoin('modResource', 'modResource', '`modResource`.`id` = `slExportFilesCats`.`cat_id`');
+
         $query = trim($this->getProperty('query'));
         if ($query) {
             $c->where([
                 'name:LIKE' => "%{$query}%"
             ]);
         }
+
+        $file_id = trim($this->getProperty('file_id'));
+        if ($file_id) {
+            $c->where([
+                'file_id:=' => $file_id
+            ]);
+        }
+
+
+        $c->select(
+            $this->modx->getSelectColumns('slExportFilesCats', 'slExportFilesCats', '', array(), true) . ',
+            modResource.pagetitle as cat'
+        );
 
         return $c;
     }

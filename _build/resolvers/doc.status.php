@@ -54,7 +54,7 @@ if ($transport->xpdo) {
                 $status_name = $properties['name'];
             }
 
-            // Статусы файлов вынрузки
+            // Статусы файлов выгрузки
             $statuses = [
                 [
                     'name' => 'В очереди на обработку',
@@ -72,6 +72,30 @@ if ($transport->xpdo) {
                     'color' => '008000',
                     'active' => 1,
                     'id' => 3
+                ],
+                [
+                    'name' => 'Импортирован',
+                    'color' => '00FF00',
+                    'active' => 1,
+                    'id' => 4
+                ],
+                [
+                    'name' => 'Ошибка',
+                    'color' => 'FF0000',
+                    'active' => 1,
+                    'id' => 5
+                ],
+                [
+                    'name' => 'В процессе',
+                    'color' => 'С0С0С0',
+                    'active' => 1,
+                    'id' => 6
+                ],
+                [
+                    'name' => 'Черновик',
+                    'color' => 'FFFFFF',
+                    'active' => 1,
+                    'id' => 7
                 ]
             ];
 
@@ -85,6 +109,57 @@ if ($transport->xpdo) {
                 ]);
                 if (!$level) {
                     $level = $modx->newObject('slExportFileStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
+            // Статусы заданий парсера
+            $statuses = [
+                [
+                    'name' => 'В очереди на обработку',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],
+                [
+                    'name' => 'Завершен',
+                    'color' => '00FF00',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Ошибка',
+                    'color' => 'FF0000',
+                    'active' => 1,
+                    'id' => 3
+                ],
+                [
+                    'name' => 'В процессе',
+                    'color' => 'С0С0С0',
+                    'active' => 1,
+                    'id' => 4
+                ],
+                [
+                    'name' => 'Черновик',
+                    'color' => 'FFFFFF',
+                    'active' => 1,
+                    'id' => 5
+                ],
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slParserTasksStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slParserTasksStatus', $properties);
                 }
                 $level->save();
 
@@ -323,6 +398,7 @@ if ($transport->xpdo) {
             $modx->removeCollection('slWarehouseShipmentStatus', []);
             $modx->removeCollection('slStoreBalancePayRequestStatus', []);
             $modx->removeCollection('slStoresRemainsStatus', []);
+            $modx->removeCollection('slParserTasksStatus', []);
             break;
     }
 }

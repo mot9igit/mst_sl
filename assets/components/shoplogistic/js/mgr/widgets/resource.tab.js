@@ -33,21 +33,6 @@ setTimeout(function () {
                                     record: config.record
                                 }]
                             }, {
-                                id: 'shoplogistic-resource-tab-warehouse'
-                                , autoHeight: true
-                                , title: _('shoplogistic_resource_tab_warehouse')
-                                , layout: 'anchor'
-                                , anchor: '100%'
-                                , items: [{
-                                    html: '<p>' + _('shoplogistic_resource_tab_warehouse_desc') + '</p>'
-                                    , bodyCssClass: 'panel-desc'
-                                    , border: false
-                                }, {
-                                    xtype: 'shoplogistic-panel-resource-warehouse',
-                                    anchor: '99%',
-                                    record: config.record
-                                }]
-                            }, {
                                 id: 'shoplogistic-resource-tab-prices'
                                 , autoHeight: true
                                 , title: _('shoplogistic_resource_tab_prices')

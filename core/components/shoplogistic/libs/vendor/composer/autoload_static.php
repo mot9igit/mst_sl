@@ -77,6 +77,10 @@ class ComposerStaticInit195e2bd1f1981435a3f88177e56dcd1b
         array (
             'Matrix\\' => 7,
         ),
+        'K' => 
+        array (
+            'KSamuel\\FacetedSearch\\' => 22,
+        ),
         'C' => 
         array (
             'Complex\\' => 8,
@@ -96,10 +100,18 @@ class ComposerStaticInit195e2bd1f1981435a3f88177e56dcd1b
         array (
             0 => __DIR__ . '/..' . '/markbaker/matrix/classes/src',
         ),
+        'KSamuel\\FacetedSearch\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/k-samuel/faceted-search/src',
+        ),
         'Complex\\' => 
         array (
             0 => __DIR__ . '/..' . '/markbaker/complex/classes/src',
         ),
+    );
+
+    public static $classMap = array (
+        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
@@ -107,6 +119,7 @@ class ComposerStaticInit195e2bd1f1981435a3f88177e56dcd1b
         return \Closure::bind(function () use ($loader) {
             $loader->prefixLengthsPsr4 = ComposerStaticInit195e2bd1f1981435a3f88177e56dcd1b::$prefixLengthsPsr4;
             $loader->prefixDirsPsr4 = ComposerStaticInit195e2bd1f1981435a3f88177e56dcd1b::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit195e2bd1f1981435a3f88177e56dcd1b::$classMap;
 
         }, null, ClassLoader::class);
     }

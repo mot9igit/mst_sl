@@ -17,7 +17,7 @@ shopLogistic.grid.ExportFiles = function (config) {
 Ext.extend(shopLogistic.grid.ExportFiles, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'store_id', 'name', 'categories', 'products', 'file', 'global', 'status', 'status_name', 'color', 'date', 'description', 'createdon', 'createdby', 'updatedon', 'updatedby', 'properties', 'actions'];
+        return ['id', 'store_id', 'name', 'categories', 'vendor', 'vendor_name', 'created', 'updated', 'error', 'products', 'file', 'global', 'status', 'status_name', 'color', 'date', 'description', 'createdon', 'createdby', 'updatedon', 'updatedby', 'properties', 'actions'];
     },
 
     getColumns: function () {
@@ -33,8 +33,8 @@ Ext.extend(shopLogistic.grid.ExportFiles, shopLogistic.grid.Default, {
                 dataIndex: 'name'
             },
             {
-                header: _('shoplogistic_export_files_description'),
-                dataIndex: 'description',
+                header: _('shoplogistic_export_files_vendor'),
+                dataIndex: 'vendor_name',
                 sortable: true,
                 width: 100,
             },
@@ -42,13 +42,25 @@ Ext.extend(shopLogistic.grid.ExportFiles, shopLogistic.grid.Default, {
                 header: _('shoplogistic_export_files_categories'),
                 dataIndex: 'categories',
                 sortable: true,
-                width: 100,
+                width: 10,
             },
             {
                 header: _('shoplogistic_export_files_products'),
                 dataIndex: 'products',
                 sortable: true,
-                width: 100,
+                width: 10,
+            },
+            {
+                header: _('shoplogistic_export_files_created'),
+                dataIndex: 'created',
+                sortable: true,
+                width: 10,
+            },
+            {
+                header: _('shoplogistic_export_files_updated'),
+                dataIndex: 'updated',
+                sortable: true,
+                width: 10,
             },
             {
                 header: _('shoplogistic_export_files_status'),
@@ -86,7 +98,7 @@ Ext.extend(shopLogistic.grid.ExportFiles, shopLogistic.grid.Default, {
         return {
             rowDblClick: function (grid, rowIndex, e) {
                 var row = grid.store.getAt(rowIndex);
-                this.updateDoc(grid, e, row);
+                this.updateFile(grid, e, row);
             },
         };
     },

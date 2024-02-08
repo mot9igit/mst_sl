@@ -199,6 +199,14 @@ class shopLogistic
             require_once dirname(__FILE__) . '/search.class.php';
             $this->search = new slSearch($this, $this->modx);
         }
+        if (!class_exists('parser')) {
+            require_once dirname(__FILE__) . '/parser.class.php';
+            $this->parser = new parser($this, $this->modx);
+        }
+        if (!class_exists('filters')) {
+            require_once dirname(__FILE__) . '/filters.class.php';
+            $this->filter = new filters($this, $this->modx);
+        }
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
 			$this->ms2 = $this->modx->getService('miniShop2');
@@ -349,6 +357,15 @@ class shopLogistic
 					$response = $this->dadata->clean("address", $data['value']);
 				}
 				break;
+            case "get/filterdata":
+                if($data["category"]){
+                    if($data["hash"]){
+                        $config = $_SESSION["dart_filters"][$data["hash"]];
+                    }
+                    $response = $this->filter->getData($data["category"], $config);
+                }
+
+                break;
 			case 'delivery/get_price':
 				$s = $data['service'];
 				$this->loadServices($ctx);

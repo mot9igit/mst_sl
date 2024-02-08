@@ -3,7 +3,7 @@ shopLogistic.grid.ExportFileCats = function (config) {
     if (!config.id) {
         config.id = 'shoplogistic-grid-export-file-cats';
     }
-    console.log(config.record)
+    // console.log(config.record)
     Ext.applyIf(config, {
         baseParams: {
             action: 'mgr/export_files_cats/getlist',
@@ -46,7 +46,7 @@ Ext.extend(shopLogistic.grid.ExportFileCats, shopLogistic.grid.Default, {
                 width: 100,
             },
             {
-                header: _('shoplogistic_export_file_cats_cat'),
+                header: _('shoplogistic_export_file_cats_cat_id'),
                 dataIndex: 'cat',
                 sortable: true,
                 width: 100,
@@ -62,11 +62,7 @@ Ext.extend(shopLogistic.grid.ExportFileCats, shopLogistic.grid.Default, {
     },
 
     getTopBar: function () {
-        return [{
-            text: '<i class="icon icon-plus"></i> ' + _('shoplogistic_export_file_cats_create'),
-            handler: this.createCats,
-            scope: this
-        }];
+        return [];
     },
 
     getListeners: function () {
@@ -76,31 +72,6 @@ Ext.extend(shopLogistic.grid.ExportFileCats, shopLogistic.grid.Default, {
                 this.updateCats(grid, e, row);
             },
         };
-    },
-
-    createCats: function (btn, e) {
-        var w = Ext.getCmp('shoplogistic-window-export-file-cats-create');
-        if (w) {
-            w.hide().getEl().remove();
-        }
-
-        w = MODx.load({
-            xtype: 'shoplogistic-window-export-file-cats-create',
-            id: 'shoplogistic-window-export-file-cats-create',
-            record: this.menu.record,
-            listeners: {
-                success: {
-                    fn: function () {
-                        this.refresh();
-                    }, scope: this
-                }
-            }
-        });
-        w.fp.getForm().reset();
-        w.fp.getForm().setValues({
-            file_id: this.config.record.id
-        });
-        w.show(e.target);
     },
 
     updateCats: function (btn, e, row) {

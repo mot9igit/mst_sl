@@ -12,6 +12,12 @@ return [
         'menuindex' => 1,
         'action' => 'mgr/docs',
     ),
+    'shoplogistic_parser' => array(
+        'description' => 'shoplogistic_parser_desc',
+        'parent' => 'shoplogistic',
+        'menuindex' => 1,
+        'action' => 'mgr/parser',
+    ),
     'shoplogistic_export_files' => array(
         'description' => 'shoplogistic_export_files_desc',
         'parent' => 'shoplogistic',

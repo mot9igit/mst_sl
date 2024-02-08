@@ -212,10 +212,10 @@ class postrf{
 				}
 			}
 			if(!empty($all['door']['price'])){
-				$out['door']['price'] = round(((($all['door']['price']  / 100) * 1.13) + 15), 2);
+				$out['door']['price'] = round(((($all['door']['price']  / 100) * 1.13) + 15));
 			}
 			if(!empty($all['terminal']['price'])){
-				$out['terminal']['price'] = round(((($all['terminal']['price']  / 100) * 1.13) + 15), 2);
+				$out['terminal']['price'] = round(((($all['terminal']['price']  / 100) * 1.13) + 15));
 			}
 			if(!empty($all['terminal']['time'])){
 				$out['terminal']["time"] = $all['terminal']['time'];
@@ -300,7 +300,7 @@ class postrf{
                     $data["mail-type"] = $tariff;
                     $prf_data = $this->request($url, $data);
                     if (!empty($prf_data['total-rate'])) {
-                        $out[$key]['price'] = $out[$key]['price'] + round(($prf_data['total-rate'] * $product['count'] * 0.01), 2);
+                        $out[$key]['price'] = $out[$key]['price'] + round(($prf_data['total-rate'] * $product['count'] * 0.01));
                     }
                     if (!empty($prf_data['delivery-time']['max-days'])) {
                         if($prf_data['delivery-time']['max-days'] > $out[$key]['time']){

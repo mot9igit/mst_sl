@@ -18,13 +18,13 @@ shopLogistic.panel.Settings = function (config) {
                 };
             },
             items: [{
-                title: _('shoplogistic_store_remains_statuses'),
+                title: _('shoplogistic_brand_association'),
                 layout: 'anchor',
                 items: [{
-                    html: _('shoplogistic_store_remains_statuses_intro'),
+                    html: _('shoplogistic_brand_association_intro'),
                     bodyCssClass: 'panel-desc',
                 }, {
-                    xtype: 'shoplogistic-grid-store-remains-statuses',
+                    xtype: 'shoplogistic-grid-association',
                     cls: 'main-wrapper',
                 }]
             },{

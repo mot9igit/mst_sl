@@ -23,6 +23,7 @@ shopLogistic.window.CreateStore = function (config) {
 
 Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
     getFields: function (config) {
+        console.log(config)
         return [{
             xtype: 'modx-tabs',
             items: [{

@@ -270,6 +270,12 @@ $_lang['shoplogistic_add'] = 'Добавить';
 $_lang['shoplogistic_confirm'] = 'Вы уверены?';
 $_lang['shoplogistic_remove'] = 'В удалении объекта.';
 
+$_lang["shoplogistic_createdon"] = "Дата создания";
+$_lang["shoplogistic_createdby"] = "Создатель";
+$_lang["shoplogistic_updatedon"] = "Дата обновления";
+$_lang["shoplogistic_updatedby"] = "Редактор";
+$_lang["shoplogistic_properties"] = "Доп. свойства";
+
 $_lang["shoplogistic_resource_tab_store"] = "Остатки по магазинам";
 $_lang["shoplogistic_resource_tab_store_desc"] = "Остатки по магазинам доступны для розницы. Их можно вбить здесь вручную или использовать ЛК.";
 $_lang["shoplogistic_resource_tab_warehouse"] = "Остатки по складам";
@@ -688,6 +694,10 @@ $_lang["shoplogistic_export_filesc_global"] = "Глобальный";
 $_lang["shoplogistic_export_files_status"] = "Статус";
 $_lang["shoplogistic_export_files_date"] = "Дата";
 $_lang["shoplogistic_export_files_categories"] = "Категории";
+$_lang["shoplogistic_export_files_vendor"] = "Производитель";
+$_lang["shoplogistic_export_files_created"] = "Создано";
+$_lang["shoplogistic_export_files_updated"] = "Обновлено";
+$_lang["shoplogistic_export_files_error"] = "Ошибки";
 $_lang["shoplogistic_export_files_products"] = "Товары";
 $_lang["shoplogistic_export_files_createdon"] = "Создан";
 $_lang["shoplogistic_export_files_created_by"] = "Создан";
@@ -726,6 +736,19 @@ $_lang["shoplogistic_export_file_cats_created_by"] = "Создана";
 $_lang["shoplogistic_export_file_cats_updatedon"] = "Изменена";
 $_lang["shoplogistic_export_file_cats_updated_by"] = "Изменена";
 
+
+$_lang["shoplogistic_export_file_cat_options"] = "Опции";
+
+$_lang["shoplogistic_export_file_cat_options_err_ae"] = "Опция с таким именем в категории уже существует";
+$_lang["shoplogistic_export_file_cat_options_err_ns"] = "Ну указан ID опции";
+$_lang["shoplogistic_export_file_cat_options_err_nf"] = "Опция не найдена";
+
+$_lang["shoplogistic_export_file_cat_options_name"] = "Наименование";
+$_lang["shoplogistic_export_file_cat_options_filter"] = "Фильтр";
+$_lang["shoplogistic_export_file_cat_options_option_id"] = "Опция";
+$_lang["shoplogistic_export_file_cat_options_cat_id"] = "Категория";
+$_lang["shoplogistic_export_file_cat_options_ignore"] = "Игнорировать";
+
 $_lang["shoplogistic_reporttypes"] = "Типы отчетов";
 $_lang["shoplogistic_reporttypes_desc"] = "Здесь находятся все типы отчетов доступных для организаций";
 $_lang["shoplogistic_reporttype_create"] = "Создать отчет";
@@ -751,7 +774,7 @@ $_lang["shoplogistic_reporttype_remove_confirm"] = "Вы уверены, что 
 $_lang["shoplogistic_reporttypefields"] = "Поля отчетов";
 $_lang["shoplogistic_reporttypefields_desc"] = "Здесь находятся все поля отчета, доступных как показатели";
 $_lang["shoplogistic_reporttypefield_create"] = "Создать поле";
-$_lang["shoplogistic_reporttypefield__update"] = "Редактировать поле";
+$_lang["shoplogistic_reporttypefield_update"] = "Редактировать поле";
 $_lang["shoplogistic_reporttypefield_name"] = "Наименование";
 $_lang["shoplogistic_reporttypefield_type"] = "Отчет";
 $_lang["shoplogistic_reporttypefield_field_type"] = "Тип поля";
@@ -869,3 +892,122 @@ $_lang["shoplogistic_store_remains_status_name"] = "Наименование";
 $_lang["shoplogistic_store_remains_status_color"] = "Цвет";
 $_lang["shoplogistic_store_remains_status_description"] = "Описание";
 $_lang["shoplogistic_store_remains_status_active"] = "Активен";
+
+$_lang["shoplogistic_brand_association"] = "Управление ассоциациями с брендами";
+$_lang["shoplogistic_brand_association_intro"] = "Так как описание бренда может быть разное, здесь вы можете настроить ассоциации.";
+$_lang["shoplogistic_brand_association_create"] = "Создать ассоциацию с брендом";
+$_lang["shoplogistic_brand_association_err_ns"] = "Ассоциация не найдена";
+$_lang["shoplogistic_brand_association_err_association"] = "Не заполнена ассоциация";
+$_lang["shoplogistic_brand_association_err_ae"] = "Такая ассоциация уже существует";
+$_lang["shoplogistic_brand_association_association"] = "Ассоциация";
+$_lang["shoplogistic_brand_association_brand"] = "Бренд";
+$_lang["shoplogistic_brand_association_description"] = "Описание";
+$_lang['shoplogistic_brand_association_remove'] = 'Удалить ассоциацию';
+$_lang['shoplogistic_brand_associations_remove'] = 'Удалить ассоциации';
+$_lang['shoplogistic_brand_association_remove_confirm'] = 'Вы уверены, что хотите удалить эту ассоциацию?';
+$_lang['shoplogistic_brand_associations_remove_confirm'] = 'Вы уверены, что хотите удалить эти ассоциации?';
+
+$_lang["shoplogistic_parser"] = "Парсер";
+$_lang["shoplogistic_parser_desc"] = "Парсим сайты, на которых нет защиты + конфигурации под другие площадки";
+
+$_lang["shoplogistic_parser_config_err_ns"] = "Конфигурация не найдена";
+$_lang["shoplogistic_parser_config_err_nf"] = "Конфигурация не найдена";
+$_lang["shoplogistic_parser_config_err_name"] = "Заполните наименование конфигурации";
+$_lang["shoplogistic_parser_config_err_ae"] = "Конфигурация с таким именем уже существует.";
+
+$_lang["shoplogistic_parser_config"] = "Конфигурации парсера";
+$_lang["shoplogistic_parser_config_intro"] = "Управляйте конфигурациями парсера";
+$_lang["shoplogistic_parser_config_create"] = "Создать конфигурацию парсера";
+$_lang["shoplogistic_parser_config_update"] = "Редактировать конфигурацию парсера";
+$_lang["shoplogistic_parser_config_name"] = "Наименование";
+$_lang["shoplogistic_parser_config_description"] = "Описание";
+$_lang["shoplogistic_parser_config_base_url"] = "Базовый URL";
+$_lang["shoplogistic_parser_config_unique"] = "Проверять на уникальность";
+$_lang["shoplogistic_parser_config_key_product_field"] = "Ключевое поле";
+$_lang["shoplogistic_parser_config_categories_base"] = "Селектор категорий в списке";
+$_lang["shoplogistic_parser_config_categories_base_inner"] = "Селектор категории на странице";
+$_lang["shoplogistic_parser_config_products_base"] = "Селектор товара в списке";
+$_lang["shoplogistic_parser_config_products_base_inner"] = "Селектор товара на странице";
+$_lang["shoplogistic_parser_config_pagination"] = "Пагинация";
+$_lang["shoplogistic_parser_config_pagination_selector"] = "Селектор пагинации";
+$_lang["shoplogistic_parser_config_pagination_filters"] = "Фильтр пагинации";
+$_lang['shoplogistic_parser_config_remove'] = 'Удалить конфигурацию';
+$_lang['shoplogistic_parser_configs_remove'] = 'Удалить конфигурации';
+$_lang['shoplogistic_parser_config_remove_confirm'] = 'Вы уверены, что хотите удалить эту конфигурацию?';
+$_lang['shoplogistic_parser_configs_remove_confirm'] = 'Вы уверены, что хотите удалить эти конфигурации?';
+
+$_lang["shoplogistic_parser_config_fields_err_ns"] = "Поле не найдено";
+$_lang["shoplogistic_parser_config_fields_err_nf"] = "Поле не найдено";
+$_lang["shoplogistic_parser_config_fields_err_name"] = "Заполните наименование поля";
+$_lang["shoplogistic_parser_config_fields_err_ae"] = "Поле с таким именем уже существует.";
+
+$_lang["shoplogistic_parser_config_fields"] = "Поля конфигурации парсера";
+$_lang["shoplogistic_parser_config_fields_intro"] = "Управляйте полями конфигурации парсера";
+$_lang["shoplogistic_parser_config_fields_categories"] = "Поля категорий";
+$_lang["shoplogistic_parser_config_fields_products"] = "Поля товаров";
+$_lang["shoplogistic_parser_config_fields_create"] = "Создать поле";
+$_lang["shoplogistic_parser_config_fields_field_type"] = "Тип поля";
+$_lang["shoplogistic_parser_config_fields_field_object"] = "Объект поля";
+$_lang["shoplogistic_parser_config_fields_name"] = "Наименование";
+$_lang["shoplogistic_parser_config_fields_description"] = "Описание";
+$_lang["shoplogistic_parser_config_fields_selector"] = "Селектор поля";
+$_lang["shoplogistic_parser_config_fields_type"] = "Тип данных";
+$_lang["shoplogistic_parser_config_fields_element_name"] = "Наименование элемента";
+$_lang["shoplogistic_parser_config_fields_goal_type"] = "Тип цели";
+$_lang["shoplogistic_parser_config_fields_config_id"] = "Конфигурация";
+$_lang["shoplogistic_parser_config_fields_index_search"] = "Поиск по индексу элемента";
+$_lang["shoplogistic_parser_config_fields_this"] = "Данные у этого элемента";
+$_lang["shoplogistic_parser_config_fields_index"] = "Индекс";
+$_lang["shoplogistic_parser_config_fields_subelement"] = "Селектор субэлемента";
+$_lang["shoplogistic_parser_config_fields_subindex"] = "Индекс субэлемента";
+$_lang["shoplogistic_parser_config_fields_filters"] = "Фильтры поля";
+$_lang["shoplogistic_parser_config_fields_type"] = "Тип данных";
+$_lang["shoplogistic_parser_config_fields_type_1"] = "Внешнее";
+$_lang["shoplogistic_parser_config_fields_type_2"] = "Внутреннее";
+$_lang["shoplogistic_parser_config_fields_source_field"] = "Поле";
+$_lang["shoplogistic_parser_config_fields_source_attribute"] = "Атрибут";
+$_lang["shoplogistic_parser_config_fields_source_withhtml"] = "Поле с HTML";
+$_lang["shoplogistic_parser_config_fields_source_css"] = "CSS (атрибут style)";
+$_lang["shoplogistic_parser_config_fields_source_table"] = "Таблица";
+
+$_lang['shoplogistic_parser_config_field_remove'] = 'Удалить поле';
+$_lang['shoplogistic_parser_config_fields_remove'] = 'Удалить поля';
+$_lang['shoplogistic_parser_config_field_remove_confirm'] = 'Вы уверены, что хотите удалить это поле?';
+$_lang['shoplogistic_parser_config_fields_remove_confirm'] = 'Вы уверены, что хотите удалить эти поля?';
+
+$_lang["shoplogistic_parser_tasks_err_ns"] = "Задача не найдена";
+$_lang["shoplogistic_parser_tasks_err_nf"] = "Задача не найдена";
+$_lang["shoplogistic_parser_tasks_err_name"] = "Заполните наименование задачи";
+$_lang["shoplogistic_parser_tasks_err_ae"] = "Задача с таким именем уже существует.";
+
+$_lang["shoplogistic_parser_tasks"] = "Задачи парсера";
+$_lang["shoplogistic_parser_tasks_intro"] = "Управляйте задачами парсера";
+$_lang["shoplogistic_parser_tasks_create"] = "Создать задачу парсера";
+$_lang["shoplogistic_parser_tasks_name"] = "Наименование";
+$_lang["shoplogistic_parser_tasks_description"] = "Описание";
+$_lang["shoplogistic_parser_tasks_url"] = "Стартовый URL";
+$_lang["shoplogistic_parser_tasks_config_id"] = "Конфигурация";
+$_lang["shoplogistic_parser_tasks_status"] = "Статус";
+$_lang["shoplogistic_parser_tasks_file"] = "Файл";
+$_lang["shoplogistic_menu_download"] = "Скачать";
+
+$_lang['shoplogistic_parser_task_remove'] = 'Удалить задачу';
+$_lang['shoplogistic_parser_tasks_remove'] = 'Удалить задачи';
+$_lang['shoplogistic_parser_task_remove_confirm'] = 'Вы уверены, что хотите удалить эту задачу?';
+$_lang['shoplogistic_parser_tasks_remove_confirm'] = 'Вы уверены, что хотите удалить эти задачи?';
+
+$_lang["shoplogistic_parser_tasks_statuses"] = "Статусы задач парсера";
+$_lang["shoplogistic_parser_tasks_statuses_intro"] = "Управление статусами задач парсера. На основе них происходит обработка задач.";
+$_lang["shoplogistic_parser_tasks_status_create"] = "Создать статус задач парсера";
+$_lang["shoplogistic_parser_tasks_status_err_ns"] = "Статус не найден";
+$_lang["shoplogistic_parser_tasks_status_err_name"] = "Не заполнено имя статуса";
+$_lang["shoplogistic_parser_tasks_status_err_ae"] = "Статус с таким именем уже существует";
+$_lang["shoplogistic_parser_tasks_status_name"] = "Наименование";
+$_lang["shoplogistic_parser_tasks_status_color"] = "Цвет";
+$_lang["shoplogistic_parser_tasks_status_description"] = "Описание";
+$_lang["shoplogistic_parser_tasks_status_active"] = "Активен";
+
+$_lang['shoplogistic_parser_task_status_remove'] = 'Удалить статус';
+$_lang['shoplogistic_parser_task_statuses_remove'] = 'Удалить статусы';
+$_lang['shoplogistic_parser_task_status_remove_confirm'] = 'Вы уверены, что хотите удалить этот статус?';
+$_lang['shoplogistic_parser_task_statuses_remove_confirm'] = 'Вы уверены, что хотите удалить эти статусы?';

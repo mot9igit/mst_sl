@@ -1,3 +1,218 @@
+dart_hash = {
+    get: function () {
+        var vars = {}, hash, splitter, hashes;
+        if (!this.oldbrowser()) {
+            var pos = window.location.href.indexOf('?');
+            hashes = (pos != -1) ? decodeURIComponent(window.location.href.substr(pos + 1)) : '';
+            splitter = '&';
+        }
+        else {
+            hashes = decodeURIComponent(window.location.hash.substr(1));
+            splitter = '/';
+        }
+
+        if (hashes.length == 0) {
+            return vars;
+        }
+        else {
+            hashes = hashes.split(splitter);
+        }
+
+        for (var i in hashes) {
+            if (hashes.hasOwnProperty(i)) {
+                hash = hashes[i].split('=');
+                if (typeof hash[1] == 'undefined') {
+                    vars['anchor'] = hash[0];
+                }
+                else {
+                    vars[hash[0]] = hash[1];
+                }
+            }
+        }
+        return vars;
+    },
+    set: function (vars) {
+        var hash = '';
+        var i;
+        for (i in vars) {
+            if (vars.hasOwnProperty(i)) {
+                hash += '&' + i + '=' + vars[i];
+            }
+        }
+        if (!this.oldbrowser()) {
+            if (hash.length != 0) {
+                hash = '?' + hash.substr(1);
+                var specialChars = {"%": "%25", "+": "%2B"};
+                for (i in specialChars) {
+                    if (specialChars.hasOwnProperty(i) && hash.indexOf(i) !== -1) {
+                        hash = hash.replace(new RegExp('\\' + i, 'g'), specialChars[i]);
+                    }
+                }
+            }
+            window.history.pushState({mSearch2: document.location.pathname + hash}, '', document.location.pathname + hash);
+        }
+        else {
+            window.location.hash = hash.substr(1);
+        }
+    },
+    add: function (key, val) {
+        var hash = this.get();
+        hash[key] = val;
+        this.set(hash);
+    },
+    remove: function (key) {
+        var hash = this.get();
+        delete hash[key];
+        this.set(hash);
+    },
+    clear: function () {
+        this.set({});
+    },
+    oldbrowser: function () {
+        return !(window.history && history.pushState);
+    }
+};
+
+var dart_filters = {
+    options: {
+        form: 'df_filters',
+        products: ".df_products",
+        pagination: ".df_pagination",
+        page: 1,
+
+        values_delimeter: ","
+    },
+    elements: ['filters', 'results', 'pagination', 'total', 'sort', 'selected', 'limit', 'tpl'],
+    initialize: function(){
+        const filterForm = document.getElementById(this.options.form)
+        if(filterForm){
+            const inputs = filterForm.querySelectorAll('input');
+            inputs.forEach((input) => {
+                input.addEventListener("change", (e) => {
+                    dart_filters.options.page = 1
+                    filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
+                })
+            })
+            filterForm.addEventListener( 'submit', (e) => {
+                e.preventDefault()
+                const obj = Object.fromEntries(new FormData(e.target))
+                obj.sl_action = "get/filterdata"
+                obj.filter_page = dart_filters.options.page
+                // const params = JSON.stringify(obj)
+                this.send(obj)
+            })
+            filterForm.addEventListener("reset", (e) => {
+                e.preventDefault()
+                const obj = Object.fromEntries(new FormData(e.target))
+                obj.sl_action = "get/filterdata"
+                this.send(obj)
+            });
+            this.pagesInit()
+        }
+    },
+    pagesInit: function(){
+        const filterForm = document.getElementById(this.options.form)
+        if(filterForm) {
+            const pages = document.querySelectorAll(this.options.pagination + " a");
+            pages.forEach((page) => {
+                page.addEventListener("click", (e) => {
+                    e.preventDefault()
+                    const page = e.target.dataset.number
+                    dart_filters.options.page = page
+                    if(dart_filters.options.page > 1){
+                        const params = new URLSearchParams(window.location.search)
+                        params.delete('page');
+                        params.set('page', dart_filters.options.page);
+                        window.history.replaceState({ }, "", decodeURIComponent(`${ window.location.pathname}?${ params}`));
+                        filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
+                    }else{
+                        const params = new URLSearchParams(window.location.search)
+                        params.delete('page');
+                    }
+                })
+            })
+        }
+    },
+    getFilters: function(){
+        const data = Array.prototype.reduce.call(
+            document.getElementById(this.options.form).elements,
+            (acc, n) => {
+                const keys = n.name.match(/\w+/g);
+                const key = keys.pop();
+                keys.reduce((p, c) => p[c] ??= {}, acc)[key] = n.value;
+                return acc;
+            },
+            {}
+        );
+        console.log(data);
+    },
+    send: function(data){
+        const container = document.querySelector(dart_filters.options.products)
+        container.classList.add('loading')
+        var response = '';
+        $.ajax({
+            type: "POST",
+            url: shoplogisticConfig['actionUrl'],
+            dataType: 'json',
+            data: data,
+            success:  function(data_r) {
+                let event = new Event("filter_update", data_r);
+                if(data_r.hasOwnProperty('products')){
+                    const container = document.querySelector(dart_filters.options.products)
+                    container.innerHTML = data_r.products
+                    container.classList.add('active')
+                }
+                if(data_r.hasOwnProperty('aggregate')){
+                    const filterForm = document.getElementById(dart_filters.options.form)
+                    const labels = filterForm.querySelectorAll('label sup');
+                    labels.forEach((item) => {
+                        item.innerText = 0
+                    })
+                    const inputs = filterForm.querySelectorAll('input[type=checkbox]');
+                    inputs.forEach((item) => {
+                        item.setAttribute('disabled', "")
+                    })
+                    for (const [key, value] of Object.entries(data_r.aggregate)) {
+                        let name = key
+                        for (const [k, v] of Object.entries(value)) {
+                            if(k == 'min' || k == 'max'){
+                                const input = document.querySelector(".polzunok-" + name + "-" + k)
+                                input.value = v
+                                const hinput = document.querySelector(".hpolzunok-" + name + "-" + k)
+                                hinput.value = v
+                            }else{
+                                const input = document.querySelector(".dart-cheackbox__" + name + "[value='" + k + "']")
+                                if(input){
+                                    input.removeAttribute('disabled')
+                                }
+                                const elem = document.querySelector(".dart-cheackbox__" + name + "[value='" + k + "'] + label sup")
+                                if(elem){
+                                    elem.innerText = v
+                                }
+                            }
+                        }
+                    }
+                    const form = document.getElementById(dart_filters.options.form)
+                    form.dispatchEvent(event)
+                    console.log(data_r.aggregate)
+                }
+                if(data_r.hasOwnProperty('pagination')){
+                    const pagination = document.querySelector(dart_filters.options.pagination)
+                    pagination.innerHTML = data_r.pagination
+                    dart_filters.pagesInit()
+                }
+                const container = document.querySelector(dart_filters.options.products)
+                container.classList.remove('loading')
+            }
+        });
+    },
+}
+
+
+document.addEventListener("DOMContentLoaded", function(event) {
+    dart_filters.initialize();
+});
+
 var dart_search = {
     options: {
         input: '.dart_header_search-block input',
@@ -13,86 +228,88 @@ var dart_search = {
     },
     initialize: function(){
         const searchField = document.querySelector(this.options.input)
-        searchField.addEventListener( 'focusin', (e) => {
-            const body = document.querySelector('body')
-            const formInput = document.querySelector(this.options.formInput)
-            var elementOffset = e.target.getBoundingClientRect().top;
-            var availableHeight = window.innerHeight
-            const field = document.querySelector(this.options.search)
-            field.classList.add(this.options.activeClass)
-            if(elementOffset > 0){
-                field.style.paddingTop = elementOffset + 'px'
-            }else{
-                field.style.paddingTop = 0
-            }
-            this.getHeight(availableHeight)
-            body.classList.add('noscroll')
-            formInput.focus()
-        })
-        const searchFieldAlt = document.querySelector(this.options.inputAlt)
-        searchFieldAlt.addEventListener( 'focusin', (e) => {
-            const body = document.querySelector('body')
-            const formInput = document.querySelector(this.options.formInput)
-            var elementOffset = e.target.getBoundingClientRect().top;
-            var availableHeight = window.innerHeight
-            const field = document.querySelector(this.options.search)
-            field.classList.add(this.options.activeClass)
-            if(elementOffset > 0){
-                field.style.paddingTop = elementOffset + 'px'
-            }else{
-                field.style.paddingTop = 0
-            }
-            this.getHeight(availableHeight)
-            body.classList.add('noscroll')
-            formInput.focus()
-        })
-        const overlay = document.querySelector(this.options.overlay)
-        overlay.addEventListener( 'click', (e) => {
-            const body = document.querySelector('body')
-            const field = document.querySelector(this.options.search)
-            field.classList.remove(this.options.activeClass)
-            body.classList.remove('noscroll')
-        })
-        const clear = document.querySelector(this.options.clear)
-        clear.addEventListener( 'click', (e) => {
-            e.preventDefault();
-            const body = document.querySelector('body')
-            const searchField = document.querySelector(this.options.formInput)
-            searchField.value = ""
-            const field = document.querySelector(this.options.input)
-            field.value = ""
-            const search = document.querySelector(this.options.search)
-            search.classList.remove(this.options.activeClass)
-            body.classList.remove('noscroll')
-        })
-        // handle input
-        const formInput = document.querySelector(this.options.formInput)
-        formInput.addEventListener('input', function(e) {
-            const search = document.querySelector('.dart-search__results')
-            search.classList.remove(dart_search.options.activeClass)
-            if(e.target.value.length > 3){
-                let inputValue = e.target.value.trim();
-                let lastTime = performance.now();
-                if (dart_search.options.timerId) {
-                    clearTimeout(dart_search.options.timerId);
+        if(searchField) {
+            searchField.addEventListener('focusin', (e) => {
+                const body = document.querySelector('body')
+                const formInput = document.querySelector(this.options.formInput)
+                var elementOffset = e.target.getBoundingClientRect().top;
+                var availableHeight = window.innerHeight
+                const field = document.querySelector(this.options.search)
+                field.classList.add(this.options.activeClass)
+                if (elementOffset > 0) {
+                    field.style.paddingTop = elementOffset + 'px'
+                } else {
+                    field.style.paddingTop = 0
                 }
-                dart_search.options.timerId = setTimeout(function() {
-                    var timer = performance.now() - lastTime;
-                    console.log(timer)
-                    if (timer > 1000 && inputValue) {
-                        var data = {
-                            sl_action: 'search/get_preresults',
-                            search: inputValue
-                        }
-                        dart_search.send(data);
+                this.getHeight(availableHeight)
+                body.classList.add('noscroll')
+                formInput.focus()
+            })
+            const searchFieldAlt = document.querySelector(this.options.inputAlt)
+            searchFieldAlt.addEventListener('focusin', (e) => {
+                const body = document.querySelector('body')
+                const formInput = document.querySelector(this.options.formInput)
+                var elementOffset = e.target.getBoundingClientRect().top;
+                var availableHeight = window.innerHeight
+                const field = document.querySelector(this.options.search)
+                field.classList.add(this.options.activeClass)
+                if (elementOffset > 0) {
+                    field.style.paddingTop = elementOffset + 'px'
+                } else {
+                    field.style.paddingTop = 0
+                }
+                this.getHeight(availableHeight)
+                body.classList.add('noscroll')
+                formInput.focus()
+            })
+            const overlay = document.querySelector(this.options.overlay)
+            overlay.addEventListener('click', (e) => {
+                const body = document.querySelector('body')
+                const field = document.querySelector(this.options.search)
+                field.classList.remove(this.options.activeClass)
+                body.classList.remove('noscroll')
+            })
+            const clear = document.querySelector(this.options.clear)
+            clear.addEventListener('click', (e) => {
+                e.preventDefault();
+                const body = document.querySelector('body')
+                const searchField = document.querySelector(this.options.formInput)
+                searchField.value = ""
+                const field = document.querySelector(this.options.input)
+                field.value = ""
+                const search = document.querySelector(this.options.search)
+                search.classList.remove(this.options.activeClass)
+                body.classList.remove('noscroll')
+            })
+            // handle input
+            const formInput = document.querySelector(this.options.formInput)
+            formInput.addEventListener('input', function (e) {
+                const search = document.querySelector('.dart-search__results')
+                search.classList.remove(dart_search.options.activeClass)
+                if (e.target.value.length > 3) {
+                    let inputValue = e.target.value.trim();
+                    let lastTime = performance.now();
+                    if (dart_search.options.timerId) {
+                        clearTimeout(dart_search.options.timerId);
                     }
-                }, 1000);
-            }
-        })
-        window.addEventListener( 'resize', (e) => {
-            var availableHeight = window.innerHeight
-            this.getHeight(availableHeight)
-        })
+                    dart_search.options.timerId = setTimeout(function () {
+                        var timer = performance.now() - lastTime;
+                        console.log(timer)
+                        if (timer > 1000 && inputValue) {
+                            var data = {
+                                sl_action: 'search/get_preresults',
+                                search: inputValue
+                            }
+                            dart_search.send(data);
+                        }
+                    }, 1000);
+                }
+            })
+            window.addEventListener('resize', (e) => {
+                var availableHeight = window.innerHeight
+                this.getHeight(availableHeight)
+            })
+        }
     },
     getHeight: function(availableHeight){
         const dialog = document.querySelector(this.options.dialog)

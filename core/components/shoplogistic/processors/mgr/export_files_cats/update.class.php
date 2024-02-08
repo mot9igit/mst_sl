@@ -30,14 +30,12 @@ class slExportFilesCatsUpdateProcessor extends modObjectUpdateProcessor
     public function beforeSet()
     {
         $id = (int)$this->getProperty('id');
-        $name = trim($this->getProperty('name'));
+        $name = (int)$this->getProperty('name');
         if (empty($id)) {
             return $this->modx->lexicon('shoplogistic_export_file_cats_err_ns');
         }
 
-        if (empty($name)) {
-            $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_export_file_cats_err_name'));
-        } elseif ($this->modx->getCount($this->classKey, ['name' => $name, 'id:!=' => $id])) {
+        if ($this->modx->getCount($this->classKey, ['name' => $name, 'id:!=' => $id])) {
             $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_export_file_cats_err_ae'));
         }
 

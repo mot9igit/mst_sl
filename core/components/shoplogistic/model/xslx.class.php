@@ -16,7 +16,17 @@ class slXSLX{
 		$this->sl =& $sl;
 		$this->modx =& $modx;
 		$this->modx->lexicon->load('shoplogistic:default');
+
+        $dir = dirname(__FILE__);
+        $file = $dir.'/libs/PHPExcel/Classes/PHPExcel.php';
+        if (file_exists($file)) {
+            include_once $file;
+        }else{
+            return $this->error("Ошибка загрузки файла Excel: ".$file);
+        }
 	}
+
+
 
 	public function generateTest(){
 		$spreadsheet = new Spreadsheet();
@@ -310,6 +320,40 @@ class slXSLX{
                 }
             }
         }
+    }
+
+    public function generateXLSXFile($table, $data, $name = "") {
+        $config = array(
+            "blank_coloumn" => 1,
+            "blank_row" => 1,
+            "coloumns" => array()
+        );
+        if($data){
+            $spreadsheet = new Spreadsheet();
+            $activeWorksheet = $spreadsheet->getActiveSheet();
+            // set header
+            foreach($table as $key => $coloumn){
+                $activeWorksheet->setCellValue([$config["blank_coloumn"], $config["blank_row"]], $coloumn["label"]);
+                $config["coloumns"][$key] = $config["blank_coloumn"];
+                $config["blank_coloumn"]++;
+            }
+            $config["blank_row"]++;
+            // set data
+            foreach($data as $item){
+                foreach($config["coloumns"] as $key => $col){
+                    $activeWorksheet->setCellValue([$col, $config["blank_row"]], $item[$key]);
+                }
+                $config["blank_row"]++;
+            }
+            $writer = new Xlsx($spreadsheet);
+            $path = "assets/files/tmp/reports/";
+            if (!file_exists($this->modx->getOption('base_path') . $path)) {
+                mkdir($this->modx->getOption('base_path') . $path, 0777, true);
+            }
+            $writer->save($this->modx->getOption('base_path') . $path . $name . ".xlsx");
+            return $path . $name . ".xlsx";
+        }
+        return false;
     }
 
     public function generateWeekSalesFile($report_id){

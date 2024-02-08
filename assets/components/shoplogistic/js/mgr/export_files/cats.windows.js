@@ -3,9 +3,9 @@ shopLogistic.window.CreateCatsExportFile = function (config) {
 
     Ext.applyIf(config, {
         title: _('shoplogistic_export_file_cats_create'),
-        width: 600,
+        width: 900,
         baseParams: {
-            action: 'mgr/export_files_cats/create',
+            action: 'mgr/export_files_cats/create'
         },
     });
     shopLogistic.window.CreateCatsExportFile.superclass.constructor.call(this, config);
@@ -40,12 +40,6 @@ Ext.extend(shopLogistic.window.CreateCatsExportFile, shopLogistic.window.Default
             id: config.id + '-export_parent_id',
             anchor: '99%'
         }, {
-            xtype: 'statictextfield',
-            fieldLabel: _('shoplogistic_export_file_cats_name'),
-            name: 'name',
-            id: config.id + '-name',
-            anchor: '99%'
-        }, {
             xtype: 'textarea',
             fieldLabel: _('shoplogistic_export_file_status_description'),
             name: 'description',
@@ -55,6 +49,7 @@ Ext.extend(shopLogistic.window.CreateCatsExportFile, shopLogistic.window.Default
             xtype: 'shoplogistic-combo-category',
             boxLabel: _('shoplogistic_export_file_status_cat_id'),
             name: 'cat_id',
+            hiddenName: 'cat_id',
             id: config.id + '-cat_id'
         }];
     },
@@ -66,8 +61,11 @@ shopLogistic.window.UpdateCatsExportFile = function (config) {
     config = config || {};
 
     Ext.applyIf(config, {
+        title: _('shoplogistic_export_file_cats_update'),
+        width: 900,
+        maxHeight: 400,
         baseParams: {
-            action: 'mgr/export_files_cats/update',
+            action: 'mgr/export_files_cats/update'
         },
         bodyCssClass: 'tabs',
     });
@@ -76,7 +74,34 @@ shopLogistic.window.UpdateCatsExportFile = function (config) {
 Ext.extend(shopLogistic.window.UpdateCatsExportFile, shopLogistic.window.CreateCatsExportFile, {
 
     getFields: function (config) {
-        return shopLogistic.window.CreateCatsExportFile.prototype.getFields.call(this, config);
+        return [{
+            xtype: 'modx-tabs',
+            autoHeight: true,
+            deferredRender: false,
+            forceLayout: true,
+            width: '98%',
+            items: [{
+                title: _('shoplogistic_export_file_cats_update'),
+                layout: 'form',
+                items: shopLogistic.window.CreateCatsExportFile.prototype.getFields.call(this, config)
+            }, {
+                title: _('shoplogistic_export_file_cat_options'),
+                items: [{
+                    html: 'Будьте внимательны при заполнений соответствий. Если не отмечена галочка "Игнорировать" и не стоит соответствие, опция будет создана.',
+                    cls: 'panel-desc'
+                },{
+                    xtype: 'shoplogistic-grid-export-file-cat-options',
+                    record: config.record,
+                }]
+            }],
+            listeners: {
+                'tabchange': {fn: function(panel) {
+                    panel.doLayout();
+                    },
+                    scope: this
+                }
+            }
+        }]
     }
 
 });
