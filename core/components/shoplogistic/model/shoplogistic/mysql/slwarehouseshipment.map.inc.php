@@ -10,17 +10,15 @@ $xpdo_meta_map['slWarehouseShipment']= array (
   ),
   'fields' => 
   array (
-    'warehouse_id' => 0,
-    'store_ids' => '',
+    'ship_id' => 0,
     'date' => NULL,
-    'createdon' => NULL,
-    'active' => 1,
-    'description' => '',
+    'store_id' => 0,
+    'status' => 1,
     'properties' => NULL,
   ),
   'fieldMeta' => 
   array (
-    'warehouse_id' => 
+    'ship_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -29,41 +27,29 @@ $xpdo_meta_map['slWarehouseShipment']= array (
       'null' => true,
       'default' => 0,
     ),
-    'store_ids' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => false,
-      'default' => '',
-    ),
     'date' => 
     array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
     ),
-    'createdon' => 
+    'store_id' => 
     array (
-      'dbtype' => 'datetime',
-      'phptype' => 'datetime',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
       'null' => true,
+      'default' => 0,
     ),
-    'active' => 
+    'status' => 
     array (
-      'dbtype' => 'tinyint',
-      'precision' => '1',
-      'phptype' => 'boolean',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
       'null' => true,
       'default' => 1,
-    ),
-    'description' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => true,
-      'default' => '',
     ),
     'properties' => 
     array (
@@ -74,15 +60,15 @@ $xpdo_meta_map['slWarehouseShipment']= array (
   ),
   'indexes' => 
   array (
-    'warehouse_id' => 
+    'ship_id' => 
     array (
-      'alias' => 'warehouse_id',
+      'alias' => 'ship_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'warehouse_id' => 
+        'ship_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -90,15 +76,15 @@ $xpdo_meta_map['slWarehouseShipment']= array (
         ),
       ),
     ),
-    'store_ids' => 
+    'store_id' => 
     array (
-      'alias' => 'store_ids',
+      'alias' => 'store_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'store_ids' => 
+        'store_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -106,15 +92,15 @@ $xpdo_meta_map['slWarehouseShipment']= array (
         ),
       ),
     ),
-    'active' => 
+    'status' => 
     array (
-      'alias' => 'active',
+      'alias' => 'status',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'active' => 
+        'status' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -125,12 +111,28 @@ $xpdo_meta_map['slWarehouseShipment']= array (
   ),
   'aggregates' => 
   array (
-    'Warehouse' => 
+    'Ship' => 
     array (
-      'class' => 'slWarehouse',
-      'local' => 'warehouse_id',
+      'class' => 'slWarehouseShip',
+      'local' => 'ship_id',
       'foreign' => 'id',
-      'cardinality' => 'many',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'slStores' => 
+    array (
+      'class' => 'slStores',
+      'local' => 'store_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'Status' => 
+    array (
+      'class' => 'slWarehouseShipmentStatus',
+      'local' => 'status',
+      'foreign' => 'id',
+      'cardinality' => 'one',
       'owner' => 'foreign',
     ),
   ),

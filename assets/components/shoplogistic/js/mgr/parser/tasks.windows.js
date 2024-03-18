@@ -51,9 +51,15 @@ Ext.extend(shopLogistic.window.CreateTask, shopLogistic.window.Default, {
             anchor: '99%'
         }, {
             xtype: 'textarea',
-            fieldLabel: _('shoplogistic_parser_config_fields_description'),
+            fieldLabel: _('shoplogistic_parser_tasks_description'),
             name: 'description',
             id: config.id + '-description',
+            anchor: '99%'
+        }, {
+            xtype: 'textarea',
+            fieldLabel: _('shoplogistic_parser_tasks_exclude'),
+            name: 'exclude',
+            id: config.id + '-exclude',
             anchor: '99%'
         }];
     }

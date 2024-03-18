@@ -1,5 +1,10 @@
 Changelog for shopLogistic.
 
+
+0.0.11-pl
+==============
+- check before noralize changelog
+
 0.0.10-pl
 ==============
 - add search by apikey in backend (stores and warehouses)

@@ -23,6 +23,44 @@ class cartDifficultHandler
 	}
 
     /**
+     * Берем доступные доставки. Позже будет упаковано.
+     *
+     * @return array
+     */
+    public function getDeliveries(){
+        return array(
+            "data" => array(
+                "yandex" => array(
+                    "name" => "Яндекс.Доставка",
+                    "logo" => "/assets/content/images/delivery/yandex.png",
+                    "pvz" => 0
+                ),
+                "postrf" => array(
+                    "name" => "Почта России",
+                    "logo" => "/assets/content/images/delivery/post.png",
+                    "pvz" => 0
+                ),
+                "cdek" => array(
+                    "name" => "СДЭК",
+                    "logo" => "/assets/content/images/delivery/cdek.svg",
+                    "pvz" => 1
+                )
+            )
+        );
+    }
+
+    /*
+     * Обновляем корзину на фронте
+     *
+     */
+    public function update(){
+        $data = $this->modx->runSnippet("msCart", array('tpl' => '@FILE chunks/ms2_cart.tpl'));
+        $data_order = $this->modx->runSnippet("sl.cart", array('cartTpl' => '@FILE chunks/ms2_order_cart.tpl'));
+        $order = $this->modx->runSnippet("msOrder", array('tpl' => '@FILE chunks/ms2_order.tpl'));
+        return $this->sl->success("Cart changer", array("cart" => $data, "cart_order" => $data_order, "order" => $order));
+    }
+
+    /**
      * Берем предложения по товару
      *
      * @param $product_id
@@ -30,8 +68,13 @@ class cartDifficultHandler
      * @return array
      */
     public function getOffers($product_id, $ctx = 'web'){
-        $output = array();
+        $output = array(
+            "location_store" => array(),
+            "stores" => array(),
+            "stores_city" => array()
+        );
         $location = $this->sl->getLocationData($ctx);
+        $output['location'] = $location;
         $output['location_store'] = $location['store'];
         // проверяем остаток в выбранном магазине
         $query = $this->modx->newQuery("slStoresRemains");
@@ -47,6 +90,15 @@ class cartDifficultHandler
             $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
             // $this->modx->log(1, print_r($remain, 1));
             if($remain){
+                $action = $this->getSales($product_id, $remain["store_id"]);
+                if($action){
+                    if($action["new_price"]){
+                        $remain["price"] = $action["new_price"];
+                    }
+                    if($action["old_price"]){
+                        $remain["old_price"] = $action["old_price"];
+                    }
+                }
                 $output['selected_store'] = $remain;
             }else{
                 // если остатка нет в магазине проверяем склад (если складов несколько, берем один с наименьшей ценой)
@@ -75,6 +127,15 @@ class cartDifficultHandler
                         if($remains){
                             foreach($remains as $key => $remain){
                                 $remains[$key]['type'] = "slWarehouse";
+                                $action = $this->getSales($product_id, $remain["store_id"]);
+                                if($action){
+                                    if($action["new_price"]){
+                                        $remains[$key]["price"] = $action["new_price"];
+                                    }
+                                    if($action["old_price"]){
+                                        $remains[$key]["old_price"] = $action["old_price"];
+                                    }
+                                }
                             }
                             $output['selected_store_warehouses'] = $remains;
                         }
@@ -109,6 +170,17 @@ class cartDifficultHandler
         if($query->prepare() && $query->stmt->execute()) {
             $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             if($remains){
+                foreach($remains as $key => $remain){
+                    $action = $this->getSales($product_id, $remain["store_id"]);
+                    if($action){
+                        if($action["new_price"]){
+                            $remains[$key]["price"] = $action["new_price"];
+                        }
+                        if($action["old_price"]){
+                            $remains[$key]["old_price"] = $action["old_price"];
+                        }
+                    }
+                }
                 $output['stores_city'] = $remains;
             }
         }
@@ -134,8 +206,23 @@ class cartDifficultHandler
         if($query->prepare() && $query->stmt->execute()) {
             $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             if($remains){
+                foreach($remains as $key => $remain){
+                    $action = $this->getSales($product_id, $remain["store_id"]);
+                    if($action){
+                        if($action["new_price"]){
+                            $remains[$key]["price"] = $action["new_price"];
+                        }
+                        if($action["old_price"]){
+                            $remains[$key]["old_price"] = $action["old_price"];
+                        }
+                    }
+                }
                 $output['stores'] = $remains;
             }
+        }
+        $output['all_stores'] = array_merge($output['stores_city'], $output['stores']);
+        if($output['selected_store']){
+            array_unshift($output['all_stores'], $output['selected_store']);
         }
         // старое условие вывода.
         if(!isset($output['selected_store']) && !isset($output['selected_store_warehouses'])){
@@ -224,7 +311,7 @@ class cartDifficultHandler
 					$tmp["id"] = $product['id'];
 					$tmp["article"] = $product['article'];
 					$tmp["name"] = $product['pagetitle'];
-					$tmp['weight'] = (float)$product['weight']?:(float)$product['weight_netto'];
+					$tmp['weight'] = (float)$product['weight']?:(float)$product['weight_brutto'];
 					$tmp['weight_netto'] = (float)$product['weight_netto'];
 					$tmp['volume'] = (float)$product['volume'];
 					// TODO: fix price
@@ -521,6 +608,90 @@ class cartDifficultHandler
 		return $new_cart;
 	}
 
+    /**
+     * Ищем активные акции
+     *
+     * @param $product_id
+     * @return array|void
+     */
+    public function getSales($product_id, $store_id = 0){
+        $city = 0;
+        $region = 0;
+        $location = $this->sl->getLocationData('web');
+        if($location['city_id']){
+            $city = $this->sl->getObject($location['city_id'], "dartLocationCity");
+            if($city){
+                $region = $city['region'];
+            }
+        }
+        if($location['region_type_full'] && $location['region']){
+            // сначала чекаем fias
+            $criteria = array(
+                "fias_id:=" => $location['region_fias_id']
+            );
+            $object = $this->modx->getObject("dartLocationRegion", $criteria);
+            if(!$object){
+                $criteria = array(
+                    "name:LIKE" => "%{$location['region_type_full']} {$location['region']}%",
+                    "OR:name:LIKE" => "%{$location['region']} {$location['region_type_full']}%"
+                );
+                $object = $this->modx->getObject("dartLocationRegion", $criteria);
+                if($object){
+                    if(!$object->get("fias_id") && $location['region_fias_id']){
+                        $object->set("fias_id", $location['region_fias_id']);
+                        $object->save();
+                    }
+                }
+            }
+            if($object){
+                $region = $object->get("id");
+            }else{
+                $region = 44;
+            }
+        }
+        // регион должен 100% определиться
+        if($region){
+            $query = $this->modx->newQuery("slActionsProducts");
+            $query->leftJoin("slActions", "slActions", "slActions.id = slActionsProducts.action_id");
+            $criteria = array(
+                "slActions.global:=" => 1,
+                "FIND_IN_SET({$region}, REPLACE(REPLACE(REPLACE(slActions.regions, '\"', ''),'[', ''),']','')) > 0"
+            );
+            if($city){
+                $criteria[] = "FIND_IN_SET({$city['id']}, REPLACE(REPLACE(REPLACE(slActions.cities, '\"', ''),'[', ''),']','')) > 0";
+            }
+            $query->where($criteria, xPDOQuery::SQL_OR);
+            $query->where(array(
+                "slActions.date_from:<=" => date('Y-m-d H:i:s'),
+                "slActions.date_to:>=" => date('Y-m-d H:i:s'),
+                "slActions.active:=" => 1,
+                "slActionsProducts.product_id:=" => $product_id
+            ));
+            if($store_id){
+                // TODO: добавить проверку на участников
+                $query->where(array(
+                    "slActions.store_id:=" => $store_id
+                ));
+            }
+            $query->select(array("slActions.*,slActionsProducts.*"));
+            $query->prepare();
+            // $this->modx->log(1, $query->toSQL());
+            if($query->prepare() && $query->stmt->execute()){
+                $results = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                if($results){
+                    if($results["force"]){
+                        return $results;
+                    }else{
+                        return array(
+                            "old_price" => $results['old_price']
+                        );
+                    }
+                }
+                return array();
+            }
+        }
+    }
+
 
     /**
      * Берем остатки
@@ -545,6 +716,15 @@ class cartDifficultHandler
         if($query->prepare() && $query->stmt->execute()){
             $remains = $query->stmt->fetch(PDO::FETCH_ASSOC);
             $tmp = array();
+            $action = $this->getSales($product_id, $object_id);
+            if($action){
+                if($action["new_price"]){
+                    $remains["price"] = $action["new_price"];
+                }
+                if($action["old_price"]){
+                    $remains["old_price"] = $action["old_price"];
+                }
+            }
             $tmp['remains'] = $remains;
             $tmp['object_id'] = $object_id;
             $tmp['type'] = $type;
@@ -887,7 +1067,7 @@ class cartDifficultHandler
 		if(!$from_id){
 			$from_id = $loc['data']['store']['id'];
 		}
-		$remain = $this->getStoreRemain($product_id, $count, $from_id, $type);
+		$remain = $this->getStoreRemain($product_id, $count, $from_id);
         // TODO: перебивается значение типа
         $type = 'slStores';
 		// print_r($remain);
@@ -1009,8 +1189,8 @@ class cartDifficultHandler
 			(float)$object['lng'],
 			(float)$object['lat']
 		);
-        $this->modx->log(1, print_r($from, 1));
-        $this->modx->log(1, print_r($to, 1));
+        //$this->modx->log(1, print_r($from, 1));
+        //$this->modx->log(1, print_r($to, 1));
 		$arr = $this->sl->esl->getYandexDeliveryPrice($product_id, $from, $to);
 		// проверяем наличие Я.Доставки
 		if($arr){

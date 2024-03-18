@@ -43,6 +43,74 @@ class filters
         );
     }
 
+    public function getRangePrices($category, $records = array()){
+        // 1. Берем местоположение пользователя.
+        $checked_store = array();
+        $all_stores = array();
+        $output = array();
+        $location = $this->sl->getLocationData('web');
+        $store_id = $location["pls"]["store_id"];
+        if($store_id){
+            $query = $this->modx->newQuery("slStoresRemains");
+            $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+            $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
+            $query->where(array(
+                "slStoresRemains.store_id:=" => $store_id,
+                "modResource.parent:=" => $category,
+                "slStoresRemains.price:>" => 0,
+                "slStoresRemains.remains:>" => 0
+            ));
+            if($records){
+                $query->where(array("modResource.id:IN" => $records));
+            }
+            $query->select(array("MIN(slStoresRemains.price) as min", "MAX(slStoresRemains.price) as max"));
+            if($query->prepare() && $query->stmt->execute()){
+                $checked_store = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            }
+        }
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+        $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
+        $query->where(array(
+            "slStoresRemains.store_id:!=" => $store_id,
+            "modResource.parent:=" => $category,
+            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.remains:>" => 0
+        ));
+        if($records){
+            $query->where(array("modResource.id:IN" => $records));
+        }
+        $query->select(array("MIN(slStoresRemains.price) as min", "MAX(slStoresRemains.price) as max"));
+        if($query->prepare() && $query->stmt->execute()){
+            $all_stores = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            if(isset($checked_store['min'])){
+                if($checked_store['min'] < $all_stores['min']){
+                    $output[0] = $checked_store['min'];
+                }else{
+                    $output[0] = $all_stores['min'];
+                }
+            }else{
+                $output[0] = $all_stores['min'];
+            }
+            if(isset($checked_store['max'])){
+                if($checked_store['max'] > $all_stores['max']){
+                    $output[1] = $checked_store['max'];
+                }else{
+                    $output[1] = $all_stores['max'];
+                }
+            }else{
+                $output[1] = $all_stores['max'];
+            }
+        }
+        if(!$output[0]){
+            $output[0] = 0;
+        }
+        if(!$output[1]){
+            $output[1] = 0;
+        }
+        return $output;
+    }
+
     /**
      * Индексирование опции, загружается по крону при необходимости
      *
@@ -59,9 +127,9 @@ class filters
 
             if($category){
                 $filters = json_decode($category->getTVValue("filters"), 1);
-                $ms_fields = array("msProductData.id");
+                $ms_fields = array("msProductData.id", "msProductData.vendor");
                 $opt_filters = array();
-                $resource_filters = array();
+                $resource_filters = array("modResource.parent");
                 foreach($filters as $filter){
                     // проверяем типы фильтров
                     if($filter["filter_table"] == "ms"){
@@ -134,6 +202,7 @@ class filters
                 $storage->optimize();
                 $indexData = $storage->export();
                 $this->setCache($indexData);
+                return $indexData;
             }
         }
     }
@@ -146,45 +215,53 @@ class filters
             $category = $this->modx->getObject("modResource", $this->category);
             if ($category) {
                 $indexData = $this->getCache();
-                if(!$indexData){
-                    $this->createIndex($this->category);
-                    $indexData = $this->getCache();
+                if (!$indexData) {
+                    $indexData = $this->createIndex($this->category);
                 }
                 // $this->modx->log(1, print_r($indexData, 1));
                 $search = (new Factory)->create(Factory::ARRAY_STORAGE);
                 $search->setData($indexData);
                 $filters = json_decode($category->getTVValue("filters"), 1);
-                foreach($filters as $filter){
+                foreach ($filters as $filter) {
                     $tmp = $filter;
                     $tmp["values"] = array();
-                    foreach($indexData as $key => $val){
-                        if($key == $tmp["filter_field"]){
-                            if($tmp["filter_type"] == "number"){
-                                $min = 99999999999;
-                                $max = 0;
-                                foreach($val as $k => $v){
-                                    if($k < $min){
-                                        $min = $k;
+                    if ($filter["filter_field"] == 'price') {
+                        $tmp["values"] = $this->getRangePrices($this->category);
+                    } else {
+                        foreach ($indexData as $key => $val) {
+                            if ($key == $tmp["filter_field"]) {
+                                if ($tmp["filter_type"] == "number") {
+                                    $min = 99999999999;
+                                    $max = 0;
+                                    foreach ($val as $k => $v) {
+                                        if ($k < $min) {
+                                            $min = $k;
+                                        }
+                                        if ($k > $max) {
+                                            $max = $k;
+                                        }
                                     }
-                                    if($k > $max){
-                                        $max = $k;
+                                    $numbers[] = $tmp["filter_field"];
+                                    $tmp["values"] = array($min, $max);
+                                } else {
+                                    foreach ($val as $k => $v) {
+                                        $tmp["values"][] = $k;
                                     }
-                                }
-                                $numbers[] = $tmp["filter_field"];
-                                $tmp["values"] = array($min, $max);
-                            }else{
-                                foreach($val as $k => $v){
-                                    $tmp["values"][] = $k;
                                 }
                             }
                         }
                     }
                     $output["filters"][] = $tmp;
-                    if($tmp["main"] == "1"){
+                    if ($tmp["main"] == "1") {
                         $output["main_filters"][] = $tmp;
                     }
                 }
+                if (isset($_POST["filters"]['price'])){
+                    $filter_price = $_POST["filters"]['price'];
+                    unset($_POST["filters"]['price']);
+                }
                 $filters_values = $_POST["filters"];
+                $config["records"] = array();
                 if($filters_values){
                     $ff = $this->prepareFilters($filters, $filters_values);
                     $query = (new AggregationQuery())->filters($ff)->countItems();
@@ -204,12 +281,20 @@ class filters
                     $config["total"] = count($records);
                 }
                 foreach($output["aggregate"] as $k => $v){
-                    if(in_array($k, $numbers)){
-                        $keys = array_keys($v);
+                    if($k == "price"){
+                        $tmp = $this->getRangePrices($this->category, $config["records"]);
                         $output["aggregate"][$k] = array(
-                            "max" => array_shift($keys),
-                            "min" => array_pop($keys)
+                            "min" => $tmp[0],
+                            "max" => $tmp[1]
                         );
+                    }else{
+                        if(in_array($k, $numbers)){
+                            $keys = array_keys($v);
+                            $output["aggregate"][$k] = array(
+                                "min" => array_shift($keys),
+                                "max" => array_pop($keys)
+                            );
+                        }
                     }
                 }
                 if($_GET["page"]){
@@ -233,9 +318,39 @@ class filters
                     "records" => $config["records"]
                 );
                 $output["pagination"] = $this->preparePagination($config);
-                $this->modx->log(1, print_r($config, 1));
+                // $this->modx->log(1, print_r($config, 1));
+                $config['sortby'] = "Data.available";
+                $config['sortdir'] = "ASC";
+                if($filter_price){
+                    if($filter_price["min"] != $filter_price["default_min"] && $filter_price["max"] != $filter_price["default_max"]){
+                        $location = $this->sl->getLocationData('web');
+                        $store_id = $location["pls"]["store_id"];
+                        $config['loadModels'] = 'shoplogistic';
+                        $config['leftJoin'] = array(
+                            "slStoresRemainsStore" => [
+                                "class" => "slStoresRemains",
+                                "on" => "msProduct.id = slStoresRemains.product_id AND slStoresRemains.store_id = {$store_id}"
+                            ],
+                            "slStoresRemainsMIN" => [
+                                "class" => "slStoresRemains",
+                                "on" => "msProduct.id = slStoresRemains.product_id AND slStoresRemains.store_id != {$store_id} AND slStoresRemains.price = (
+                                select min(price)
+                                from slStoresRemains
+                                where msProduct.id = slStoresRemains.product_id AND slStoresRemains.remains > 0 AND slStoresRemains.price > 0
+                            )"
+                            ]
+                        );
+                        $config['select'] = array(
+                            "msProduct" => "*",
+                            "slStoresRemainsStore" => "slStoresRemainsStore.remains as sl_remains, coalesce(slStoresRemainsStore.price, slStoresRemainsMIN.price, 0) AS sl_price"
+                        );
+                        $config['where'] = array(
+                            "sl_price:>=" => $filter_price["min"],
+                            "AND:sl_price:<=" => $filter_price["max"]
+                        );
+                    }
+                }
                 $output["products"] = $this->modx->runSnippet("msProducts", $config);
-
             }
         }
         // $this->modx->log(1, print_r($output, 1));
@@ -269,12 +384,12 @@ class filters
         }else{
             $pls["next"] = 0;
         }
-        $this->modx->log(1, print_r($pls, 1));
+        // $this->modx->log(1, print_r($pls, 1));
         $chunk = "sl.pagination";
         $pdo = $this->modx->getService('pdoFetch');
         if($pdo){
             $output = $pdo->getChunk($chunk, $pls);
-            $this->modx->log(1, print_r($output, 1));
+            // $this->modx->log(1, print_r($output, 1));
         }
         return $output;
     }

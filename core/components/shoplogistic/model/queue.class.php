@@ -110,12 +110,70 @@ class queueHandler
      * @return void
      */
     public function handleQueue(){
+        // $this->clearQueue();
         $queues = $this->getQueue();
         if($queues){
             foreach($queues as $queue){
                 if(!$this->checkProccessing($queue['id'])){
                     $this->setProccessing($queue['id']);
                     switch ($queue['action']) {
+                        case 'store/products/copo/update':
+                            $properties = json_decode($queue['properties'], 1);
+                            $q = $this->modx->newQuery("slStoresRemains");
+                            $q->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+                            $q->select("`slStoresRemains`.`id`");
+                            if($properties['store']){
+                                $q->where(array("slStoresRemains.store_id:=" => $properties['store']));
+                            }else{
+                                $q->where(array("slStores.active:=" => 1));
+                            }
+                            $all_data = $this->modx->getCount("slStoresRemains", $q);
+                            $response['all'] = $all_data;
+                            // перепривязываем
+                            $limit = 1000;
+                            for($i = 0; $i <= $all_data; $i += $limit){
+                                $query = $this->modx->newQuery("slStoresRemains");
+                                $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+                                $query->select(array("slStoresRemains.id"));
+                                if($properties['store']){
+                                    $query->where(array("slStoresRemains.store_id:=" => $properties['store']));
+                                }else{
+                                    $query->where(array("slStores.active:=" => 1));
+                                }
+                                $query->limit($limit, $i);
+                                if($query->prepare() && $query->stmt->execute()){
+                                    $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                    foreach($remains as $remain){
+                                        $res = $this->sl->product->linkProduct($remain['id'], 'slStores');
+                                    }
+                                }
+                            }
+                            if($properties['store']){
+                                $res = $this->sl->product->generateCopoReport($properties['store'], 1);
+                            }else{
+                                $q = $this->modx->newQuery("slStores");
+                                $q->select("`slStores`.`id`");
+                                $q->where(array("slStores.active:=" => 1));
+                                $all_data = $this->modx->getCount("slStores", $q);
+                                $response['all'] = $all_data;
+                                // генерируем отчеты
+                                $limit = 1000;
+                                for($i = 0; $i <= $all_data; $i += $limit){
+                                    $query = $this->modx->newQuery("slStores");
+                                    $query->select(array("slStores.id"));
+                                    $q->where(array("slStores.active:=" => 1));
+                                    $query->limit($limit, $i);
+                                    if($query->prepare() && $query->stmt->execute()){
+                                        $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                        foreach($stores as $store){
+                                            $res = $this->sl->product->generateCopoReport($store['id'], 1);
+                                        }
+                                    }
+                                }
+                            }
+
+                            $this->setProccessed($queue['id'], $response);
+                            break;
                         // импорт файла из API
                         case 'api/file/handler':
                             $properties = json_decode($queue['properties'], 1);

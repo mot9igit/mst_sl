@@ -17,7 +17,7 @@ shopLogistic.grid.ParserTasks = function (config) {
 Ext.extend(shopLogistic.grid.ParserTasks, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'name', 'description', 'config_id', 'config', 'url', 'status', 'status_name', 'color', 'file', 'properties', 'actions'];
+        return ['id', 'name', 'exclude', 'description', 'config_id', 'config', 'url', 'status', 'status_name', 'color', 'file', 'properties', 'actions'];
     },
 
     getColumns: function () {

@@ -522,7 +522,7 @@
 		public static function setLog($arData, $type = '')
 		{
 			$return = false;
-			if(!defined("C_REST_BLOCK_LOG") || C_REST_BLOCK_LOG !== true)
+			/* if(!defined("C_REST_BLOCK_LOG") || C_REST_BLOCK_LOG !== true)
 			{
 				if(defined("C_REST_LOGS_DIR"))
 				{
@@ -556,7 +556,7 @@
 				{
 					$return = file_put_contents($path . '.txt', var_export($arData, true));
 				}
-			}
+			} */
 			return $return;
 		}
 

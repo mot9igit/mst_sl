@@ -14,6 +14,7 @@ $xpdo_meta_map['slWarehouseStores']= array (
     'warehouse_id' => 0,
     'description' => '',
     'sync' => 0,
+    'date' => NULL,
     'properties' => NULL,
   ),
   'fieldMeta' => 
@@ -51,6 +52,12 @@ $xpdo_meta_map['slWarehouseStores']= array (
       'phptype' => 'boolean',
       'null' => false,
       'default' => 0,
+    ),
+    'date' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
     ),
     'properties' => 
     array (
@@ -114,7 +121,7 @@ $xpdo_meta_map['slWarehouseStores']= array (
   array (
     'Warehouse' => 
     array (
-      'class' => 'slWarehouse',
+      'class' => 'slStores',
       'local' => 'warehouse_id',
       'foreign' => 'id',
       'cardinality' => 'many',

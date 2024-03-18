@@ -41,6 +41,9 @@ shopLogistic.utils.renderParserFieldSource = function (value) {
     if(value == 'table'){
         return String.format('<span class="shoplogistic_badge shoplogistic_badge_grey_2">{0}</span>', _('shoplogistic_parser_config_fields_source_table'))
     }
+    if(value == 'tables'){
+        return String.format('<span class="shoplogistic_badge shoplogistic_badge_green">{0}</span>', _('shoplogistic_parser_config_fields_source_tables'))
+    }
 };
 
 shopLogistic.utils.renderFieldType = function (value) {

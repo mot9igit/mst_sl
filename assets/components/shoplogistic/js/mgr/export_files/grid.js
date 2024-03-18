@@ -17,7 +17,7 @@ shopLogistic.grid.ExportFiles = function (config) {
 Ext.extend(shopLogistic.grid.ExportFiles, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'store_id', 'name', 'categories', 'vendor', 'vendor_name', 'created', 'updated', 'error', 'products', 'file', 'global', 'status', 'status_name', 'color', 'date', 'description', 'createdon', 'createdby', 'updatedon', 'updatedby', 'properties', 'actions'];
+        return ['id', 'store_id', 'vendors', 'vendor_check', 'name', 'categories', 'vendor', 'vendor_name', 'created', 'updated', 'error', 'products', 'file', 'global', 'status', 'status_name', 'color', 'date', 'description', 'createdon', 'createdby', 'updatedon', 'updatedby', 'properties', 'actions'];
     },
 
     getColumns: function () {
@@ -151,6 +151,34 @@ Ext.extend(shopLogistic.grid.ExportFiles, shopLogistic.grid.Default, {
         w.fp.getForm().reset();
         w.fp.getForm().setValues(this.menu.record);
         w.show(e.target);
-    }
+    },
+
+    removeFile: function () {
+        var ids = this._getSelectedIds();
+        if (!ids.length) {
+            return false;
+        }
+        MODx.msg.confirm({
+            title: ids.length > 1
+                ? _('shoplogistic_export_files_remove')
+                : _('shoplogistic_export_file_remove'),
+            text: ids.length > 1
+                ? _('shoplogistic_export_files_remove_confirm')
+                : _('shoplogistic_export_file_remove_confirm'),
+            url: this.config.url,
+            params: {
+                action: 'mgr/export_files/remove',
+                ids: Ext.util.JSON.encode(ids),
+            },
+            listeners: {
+                success: {
+                    fn: function () {
+                        this.refresh();
+                    }, scope: this
+                }
+            }
+        });
+        return true;
+    },
 });
 Ext.reg('shoplogistic-grid-export-files', shopLogistic.grid.ExportFiles);

@@ -10,6 +10,7 @@ $_lang['area_shoplogistic_order'] = 'Заказ';
 $_lang['area_shoplogistic_cdek'] = 'СДЭК';
 $_lang['area_shoplogistic_yandex'] = 'Yandex';
 $_lang['area_shoplogistic_postrf'] = 'Почта России';
+$_lang['area_shoplogistic_parserdata'] = 'Parserdata';
 
 $_lang['setting_shoplogistic_frontend_css'] = 'СSS-файл для фронта';
 $_lang['setting_shoplogistic_frontend_css_desc'] = 'Можно указать тут свой файл или перенести стили в свой css-файл и очистить поле.';
@@ -27,9 +28,14 @@ $_lang['setting_shoplogistic_default_delivery_desc'] = 'ID способа дос
 
 $_lang['setting_shoplogistic_curier_delivery'] = 'Способ доставки курьером';
 $_lang['setting_shoplogistic_curier_delivery_desc'] = 'ID способа доставки MS2 курьером, у доставки нужен класс обработчик slHandler.';
-
+$_lang['setting_shoplogistic_store_colors'] = 'Цвета магазинов';
+$_lang['setting_shoplogistic_store_colors_desc'] = 'Для отображения в корзине и заказах. Указываем черех запятую. Например, #cccccc,$ffffff.';
 $_lang['setting_shoplogistic_punkt_delivery'] = 'Способ доставки в пункт выдачи';
 $_lang['setting_shoplogistic_punkt_delivery_desc'] = 'ID способа доставки MS2 в пункт выдачи, у доставки нужен класс обработчик slHandler.';
+$_lang['setting_shoplogistic_pickup_delivery'] = 'Способ доставки Самовывоз';
+$_lang['setting_shoplogistic_pickup_delivery_desc'] = 'ID способа доставки MS2 Самовывоз, у доставки нужен класс обработчик slHandler.';
+$_lang['setting_shoplogistic_express_delivery'] = 'Способ доставки Экспресс';
+$_lang['setting_shoplogistic_express_delivery_desc'] = 'ID способа доставки MS2 Экспресс, у доставки нужен класс обработчик slHandler.';
 
 $_lang['setting_shoplogistic_blank_image'] = 'Изображение заглушка';
 $_lang['setting_shoplogistic_blank_image_desc'] = 'Укажите путь до изображения-заглушки относительно корня сайта';
@@ -150,3 +156,9 @@ $_lang['setting_shoplogistic_code_live'] = 'Срок жизни кода выд�
 $_lang['setting_shoplogistic_code_live_desc'] = 'В секундах, 0 - не обновлять';
 $_lang['setting_shoplogistic_regenerate_code'] = 'Перегенерировать код?';
 $_lang['setting_shoplogistic_regenerate_code_desc'] = '';
+
+// Parserdata
+$_lang['setting_shoplogistic_parserdata_token'] = 'Токен';
+$_lang['setting_shoplogistic_parserdata_token_desc'] = 'См. в ЛК <a href="https://apimarket.parserdata.ru/">Parserdata</a>';
+$_lang['setting_shoplogistic_parserdata_url'] = 'URL API';
+$_lang['setting_shoplogistic_parserdata_url_desc'] = 'См. в ЛК <a href="https://apimarket.parserdata.ru/">Parserdata</a>';

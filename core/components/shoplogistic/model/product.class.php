@@ -271,59 +271,63 @@ class productHandler
             if(!$vendor){
                 $vendor = $this->searchVendor($remain['catalog']);
             }
-            if($vendor && $remain['article']){
-                // бренд найден
-                $query = $this->modx->newQuery("modResource");
-                $query->leftJoin("msProductData", "Data");
-                $query->where(array(
-                    "`Data`.`vendor_article`:=" => trim($remain['article']),
-                    "`Data`.`vendor`:=" => $vendor['id']
-                ));
-                $query->select(array(
-                    "`modResource`.*",
-                    "`Data`.*"
-                ));
-                $query->limit(1);
-                if ($query->prepare() && $query->stmt->execute()) {
-                    // нашли товар
-                    $product = $query->stmt->fetch(PDO::FETCH_ASSOC);
-                    if ($product) {
+            if($vendor){
+                if(!$remain['article']){
+                    $update_data = array(
+                        "brand_id" => $vendor['id'],
+                        "status" => 2
+                    );
+                }else{
+                    if(!$remain['price']){
                         $update_data = array(
-                            "status" => 3,
                             "brand_id" => $vendor['id'],
-                            "product_id" => $product['id']
+                            "status" => 6
                         );
                     }else{
-                        $update_data = array(
-                            "status" => 4,
-                            "brand_id" => $vendor['id'],
-                            "product_id" => 0
-                        );
+                        // ищем карточку товара
+                        $query = $this->modx->newQuery("modResource");
+                        $query->leftJoin("msProductData", "Data");
+                        $query->where(array(
+                            "`Data`.`vendor_article`:=" => trim($remain['article']),
+                            "`Data`.`vendor`:=" => $vendor['id']
+                        ));
+                        $query->select(array(
+                            "`modResource`.*",
+                            "`Data`.*"
+                        ));
+                        $query->limit(1);
+                        if ($query->prepare() && $query->stmt->execute()) {
+                            // нашли товар
+                            $product = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                            if ($product) {
+                                $update_data = array(
+                                    "status" => 3,
+                                    "brand_id" => $vendor['id'],
+                                    "product_id" => $product['id']
+                                );
+                            }else{
+                                $update_data = array(
+                                    "status" => 4,
+                                    "brand_id" => $vendor['id'],
+                                    "product_id" => 0
+                                );
+                            }
+                        }else{
+                            $update_data = array(
+                                "status" => 4,
+                                "brand_id" => $vendor['id'],
+                                "product_id" => 0
+                            );
+                        }
                     }
-                }else{
-                    $update_data = array(
-                        "status" => 4,
-                        "brand_id" => $vendor['id'],
-                        "product_id" => 0
-                    );
                 }
             }else{
-                if(!$vendor && $remain['article']) {
-                    // если не найден бренд выставляем статус
-                    $update_data = array(
-                        "status" => 1,
-                        "brand_id" => 0,
-                        "product_id" => 0
-                    );
-                }
-                if($vendor && !$remain['article']) {
-                    // если не найден бренд выставляем статус
-                    $update_data = array(
-                        "status" => 2,
-                        "brand_id" => 0,
-                        "product_id" => 0
-                    );
-                }
+                // если не найден бренд выставляем статус
+                $update_data = array(
+                    "status" => 1,
+                    "brand_id" => 0,
+                    "product_id" => 0
+                );
             }
             if(count($update_data)){
                 $this->sl->api->update("slStoresRemains", $update_data, $remain['id']);
@@ -359,6 +363,7 @@ class productHandler
         $query->select(array("slBrandAssociation.*, LENGTH(association) as lenght_name"));
         $query->where($crit_assoc, xPDOQuery::SQL_OR);
         $query->sortby('LENGTH(association)', 'DESC');
+        $query->prepare();
         if ($query->prepare() && $query->stmt->execute()) {
             $associations = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach($associations as $association){
@@ -374,6 +379,7 @@ class productHandler
             $query->select(array("msVendor.*, LENGTH(name) as lenght_name"));
             $query->where($crit_name, xPDOQuery::SQL_OR);
             $query->sortby('LENGTH(name)', 'DESC');
+            $query->prepare();
             if ($query->prepare() && $query->stmt->execute()) {
                 $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($vendors as $vendor) {

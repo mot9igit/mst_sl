@@ -431,6 +431,9 @@ class shopLogistic
             case 'search/get_preresults':
                 $response = $this->getPreresult($data);
                 break;
+            case 'cart/update':
+                $response = $this->cart->update();
+                break;
 		}
 		return $response;
 	}
@@ -473,6 +476,7 @@ class shopLogistic
         $pdo = $this->modx->getService('pdoFetch');
         $chunk = "@FILE chunks/search_pre_results.tpl";
         if($html){
+            $this->search->addRequest($data['search']);
             $out = $pdo->getChunk($chunk, $output);
             return $this->success("", array("data" => $out));
         }else{
@@ -482,7 +486,7 @@ class shopLogistic
 
     public function getRequests($search){
         $query = $this->modx->newQuery('slSearchHistory');
-        $query->select('slSearchHistory.*');
+        $query->select(array('slSearchHistory.*'));
         $query->where(array(
             "request:LIKE" => '%'.$search.'%'
         ));
@@ -509,7 +513,7 @@ class shopLogistic
             $sphinx->SetFilter('available', array(1));
         }
         $sphinx->SetLimits($offset, $limit, 1000);
-        $result = $sphinx->Query($string, 'mst_tools');
+        $result = $sphinx->Query($string, 'dev_mst_tools');
         if ($result && isset($result['matches'])){
             $res = array();
             foreach($result['matches'] as $key => $val){
@@ -535,12 +539,50 @@ class shopLogistic
             $sphinx->SetFilter('available', array(1));
         }
         $sphinx->SetLimits($offset, $limit, 1000);
-        $result = $sphinx->Query($string, 'mst_tools');
+        $result = $sphinx->Query($string, 'dev_mst_tools');
         if ($result && isset($result['matches'])){
             return $result;
         }else{
             return false;
         }
+    }
+
+    /**
+     * Генерим sitemap и возвращаем XML
+     *
+     * @return void
+     */
+    public function generateSitemap(){
+        $query = $this->modx->newQuery("modResource");
+        $query->where(array(
+           "contentType" => "text/html"
+        ));
+        $total = $this->modx->getCount("modResource", $query);
+
+        $limit = 1000;
+
+        $output['index'] = ceil($total / $limit) - 1;
+        if(isset($_GET["sitemap"])){
+            $query = $this->modx->newQuery("modResource");
+            $query->where(array(
+                "contentType" => "text/html"
+            ));
+            $offset = $limit * $_GET["sitemap"];
+            $query->limit($limit, $offset);
+            $query->select(array("modResource.*"));
+            if($query->prepare() && $query->stmt->execute()){
+                $output["items"] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $pdo = $this->modx->getService('pdoFetch');
+                $chunk = "@FILE chunks/sitemap_small.tpl";
+                $out = $pdo->getChunk($chunk, $output);
+            }
+        }else{
+            $pdo = $this->modx->getService('pdoFetch');
+            $chunk = "@FILE chunks/sitemap_big.tpl";
+            $out = $pdo->getChunk($chunk, $output);
+        }
+
+        return $out;
     }
 
     /**
@@ -626,7 +668,7 @@ class shopLogistic
 			$output['html_stores'] = '';
 			foreach($stores as $key => $store) {
                 // TODO: ID убрать в переменную
-                $store['redirect'] = $this->modx->makeURL(2);
+                $store['redirect'] = $this->modx->makeURL(1);
                 $store['data'] = json_encode($store);
                 $stores[$key]['data'] = json_encode($store);
                 $stores[$key]['text'] = $this->pdoTools->getChunk("@FILE chunks/sl_store_baloon.tpl", $store);
@@ -668,7 +710,7 @@ class shopLogistic
 			);
 			$output = $this->modx->runSnippet("sl.get_delivery_data", $props);
 		}
-		return $this->success("", array("selector_id" => "#delivery_".$data["id"]."_".$data['from_id'], "html_delivery" => $output));
+		return $this->success("", array("selector_id" => "#delivery_".$data["id"]."_".$data['from_id'], "selector_modal_id" => "#modal_delivery_".$data["id"]."_".$data['from_id'], "html_delivery" => $output));
 	}
 
 	public function getCityStatus(){

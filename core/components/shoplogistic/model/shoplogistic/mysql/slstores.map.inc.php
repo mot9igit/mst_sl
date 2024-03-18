@@ -10,7 +10,9 @@ $xpdo_meta_map['slStores']= array (
   ),
   'fields' => 
   array (
+    'type' => 0,
     'name' => '',
+    'name_short' => '',
     'balance' => 0.0,
     'apikey' => '',
     'website' => '',
@@ -34,15 +36,43 @@ $xpdo_meta_map['slStores']= array (
     'email' => '',
     'phone' => '',
     'file' => '',
+    'yml_file' => '',
+    'image' => '',
     'coordinats' => '',
     'lat' => 0.0,
     'lng' => 0.0,
+    'delivery_tk' => 0,
+    'integration' => 0,
     'active' => 1,
+    'store' => 1,
+    'warehouse' => 0,
+    'vendor' => 0,
+    'date_api_ping' => NULL,
+    'date_remains_update' => NULL,
+    'date_docs_update' => NULL,
+    'check_remains' => 1,
+    'check_docs' => 1,
     'properties' => NULL,
   ),
   'fieldMeta' => 
   array (
+    'type' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '11',
+      'phptype' => 'integer',
+      'null' => false,
+      'default' => 0,
+    ),
     'name' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'name_short' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -234,6 +264,22 @@ $xpdo_meta_map['slStores']= array (
       'null' => false,
       'default' => '',
     ),
+    'yml_file' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => false,
+      'default' => '',
+    ),
+    'image' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => false,
+      'default' => '',
+    ),
     'coordinats' => 
     array (
       'dbtype' => 'varchar',
@@ -258,7 +304,81 @@ $xpdo_meta_map['slStores']= array (
       'null' => false,
       'default' => 0.0,
     ),
+    'delivery_tk' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
+    'integration' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
     'active' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
+    ),
+    'store' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
+    ),
+    'warehouse' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
+    'vendor' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
+    'date_api_ping' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
+    ),
+    'date_remains_update' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
+    ),
+    'date_docs_update' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
+    ),
+    'check_remains' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
+    ),
+    'check_docs' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',
@@ -307,6 +427,22 @@ $xpdo_meta_map['slStores']= array (
         ),
       ),
     ),
+    'integration' => 
+    array (
+      'alias' => 'integration',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'integration' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'active' => 
     array (
       'alias' => 'active',
@@ -323,12 +459,124 @@ $xpdo_meta_map['slStores']= array (
         ),
       ),
     ),
+    'store' => 
+    array (
+      'alias' => 'store',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'store' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'warehouse' => 
+    array (
+      'alias' => 'warehouse',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'warehouse' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'vendor' => 
+    array (
+      'alias' => 'vendor',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'vendor' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'check_remains' => 
+    array (
+      'alias' => 'check_remains',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'check_remains' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'check_docs' => 
+    array (
+      'alias' => 'check_docs',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'check_docs' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'date_remains_update' => 
+    array (
+      'alias' => 'date_remains_update',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'date_remains_update' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'date_docs_update' => 
+    array (
+      'alias' => 'date_docs_update',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'date_docs_update' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
   ),
   'aggregates' => 
   array (
-    'city' => 
+    'City' => 
     array (
-      'class' => 'slCityCity',
+      'class' => 'dartLocationCity',
       'local' => 'city',
       'foreign' => 'id',
       'cardinality' => 'one',

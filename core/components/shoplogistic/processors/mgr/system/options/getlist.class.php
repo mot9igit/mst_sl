@@ -16,6 +16,7 @@ class slMS2OptionsGetListProcessor extends modObjectGetListProcessor
     {
         $category = $this->getProperty('category');
         if($category){
+            $opts = array();
             $query = $this->modx->newQuery("msCategoryOption");
             $query->select(array("msCategoryOption.option_id as id"));
             $query->where(array(
@@ -26,10 +27,12 @@ class slMS2OptionsGetListProcessor extends modObjectGetListProcessor
                 foreach($options as $opt){
                     $opts[] = $opt["id"];
                 }
-                $options = array_unique($opts);
-                $c->where(array(
-                    'msOption.id:IN' => $options
-                ));
+                if($opts) {
+                    $options = array_unique($opts);
+                    $c->where(array(
+                        'msOption.id:IN' => $options
+                    ));
+                }
             }
         }
         $query = $this->getProperty('query', '');

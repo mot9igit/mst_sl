@@ -41,11 +41,16 @@ return [
 		'value' => 1,
 		'area' => 'shoplogistic_eshoplogistic',
 	],
-	'post_delivery' => [
+	'express_delivery' => [
 		'xtype' => 'textfield',
 		'value' => 1,
 		'area' => 'shoplogistic_eshoplogistic',
 	],
+    'pickup_delivery' => [
+        'xtype' => 'textfield',
+        'value' => 1,
+        'area' => 'shoplogistic_eshoplogistic',
+    ],
     'blank_image' => [
         'xtype' => 'textfield',
         'value' => 'assets/components/shoplogistic/img/nopic.png',
@@ -61,6 +66,11 @@ return [
 		'value' => 'contact,email,phone',
 		'area' => 'shoplogistic_main',
 	],
+    'store_colors' => [
+        'xtype' => 'textfield',
+        'value' => '',
+        'area' => 'shoplogistic_main',
+    ],
 	'open_fields_warehouse' => [
 		'xtype' => 'textfield',
 		'value' => 'contact,email,phone',
@@ -88,12 +98,12 @@ return [
 	],
 	'ur_name' => [
 		'xtype' => 'textfield',
-		'value' => 'Берсенев Андрей Юрьевич, ИП',
+		'value' => '',
 		'area' => 'shoplogistic_requizites',
 	],
 	'inn' => [
 		'xtype' => 'textfield',
-		'value' => '741500616394',
+		'value' => '',
 		'area' => 'shoplogistic_requizites',
 	],
 	'kpp' => [
@@ -232,6 +242,17 @@ return [
         'xtype' => 'textfield',
         'value' => 'https://otpravka-api.pochta.ru/',
         'area' => 'shoplogistic_postrf',
+    ],
+    // PARSER DATA
+    'parserdata_token' => [
+        'xtype' => 'textfield',
+        'value' => '',
+        'area' => 'shoplogistic_parserdata',
+    ],
+    'parserdata_url' => [
+        'xtype' => 'textfield',
+        'value' => 'https://apimarket.parserdata.ru/api/v2/',
+        'area' => 'shoplogistic_parserdata',
     ],
     // ORDER SETTINGS
     'tax_percent' => [

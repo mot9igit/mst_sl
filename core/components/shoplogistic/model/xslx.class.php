@@ -323,6 +323,9 @@ class slXSLX{
     }
 
     public function generateXLSXFile($table, $data, $name = "") {
+        // $this->modx->log(1, print_r($table, 1));
+        // $this->modx->log(1, print_r($data, 1));
+        // $this->modx->log(1, print_r($name, 1));
         $config = array(
             "blank_coloumn" => 1,
             "blank_row" => 1,
@@ -333,7 +336,7 @@ class slXSLX{
             $activeWorksheet = $spreadsheet->getActiveSheet();
             // set header
             foreach($table as $key => $coloumn){
-                $activeWorksheet->setCellValue([$config["blank_coloumn"], $config["blank_row"]], $coloumn["label"]);
+                $activeWorksheet->setCellValueByColumnAndRow($config["blank_coloumn"], $config["blank_row"], $coloumn["label"]);
                 $config["coloumns"][$key] = $config["blank_coloumn"];
                 $config["blank_coloumn"]++;
             }
@@ -341,17 +344,17 @@ class slXSLX{
             // set data
             foreach($data as $item){
                 foreach($config["coloumns"] as $key => $col){
-                    $activeWorksheet->setCellValue([$col, $config["blank_row"]], $item[$key]);
+                    $activeWorksheet->setCellValueByColumnAndRow($col, $config["blank_row"], $item[$key]);
                 }
                 $config["blank_row"]++;
             }
             $writer = new Xlsx($spreadsheet);
-            $path = "assets/files/tmp/reports/";
+            $path = "assets/content/tmp/reports/";
             if (!file_exists($this->modx->getOption('base_path') . $path)) {
                 mkdir($this->modx->getOption('base_path') . $path, 0777, true);
             }
             $writer->save($this->modx->getOption('base_path') . $path . $name . ".xlsx");
-            return $path . $name . ".xlsx";
+            return array("filename" => $this->modx->getOption('site_url') . $path . $name . ".xlsx");
         }
         return false;
     }

@@ -343,6 +343,12 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                     name: 'address',
                     id: config.id + '-address',
                     anchor: '99%'
+                },{
+                    xtype: 'textarea',
+                    fieldLabel: _('shoplogistic_store_address_short'),
+                    name: 'address_short',
+                    id: config.id + '-address_short',
+                    anchor: '99%'
                 }]
             },{
                 columnWidth: 1,

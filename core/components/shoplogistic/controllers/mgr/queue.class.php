@@ -4,14 +4,14 @@ if (!class_exists('slManagerController')) {
     require_once dirname(__FILE__, 2) . '/manager.class.php';
 }
 
-class ShoplogisticMgrParserManagerController extends slManagerController
+class ShoplogisticMgrQueueManagerController extends slManagerController
 {
     /**
      * @return string
      */
     public function getPageTitle()
     {
-        return $this->modx->lexicon('shoplogistic_parser') . ' | shoplogistic';
+        return $this->modx->lexicon('shoplogistic_queue') . ' | shoplogistic';
     }
 
 
@@ -41,18 +41,16 @@ class ShoplogisticMgrParserManagerController extends slManagerController
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/panel.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/windows.js?v='.$this->shopLogistic->config['version']);
-        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/status.grid.js?v='.$this->shopLogistic->config['version']);
-        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/status.windows.js?v='.$this->shopLogistic->config['version']);
 
         $this->addHtml('<script type="text/javascript">
 			shopLogistic.config = ' . json_encode($this->shopLogistic->config) . ';
 			shopLogistic.config.connector_url = "' . $this->shopLogistic->config['connectorUrl'] . '";
-			Ext.onReady(function() {MODx.load({ xtype: "shoplogistic-page-parser"});});
+			Ext.onReady(function() {MODx.load({ xtype: "shoplogistic-page-queue"});});
         </script>');
 
         $this->modx->invokeEvent('slOnManagerCustomCssJs', array(
             'controller' => $this,
-            'page' => 'parser',
+            'page' => 'queue',
         ));
     }
 }

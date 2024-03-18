@@ -279,18 +279,18 @@ class postrf{
                         // Посылка (до отделения)
                         // EMS PT (курьер)
                         $tariffs = array(
-                            'terminal' => 'ONLINE_PARCEL',
+                            'terminal' => 'POSTAL_PARCEL',
                             'door' => 'EMS_RT'
                         );
                     }else{
                         $tariffs = array(
-                            'terminal' => 'ONLINE_PARCEL',
+                            'terminal' => 'POSTAL_PARCEL',
                             'door' => 'EMS_RT'
                         );
                     }
                 }else{
                     $tariffs = array(
-                        'terminal' => 'ONLINE_PARCEL',
+                        'terminal' => 'POSTAL_PARCEL',
                         'door' => 'EMS_RT'
                     );
                 }
@@ -299,6 +299,7 @@ class postrf{
                     $data["mass"] = $product['weight'] * 1000;
                     $data["mail-type"] = $tariff;
                     $prf_data = $this->request($url, $data);
+                    $this->sl->tools->log(print_r($prf_data, 1), $this->config["log_file_name"]);
                     if (!empty($prf_data['total-rate'])) {
                         $out[$key]['price'] = $out[$key]['price'] + round(($prf_data['total-rate'] * $product['count'] * 0.01));
                     }
@@ -445,10 +446,10 @@ class postrf{
 
         $result = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if($this->config["delivery_log"]){
+        //if($this->config["delivery_log"]){
             $this->sl->tools->log($http_code, $this->config["log_file_name"]);
             $this->sl->tools->log(print_r($result, 1), $this->config["log_file_name"]);
-        }
+        //}
         if (curl_errno($ch)) {
             $this->modx->log(xPDO::LOG_LEVEL_ERROR,  'POSTRF Error:' . curl_error($ch));
         }

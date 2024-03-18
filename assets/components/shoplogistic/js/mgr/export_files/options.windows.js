@@ -29,6 +29,12 @@ Ext.extend(shopLogistic.window.CreateOptionsExportFile, shopLogistic.window.Defa
             name: 'filter',
             id: config.id + '-filter',
             anchor: '99%'
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_export_file_cat_options_to_field'),
+            name: 'to_field',
+            id: config.id + '-to_field',
+            anchor: '99%'
         }, {
             xtype: 'shoplogistic-combo-options',
             fieldLabel: _('shoplogistic_export_file_cat_options_option_id'),
@@ -38,11 +44,17 @@ Ext.extend(shopLogistic.window.CreateOptionsExportFile, shopLogistic.window.Defa
             anchor: '99%'
         }, {
             xtype: 'textarea',
-            fieldLabel: _('shoplogistic_export_file_status_description'),
+            fieldLabel: _('shoplogistic_export_file_cat_options_description'),
             name: 'description',
             id: config.id + '-description',
             anchor: '99%'
-        },];
+        }, {
+            xtype: 'textarea',
+            fieldLabel: _('shoplogistic_export_file_cat_options_examples'),
+            name: 'examples',
+            id: config.id + '-examples',
+            anchor: '99%'
+        }];
     },
 });
 Ext.reg('shoplogistic-window-export-file-options-create', shopLogistic.window.CreateOptionsExportFile);

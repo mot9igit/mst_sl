@@ -78,14 +78,111 @@ var dart_filters = {
         form: 'df_filters',
         products: ".df_products",
         pagination: ".df_pagination",
+        sortbutton: ".df_sort",
+        instockbutton: "#toggle-button-catalog-df_instock",
         page: 1,
 
         values_delimeter: ","
     },
     elements: ['filters', 'results', 'pagination', 'total', 'sort', 'selected', 'limit', 'tpl'],
     initialize: function(){
+        var query = window.location.search.substring(1)
+        var qs = this.parseQuery(query)
+        if(Object.prototype.hasOwnProperty.call(qs, "page")){
+            dart_filters.options.page = qs.page
+        }
         const filterForm = document.getElementById(this.options.form)
         if(filterForm){
+            // sort handlers
+            $(document).on("click", this.options.sortbutton, function(e){
+                e.preventDefault();
+                var parent = $(this).closest(".modal-sort");
+                var sortdir = $(this).data("sortdir");
+                var sortby = $(this).data("sortby");
+                var csortdir = parent.data("sortdir");
+                var csortby = parent.data("sortby");
+                var text = $(this).text();
+
+                parent.find(".modalSortToggle span").text(text);
+                if(sortby != csortby){
+                    parent.removeClass("active active_" + csortdir);
+                }
+                if(parent.hasClass("active")){
+                    if(sortdir == csortdir){
+                        if(csortdir == 'asc'){
+                            sortdir = "desc";
+                        }else{
+                            sortdir = "asc";
+                        }
+                        $("#" + dart_filters.options.form).find("input[name=sortby]").val(sortby);
+                        $("#" + dart_filters.options.form).find("input[name=sortdir]").val(sortdir);
+                        parent.removeClass("active active_" + csortdir);
+                        parent.addClass("active active_" + sortdir);
+                    }else{
+                        parent.data("sortby", "");
+                        parent.data("sortdir", "");
+                        $("#" + dart_filters.options.form).find("input[name=sortby]").val("");
+                        $("#" + dart_filters.options.form).find("input[name=sortdir]").val("");
+                        parent.removeClass("active active_" + csortdir);
+                    }
+                }else{
+                    parent.data("sortby", sortby);
+                    parent.data("sortdir", sortdir);
+                    $("#" + dart_filters.options.form).find("input[name=sortby]").val(sortby);
+                    $("#" + dart_filters.options.form).find("input[name=sortdir]").val(sortdir);
+                    parent.addClass("active active_" + sortdir);
+                }
+                $(".modal-sort__close").trigger("click");
+            });
+
+
+            $(".sliderui .polzunok-5").slider({
+                min: $(".sliderui .sliderui-min input").attr('data-min') / 1,
+                max: $(".sliderui .sliderui-max input").attr('data-max'),
+                values: [$(".sliderui .sliderui-min input").attr('data-min'), $(".sliderui .sliderui-max input").attr('data-max')],
+                range: true,
+                animate: "fast",
+                stop : function(event, ui) {
+                    $(".sliderui-min input").val($(".sliderui .polzunok-5").slider("values", 0));
+                    $(".sliderui-max input").val($(".sliderui .polzunok-5").slider("values", 1));
+                    filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
+                }
+            });
+
+            $(".sliderui .polzunok-5").change(function() {
+                var input_left = $(".sliderui-min input").val().replace(/[^0-9]/g, ''),
+                    opt_left = $(".sliderui .polzunok-5").slider("option", "min"),
+                    where_right = $(".sliderui .polzunok-5").slider("values", 1),
+                    input_right = $(".sliderui-max input").val().replace(/[^0-9]/g, ''),
+                    opt_right = $(".sliderui .polzunok-5").slider("option", "max"),
+                    where_left = $(".sliderui .polzunok-5").slider("values", 0);
+                if (input_left > where_right) {
+                    input_left = where_right;
+                }
+                if (input_left < opt_left) {
+                    input_left = opt_left;
+                }
+                if (input_left == "") {
+                    input_left = 0;
+                }
+                if (input_right < where_left) {
+                    input_right = where_left;
+                }
+                if (input_right > opt_right) {
+                    input_right = opt_right;
+                }
+                if (input_right == "") {
+                    input_right = 0;
+                }
+                $(".sliderui-min input").val(input_left);
+                $(".sliderui-max input").val(input_right);
+                if (input_left != where_left) {
+                    $(".sliderui .polzunok-5").slider("values", 0, input_left);
+                }
+                if (input_right != where_right) {
+                    $(".sliderui .polzunok-5").slider("values", 1, input_right);
+                }
+            });
             const inputs = filterForm.querySelectorAll('input');
             inputs.forEach((input) => {
                 input.addEventListener("change", (e) => {
@@ -110,6 +207,27 @@ var dart_filters = {
             this.pagesInit()
         }
     },
+    parseQuery: function(query){
+        var vars = query.split("&");
+        var query_string = {};
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split("=");
+            var key = decodeURIComponent(pair.shift());
+            var value = decodeURIComponent(pair.join("="));
+            // If first entry with this name
+            if (typeof query_string[key] === "undefined") {
+                query_string[key] = value;
+                // If second entry with this name
+            } else if (typeof query_string[key] === "string") {
+                var arr = [query_string[key], value];
+                query_string[key] = arr;
+                // If third or later entry with this name
+            } else {
+                query_string[key].push(value);
+            }
+        }
+        return query_string;
+    },
     pagesInit: function(){
         const filterForm = document.getElementById(this.options.form)
         if(filterForm) {
@@ -118,8 +236,9 @@ var dart_filters = {
                 page.addEventListener("click", (e) => {
                     e.preventDefault()
                     const page = e.target.dataset.number
+                    const old_page = dart_filters.options.page
                     dart_filters.options.page = page
-                    if(dart_filters.options.page > 1){
+                    if(dart_filters.options.page != old_page){
                         const params = new URLSearchParams(window.location.search)
                         params.delete('page');
                         params.set('page', dart_filters.options.page);
@@ -220,7 +339,7 @@ var dart_search = {
         form: '.dart-search__form',
         formInput: '.dart-search__form input',
         search: '.dart-search',
-        activeClass: 'active',
+        activeClass: 'show',
         overlay: '.dart-search__overlay',
         dialog: '.dart-search__dialog',
         clear: '.dart-search__clear',
@@ -237,14 +356,15 @@ var dart_search = {
                 const field = document.querySelector(this.options.search)
                 field.classList.add(this.options.activeClass)
                 if (elementOffset > 0) {
-                    field.style.paddingTop = elementOffset + 'px'
+                    // field.style.paddingTop = elementOffset + 'px'
                 } else {
-                    field.style.paddingTop = 0
+                    // field.style.paddingTop = 0
                 }
                 this.getHeight(availableHeight)
                 body.classList.add('noscroll')
                 formInput.focus()
             })
+            /*
             const searchFieldAlt = document.querySelector(this.options.inputAlt)
             searchFieldAlt.addEventListener('focusin', (e) => {
                 const body = document.querySelector('body')
@@ -261,7 +381,7 @@ var dart_search = {
                 this.getHeight(availableHeight)
                 body.classList.add('noscroll')
                 formInput.focus()
-            })
+            })*/
             const overlay = document.querySelector(this.options.overlay)
             overlay.addEventListener('click', (e) => {
                 const body = document.querySelector('body')
@@ -269,6 +389,7 @@ var dart_search = {
                 field.classList.remove(this.options.activeClass)
                 body.classList.remove('noscroll')
             })
+            /*
             const clear = document.querySelector(this.options.clear)
             clear.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -281,6 +402,7 @@ var dart_search = {
                 search.classList.remove(this.options.activeClass)
                 body.classList.remove('noscroll')
             })
+            */
             // handle input
             const formInput = document.querySelector(this.options.formInput)
             formInput.addEventListener('input', function (e) {
@@ -294,7 +416,6 @@ var dart_search = {
                     }
                     dart_search.options.timerId = setTimeout(function () {
                         var timer = performance.now() - lastTime;
-                        console.log(timer)
                         if (timer > 1000 && inputValue) {
                             var data = {
                                 sl_action: 'search/get_preresults',
@@ -331,7 +452,7 @@ var dart_search = {
                 if(data_r.hasOwnProperty('data')){
                     const container = document.querySelector('.dart-search__results')
                     container.innerHTML = data_r.data.data
-                    container.classList.add('active')
+                    container.classList.add(dart_search.options.activeClass)
                 }
                 form.classList.remove('loading')
             }
@@ -354,25 +475,34 @@ var sl_delivery = {
         hidden_address: ".sl_address_block",
         services: ".sl-services",
         service: ".sl-services input",
-        map: '.service-map',
+        map: '.service-pvz-map',
+        pvz_map: '.sl_pvz_map',
         pvz: '.sl_pvz',
         choosed_pvz: '.choosed_data',
-        yandex: '.yandex_delivery'
+        yandex: '.yandex_delivery',
+        placemarks: {},
+        terminals: {}
     },
     initialize: function(){
         // handlers event
-        $(this.options.address_field).suggestions({
+        $(this.options.wrapper + ' ' + this.options.address_field).suggestions({
             token: shoplogisticConfig['dadata_api_key'],
             type: "ADDRESS",
             /* Вызывается, когда пользователь выбирает одну из подсказок */
             onSelect: sl_delivery.setDeliveryFields
         });
         this.viewAddress();
-        $('input[type=radio][name=delivery]').change(function() {
+        $(this.options.wrapper + ' input[type=radio][name=delivery]').change(function() {
             sl_delivery.viewAddress();
-            $(sl_delivery.options.pvz).text('');
+            $(sl_delivery.options.pvz).text('Выберите пункт выдачи');
             $(sl_delivery.options.choosed_pvz).removeClass('active');
             var d = $('input[type=radio][name=delivery]:checked').val();
+            var pvz = $('input[type=radio][name=sl_service]:checked').closest(".visual_block").data("pvz");
+            if(d == shoplogisticConfig['punkt_delivery'] && pvz){
+                $(sl_delivery.options.pvz_map).addClass("active");
+            }else{
+                $(sl_delivery.options.pvz_map).removeClass("active");
+            }
             if(d == shoplogisticConfig['punkt_delivery'] || d == shoplogisticConfig['curier_delivery']){
                 var geo_data = $(sl_delivery.options.hidden_address).find("input[name=geo_data]").val();
                 if (geo_data){
@@ -381,40 +511,18 @@ var sl_delivery = {
             }
         });
         // radio fix in miniShop2 default.js (order.add)
-        $('input[type=radio][name=sl_service]').change(function() {
+        $(this.options.wrapper + ' input[type=radio][name=sl_service]').change(function() {
             var main_data = $('input[type=radio][name=sl_service]:checked').data('data');
             sl_delivery.setData(JSON.parse(main_data));
+            var pvz = $('input[type=radio][name=sl_service]:checked').closest(".visual_block").data("pvz");
             var d = $('input[type=radio][name=delivery]:checked').val();
-            $(sl_delivery.options.pvz).text('');
+            $(sl_delivery.options.pvz).text('Выберите пункт выдачи');
             $(sl_delivery.options.choosed_pvz).removeClass('active');
-        });
-        $(document).on("click", ".sl_check", function(e){
-            e.preventDefault();
-            var save_data = {};
-            var data = $(this).data("info");
-            var d = $('input[type=radio][name=sl_service]:checked').val();
-            var main_data = $('input[type=radio][name=sl_service]:checked').data('data');
-            if (typeof data === 'object'){
-                save_data.pvz = data;
+            if(d == shoplogisticConfig['punkt_delivery'] && pvz){
+                $(sl_delivery.options.pvz_map).addClass("active");
             }else{
-                save_data.pvz = JSON.parse(data);
+                $(sl_delivery.options.pvz_map).removeClass("active");
             }
-            if (typeof main_data === 'object'){
-                save_data.service = main_data;
-            }else{
-                save_data.service = JSON.parse(main_data);
-            }
-            var send_data = JSON.stringify(save_data);
-            $(sl_delivery.options.wrapper).find('.delivery_data').val(JSON.stringify(send_data));
-            var data = {
-                sl_action: 'delivery/add_order',
-                data: send_data
-            }
-            sl_delivery.send(data);
-            sl_delivery.map.balloon.close();
-            var d = $('input[type=radio][name=delivery]:checked').val();
-            $(sl_delivery.options.pvz).text(save_data.pvz.code + ' || ' +  save_data.pvz.address);
-            $(sl_delivery.options.choosed_pvz).addClass('active');
         });
 
         miniShop2.Callbacks.add('Cart.change.response.success', 'ShopLogisticCartChange', function (response) {
@@ -603,19 +711,76 @@ var sl_delivery = {
             }
         }
     },
+    pvzclick: function(code){
+        if(code){
+            sl_delivery.options.placemarks[code].balloon.open();
+            if(sl_delivery.options.terminals[code]){
+                var btn = $(".changeAddresPoint__content .changeshop__button .sl_check");
+                btn.attr("data-code", code);
+            }
+        }
+    },
+    pvzcheck: function(elem){
+        var code = elem.dataset.code;
+        var save_data = {};
+        var data = sl_delivery.options.terminals[code];
+        var d = $('input[type=radio][name=sl_service]:checked').val();
+        var main_data = $('input[type=radio][name=sl_service]:checked').data('data');
+        if (typeof data === 'object'){
+            save_data.pvz = data;
+        }else{
+            save_data.pvz = JSON.parse(data);
+        }
+        if (typeof main_data === 'object'){
+            save_data.service = main_data;
+        }else{
+            save_data.service = JSON.parse(main_data);
+        }
+        var send_data = JSON.stringify(save_data);
+        $(sl_delivery.options.wrapper).find('.delivery_data').val(JSON.stringify(send_data));
+        var data = {
+            sl_action: 'delivery/add_order',
+            data: send_data
+        }
+        sl_delivery.send(data);
+        sl_delivery.map.balloon.close();
+
+        $(sl_delivery.options.pvz).text(save_data.pvz.code + ' || ' +  save_data.pvz.address);
+        $(sl_delivery.options.choosed_pvz).addClass('active');
+        $(".changeAddresPoint").removeClass("show");
+    },
     initMap: function(center, terminals){
         if(this.map){
             this.map.destroy();
         }
-        this.map = new ymaps.Map('service-map', {
+        this.map = new ymaps.Map('service-pvz-map', {
             center: center,
             zoom: 9
         }, {
             searchControlProvider: 'yandex#search'
         });
+        var element_text = '';
         terminals.forEach((element, index, array) => {
             var coords = [element['lat'], element['lon']];
             var data = JSON.stringify(element);
+            sl_delivery.options.terminals[element['code']] = element
+            element_text += '<div class="changeshop__el" onclick="sl_delivery.pvzclick(\''+ element['code'] +'\')" data-code="'+ element['code'] +'" data-info=\''+data+'\'>\n' +
+                '                    <div class="changeshop__info">\n' +
+                '                        <h4>Пункт выдачи заказов</h4>\n' +
+                '                        <p class="mt-3 mb-1">\n' +
+                '                            '+element['address'] +
+                '                        </p>\n';
+            if(element['workTime']) {
+                element_text += '                        <p class="shop-map__timing mt-3">\n' +
+                '                            ' + element['workTime'] +
+                '                        </p>\n';
+            }
+            element_text += '                    </div>\n' +
+                '                    <div>\n' +
+                '                        <img class="shop-map__icon" src="'+element['image']+'" alt="">\n' +
+                '                    </div>\n' +
+                '                </div>';
+            $(".changeAddresPoint__content .changeshop__shops").html(element_text);
             var text = '<div class="sl_baloon_header"><img src="'+element['image']+'" width="10"/>'+element['address']+'</div>';
             if(element['phones']){
                 text = text+'<div class="sl_baloon_phones sl_baloon_block"><b>Телефоны:</b><br/>'+element['phones']+'</div>';
@@ -623,8 +788,8 @@ var sl_delivery = {
             if(element['workTime']){
                 text = text+'<div class="sl_baloon_works sl_baloon_block"><b>Время работы:</b><br/>'+element['workTime']+'</div>';
             }
-            text = text+'<div class="sl_baloon_submit sl_baloon_block"><button type="button" class="sl_check" data-info=\''+data+'\'>Забрать отсюда</button></div>';
-            var myPlacemark = new ymaps.Placemark(coords, {
+            text = text+'<div class="sl_baloon_submit sl_baloon_block"><button type="button" class="sl_check" onclick="sl_delivery.pvzcheck(this)" data-code="'+ element['code'] +'">Забрать отсюда</button></div>';
+            sl_delivery.options.placemarks[element['code']] = new ymaps.Placemark(coords, {
                 hintContent: element['address'],
                 balloonContent: text
             }, {
@@ -633,7 +798,7 @@ var sl_delivery = {
                 iconImageSize: [20, 20],
                 iconImageOffset: [-10, -10]
             });
-            this.map.geoObjects.add(myPlacemark);
+            this.map.geoObjects.add(sl_delivery.options.placemarks[element['code']]);
         });
     },
     setMap: function(terminals){
@@ -878,8 +1043,9 @@ var sl_marketplace = {
                     if(data_r.data.html_delivery){
                         if(data_r.data.hasOwnProperty('selector_id')) {
                             $(data_r.data.selector_id).html(data_r.data.html_delivery);
-                        }else{
-                            $('.delivery_data').html(data_r.data.html_delivery);
+                        }
+                        if(data_r.data.hasOwnProperty('selector_modal_id')) {
+                            $(data_r.data.selector_modal_id).html(data_r.data.html_delivery);
                         }
                     }
                 }
@@ -974,7 +1140,7 @@ $(document).ready(function(){
         e.preventDefault();
 		// check validation
 		$('.error-desc').remove();
-		$('.form_input_group').removeClass('error');
+		$('.dart-input input').removeClass('error');
 		var errors = {};
 		var d = $('input[type=radio][name=delivery]:checked').val();
 		var required = ['receiver','email','phone'];
@@ -1025,25 +1191,26 @@ $(document).ready(function(){
 				errors['sl-services'] = 'Укажите транспортную компанию для доставки.';
 			}
 			var pvz = $('.sl_pvz').text();
-			if(pvz == '' && service != 'postrf'){
-				errors['service-map'] = 'Выберите удобный пункт выдачи заказов на карте.';
+			if(pvz == 'Выберите пункт выдачи' && service != 'postrf'){
+				errors['sl_pvz_map'] = 'Выберите удобный пункт выдачи заказов на карте.';
 			}
 		}
 		if(Object.keys(errors).length){
 			for (const [key, value] of Object.entries(errors)) {
 				var error_string = "<div class='sl-alert sl-alert-error'>"+value+"</div>";
-				if(key == 'sl-services' || key == 'service-map'){
+				if(key == 'sl-services' || key == 'sl_pvz_map'){
 					$('.'+key).prepend(error_string);
 				}else{
 					var error_string = "<span class='error-desc'>"+value+"</span>";
-					$('#order_'+key).closest('.form_input_group').addClass('error').append(error_string);
+                    $('#order_'+key).addClass('error');
+					$('#order_'+key).closest('.dart-input').append(error_string);
 				}
 			}
             $('.summary-block__title').find('.alert').remove();
 			$('.summary-block__title').append("<div class='alert alert-danger'>Проверьте форму на наличие ошибок.</div>")
 		}else{
-			$('body').addClass("sl_noscroll");  
-			$('body').addClass('loading');
+			// $('body').addClass("sl_noscroll");
+			$('.dart-order__container').addClass('loading');
 			if(!$(this).attr("disabled")){
 				$(this).attr("disabled", "disabled");
 				$("#msOrder .ms2_link").trigger("click");

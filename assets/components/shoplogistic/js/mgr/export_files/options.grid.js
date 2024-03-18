@@ -22,7 +22,7 @@ shopLogistic.grid.ExportFileCatOptions = function (config) {
 Ext.extend(shopLogistic.grid.ExportFileCatOptions, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'name', 'description', 'option_id', 'filter', 'cat_id', 'opt', 'ignore', 'createdon', 'updatedon', 'updatedby', 'properties', 'actions'];
+        return ['id', 'name', 'examples', 'to_field', 'description', 'option_id', 'filter', 'cat_id', 'opt', 'ignore', 'createdon', 'updatedon', 'updatedby', 'properties', 'actions'];
     },
 
     getColumns: function (config) {
@@ -31,7 +31,14 @@ Ext.extend(shopLogistic.grid.ExportFileCatOptions, shopLogistic.grid.Default, {
             {
                 header: _('shoplogistic_id'),
                 dataIndex: 'id',
+                sortable: true,
                 width: 20
+            },
+            {
+                header: _('shoplogistic_export_file_cat_options_to_field'),
+                width: 50,
+                dataIndex: 'to_field',
+                editor: {xtype: 'textfield'}
             },
             {
                 header: _('shoplogistic_export_file_cat_options_name'),

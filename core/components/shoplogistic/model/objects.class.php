@@ -17,6 +17,85 @@ class objectsHandler
     }
 
     /**
+     * Парсим строку фильтров
+     *
+     * @param $str
+     * @return array
+     */
+    public function filter_parse($str, $delimeter = "||", $delimeter_params = ":[", $clean = 0){
+        $out = array();
+        $filters = explode($delimeter, $str);
+        foreach($filters as $filter){
+            $f = explode($delimeter_params, $filter);
+            $filter_name = $f[0];
+            if($clean){
+                $f[1] = str_replace(array("=>", "(", ")", "/"), array(":", "{", "}", ""), $f[1]);
+            }else{
+                $f[1] = str_replace(array("=>", "[", "]"), array(":", "{", "}"), '['.$f[1]);
+            }
+            $this->modx->log(1, print_r($f[1], 1));
+            $filter_param = json_decode($f[1], 1);
+            $out[$filter_name] = $filter_param;
+        }
+        return $out;
+    }
+
+    public function filter($name, $config, $value){
+        $field_value = '';
+        switch ($name) {
+            case 'koef':
+                if($config["koef"]){
+                    $field_value = floatval($value) * floatval($config["koef"]);
+                }
+                break;
+            case 'numeric':
+                if(is_array($value)){
+                    $field_value = array();
+                    foreach($value as $key => $item){
+                        $field_value[$key] = preg_replace('/[^0-9]/', '', $item);
+                    }
+                }else{
+                    $field_value = preg_replace('/[^0-9]/', '', $value);
+                }
+                break;
+            case 'replace':
+                if(is_array($value)){
+                    $field_value = array();
+                    foreach($value as $key => $item){
+                        foreach($config as $k => $v){
+                            $field_value[$key] = trim(str_replace($k, $v, $item));
+                        }
+                    }
+                }else{
+                    foreach($config as $k => $v){
+                        $field_value = trim(str_replace($k, $v, $value));
+                    }
+                }
+                break;
+        }
+        return $field_value;
+    }
+
+    /**
+     * Проверка производителя
+     *
+     * @param $str
+     * @return mixed
+     */
+    public function findVendor($str){
+        $criteria = array(
+            "name" => $str
+        );
+        $vendor = $this->modx->getObject("msVendor", $criteria);
+        if(!$vendor){
+            $vendor = $this->modx->newObject("msVendor");
+            $vendor->set("name", $str);
+        }
+        $vendor->save();
+        return $vendor->get("id");
+    }
+
+    /**
      * Обработка файлов фида (выгрузка в YML)
      *
      * @return void
@@ -26,6 +105,8 @@ class objectsHandler
         // черновая обработка
         $feeds = $this->modx->getCollection("slExportFiles", array("status:=" => 1));
         foreach($feeds as $feed){
+            $feed->set("status", 6);
+            $feed->save();
             // чистим лишнее
             $cats = $this->modx->getCollection("slExportFilesCats", array("file_id" => $feed->get("id")));
             foreach($cats as $cat){
@@ -34,13 +115,21 @@ class objectsHandler
             $file = $feed->get("file");
             $xml = simplexml_load_file($file);
             $cats = count($xml->shop->categories->category);
-            $offers = count($xml->shop->offers->offer);
-            $feed->set("categories", $cats);
+            $offers = count($xml->shop->offers->offer);            
             $feed->set("products", $offers);
             $feed->save();
             $categories = array();
             foreach ($xml->shop->categories->category as $row) {
-                $cat = $this->modx->newObject("slExportFilesCats");
+				// проверка на дубликаты
+				$criteria = array(
+					"export_id" => strval($row['id']),
+					"file_id" => $feed->get("id"),
+					"name" => strval($row)
+				);
+				$cat = $this->modx->getObject("slExportFilesCats", $criteria);
+				if(!$cat){
+					$cat = $this->modx->newObject("slExportFilesCats");
+				}
                 $cat->set("name", strval($row));
                 $cat->set("file_id", $feed->get("id"));
                 $cat->set("export_id", $row['id']);
@@ -51,31 +140,59 @@ class objectsHandler
                 $cat_id = $cat->get("id");
                 $categories[$file_cat_id] = $cat_id;
             }
+			$feed->set("categories", count($categories));
+			$feed->save();
+            $vendors = array();
 
             foreach($xml->shop->offers->offer as $offer){
                 $category = strval($offer->categoryId);
                 if(strval($offer->categoryId)){
                     $cat_id = $categories[$category];
                     if($cat_id){
+                        if(strval($offer->vendor)){
+                            if(!in_array(strval($offer->vendor), $vendors)){
+                                $vendors[] = strval($offer->vendor);
+                            }
+                        }
                         foreach($offer->param as $param) {
                             $option = trim(strval($param["name"]));
                             $criteria = array(
                                 "name" => $option,
                                 "cat_id" => $cat_id
                             );
-                            $opt = $this->modx->getObject("slExportFilesCatsOptions", $criteria);
-                            if (!$opt){
+                            $cat = $this->modx->getObject("slExportFilesCatsOptions", $criteria);
+                            if (!$cat){
                                 $cat = $this->modx->newObject("slExportFilesCatsOptions");
                                 $cat->set("name", $option);
                                 $cat->set("cat_id", $cat_id);
                                 $cat->set("createdon", time());
-                                $cat->save();
+                                $cat->set("examples", strval($param));
+                                // чекаем опцию с таким наименованием
+                                $criteria = array(
+                                    "caption" => $option
+                                );
+                                $synonim = $this->modx->getObject("msOption", $criteria);
+                                if($synonim){
+                                    $id = $synonim->get("id");
+                                    $cat->set("option_id", $id);
+                                }
+                            }else{
+                                $ex = $cat->get("examples");
+                                $examples = explode("||", $cat->get("examples"));
+                                $length = strlen(strval($param));
+                                $sum = strlen($ex) + $length;
+                                if(!in_array(strval($param), $examples) && $length <= 25 && $sum < 255){
+                                    $examples[] = strval($param);
+                                    $cat->set("examples", implode("||", $examples));
+                                }
                             }
+                            $cat->save();
                         }
                     }
                 }
             }
             $feed->set("status", 2);
+            $feed->set("vendors", implode("||", $vendors));
             $feed->save();
         }
         // импорт товаров
@@ -103,6 +220,7 @@ class objectsHandler
             }
             // импортируем товар
             $vendor = $feed->get("vendor");
+            $vendor_check = $feed->get("vendor_check");
             $feed->set("status", 6);
             $feed->set("error", "");
             $feed->save();
@@ -115,19 +233,41 @@ class objectsHandler
                             $cat = $this->modx->getObject("slExportFilesCats", $cat_id);
                             if($cat){
                                 $parent = $cat->get("cat_id");
-                                if($parent){
+                                $article = strval($row->article);
+                                $varticle = strval($row->vendorCode);
+                                if($parent && ($article || $varticle)){
                                     $data = array();
                                     $data['pagetitle'] = strval($row->name);
                                     $data['source_url'] = strval($row->url);
                                     $data['article'] = strval($row->article);
                                     $data['vendor_article'] = strval($row->article);
-                                    $data['vendor'] = $vendor;
-                                    $data['price'] = intval($row->price);
-                                    $data['price_rrc'] = intval($row->price);
-                                    $data['length'] = intval($row->length);
-                                    $data['width'] = intval($row->width);
-                                    $data['height'] = intval($row->height);
-                                    $data['weight_brutto'] = floatval($row->weight);
+                                    if(strval($row->vendorCode)){
+                                        $data['article'] = strval($row->vendorCode);
+                                        $data['vendor_article'] = strval($row->vendorCode);
+                                    }
+                                    if(strval($row->barcode)){
+                                        $data['barcode'] = strval($row->barcode);
+                                    }
+                                    if($vendor_check){
+                                        if(strval($row->vendor)){
+                                            $v = $this->findVendor(strval($row->vendor));
+                                            if($v){
+                                                $data['vendor'] = $v;
+                                            }else{
+                                                $data['vendor'] = $vendor;
+                                            }
+                                        }else{
+                                            $data['vendor'] = $vendor;
+                                        }
+                                    }else{
+                                        $data['vendor'] = $vendor;
+                                    }
+                                    $data['price'] = floatval(str_replace(",", ".", strval($row->price)));
+                                    $data['price_rrc'] = floatval(str_replace(",", ".", strval($row->price)));
+                                    $data['length'] = floatval(str_replace(",", ".", strval($row->length)));
+                                    $data['width'] = floatval(str_replace(",", ".", strval($row->width)));
+                                    $data['height'] = floatval(str_replace(",", ".", strval($row->height)));
+                                    $data['weight_brutto'] = floatval(str_replace(",", ".", strval($row->weight)));
                                     $data['weight_netto'] = 0;
                                     $data['introtext'] = strval($row->description);
                                     $data['content'] = strval($row->descriptionFull);
@@ -137,6 +277,9 @@ class objectsHandler
                                     $data['volume'] = 0;
                                     $data['b24id'] = '';
                                     foreach($row->pictures->picture as $picture){
+                                        $data['image'][] = strval($picture);
+                                    }
+                                    foreach($row->picture as $picture){
                                         $data['image'][] = strval($picture);
                                     }
 
@@ -156,10 +299,22 @@ class objectsHandler
                                             if($conf_option){
                                                 // если не игнорим
                                                 if(!$conf_option['ignore']){
-                                                    if($conf_option["option_id"]){
-                                                        // устанавливаем существующую
-                                                        $data["options-".$conf_option["option_key"]] = $value;
-                                                        $this->sl->api->cat_option_check($conf_option["option_id"], $data['parent']);
+                                                    if($conf_option["option_id"] || $conf_option["to_field"]){
+                                                        if($conf_option["option_id"]){
+                                                            // устанавливаем существующую
+                                                            $data["options-".$conf_option["option_key"]] = $value;
+                                                            $this->sl->api->cat_option_check($conf_option["option_id"], $data['parent']);
+                                                        }
+                                                        if($conf_option["to_field"]){
+                                                            $v = $value;
+                                                            if($conf_option["filters"]){
+                                                                $filters = $this->filter_parse($conf_option["filters"]);
+                                                                foreach($filters as $key => $val) {
+                                                                    $v = $this->filter($key, $val, $v);
+                                                                }
+                                                            }
+                                                            $data[$conf_option["to_field"]] = $v;
+                                                        }
                                                     }else{
                                                         // создаем опцию
                                                         if($opt){
@@ -176,7 +331,7 @@ class objectsHandler
                                                                 // TODO: возможно, настроить фильтр опций
                                                                 $p = $this->modx->newObject("modResource");
                                                                 $op = array(
-                                                                    "key" => $p->cleanAlias($opt),
+                                                                    "key" => str_replace(array(".", ","), array(" ", " "), $p->cleanAlias($opt)),
                                                                     "caption" => $opt,
                                                                     "category" => 20,
                                                                     "type" => "combo-options",
@@ -204,7 +359,11 @@ class objectsHandler
                                     if($prod['resource']){
                                         $resource = $this->modx->getObject("modResource", $prod['resource']);
                                         if($resource){
-                                            $resource->set("alias", $resource->get("id"));
+                                            $resource->set("createdon", time());
+                                            $resource->set("updatedon", time());
+                                            $resource->set("alias", md5($resource->get("id")));
+                                            $resource->set("uri",  md5($resource->get("id")));
+                                            $resource->set("uri_override", 1);
                                             $resource->save();
                                         }
                                     }
@@ -568,6 +727,7 @@ class objectsHandler
             $ress = $statement->fetch(PDO::FETCH_ASSOC);
             $result['total'] = intval($ress["count"]);
         }
+        $xlsx_query = $query;
         if($properties['page'] && $properties['perpage']){
             $limit = $properties['perpage'];
             $offset = ($properties['page'] - 1) * $properties['perpage'];
@@ -580,7 +740,7 @@ class objectsHandler
         $query_copo = $query_all;
         $query_all->select(array("COUNT(*) as count, SUM(slStoresRemains.price * slStoresRemains.remains) as price, SUM(slStoresRemains.remains) as remains"));
         $query_all->prepare();
-        $this->modx->log(1, $query_all->toSQL());
+        // $this->modx->log(1, $query_all->toSQL());
         if($query_all->prepare() && $query_all->stmt->execute()){
             $all_data = $query_all->stmt->fetch(PDO::FETCH_ASSOC);
             $result['all_data']['numbers']["all_summ"] = $all_data["price"];
@@ -592,8 +752,7 @@ class objectsHandler
         }
         $query_copo->select(array("COUNT(*) as count, SUM(slStoresRemains.price * slStoresRemains.remains) as price, SUM(slStoresRemains.remains) as remains"));
         $query_copo->where(array("slStoresRemains.product_id:>" => 0));
-        $query_copo->prepare();
-        $this->modx->log(1, $query_copo->toSQL());
+        // $this->modx->log(1, $query_copo->toSQL());
         if($query_copo->prepare() && $query_copo->stmt->execute()){
             $all_data = $query_copo->stmt->fetch(PDO::FETCH_ASSOC);
             $result['all_data']['numbers']["copo_summ"] = $all_data["price"];
@@ -700,8 +859,17 @@ class objectsHandler
             ));
 
             // Подсчитываем общее число записей
-            $result['total'] = $this->modx->getCount('slStoresRemains', $q);
-
+            $total_query = $q;
+            $total_query->prepare();
+            $total_sql = "SELECT COUNT(*) as count FROM ( {$total_query->toSQL()} ) AS SQ";
+            $this->modx->log(1, print_r($total_sql, 1));
+            $statement = $this->modx->query($total_sql);
+            if($statement){
+                $ress = $statement->fetch(PDO::FETCH_ASSOC);
+                $result['total'] = intval($ress["count"]);
+            }
+            // $result['total'] = $this->modx->getCount('slStoresRemains', $q);
+            $xlsx_query = $q;
             // Устанавливаем лимит 1/10 от общего количества записей
             // со сдвигом 1/20 (offset)
             if($properties['page'] && $properties['perpage']){
@@ -716,6 +884,7 @@ class objectsHandler
                 $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
             }
             $q->prepare();
+            $this->modx->log(1, print_r($q->toSQL(), 1));
             if($q->prepare() && $q->stmt->execute()){
                 $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach($result['items'] as $key => $item){
@@ -726,6 +895,21 @@ class objectsHandler
                         $result['items'][$key]["summ"] = number_format($item['summ'], 2, '.', ' ');
                     }
                 }
+
+                // $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $result['items'], "copo_file_details_".$properties["id"]."_".$properties['brand_id']);
+
+                $i = $limit;
+                $limit = 1000;
+                for($i = 0; $i <= $result['total']; $i += $limit){
+                    $query = $xlsx_query;
+                    $query->limit($limit, $i);
+                    if($query->prepare() && $query->stmt->execute()){
+                        $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $data, "copo_file_details_".$properties["id"]."_".$properties['brand_id'], 0, $xlsx["config"]);
+                    }
+                }
+                $result["file"] = $xlsx["filename"];
+
             }
             return $result;
         }
@@ -781,7 +965,6 @@ class objectsHandler
                     $query->select(array("slStoresRemainsVendorReports.*,
                     (slStoresRemainsVendorReports.find - slStoresRemainsVendorReports.identified) as no_identified,
                     slStoresRemainsVendorReports.summ as vendor_price,
-                    slStoresRemainsVendorReports.percent_identified as percent_identified,
                     ROUND((slStoresRemainsVendorReports.summ_copo / slStoresRemainsVendorReports.summ * 100), 2) as percent_summ_identified,
                     msVendor.name as name,msVendor.export_file as export_file"));
                     // И сортируем по ID в обратном порядке
@@ -796,7 +979,6 @@ class objectsHandler
                 $query->select(array("slStoresRemainsVendorReports.*, 
                 (slStoresRemainsVendorReports.find - slStoresRemainsVendorReports.identified) as no_identified,
                 slStoresRemainsVendorReports.summ as vendor_price,
-                slStoresRemainsVendorReports.percent_identified as percent_identified,
                 ROUND((slStoresRemainsVendorReports.summ_copo / slStoresRemainsVendorReports.summ * 100), 2) as percent_summ_identified,
                 msVendor.name as name,msVendor.export_file as export_file"));
                 // И сортируем по ID в обратном порядке
@@ -807,8 +989,16 @@ class objectsHandler
                     $query->sortby('slStoresRemainsVendorReports.find', 'desc');
                 }
             }
+            $query->prepare();
+            $total_sql = "SELECT COUNT(*) as count FROM ( {$query->toSQL()} ) AS SQ";
+            $this->modx->log(1, print_r($total_sql, 1));
+            $statement = $this->modx->query($total_sql);
+            if($statement){
+                $ress = $statement->fetch(PDO::FETCH_ASSOC);
+                $result['total'] = intval($ress["count"]);
+            }
+            $xlsx_query = $query;
 
-            $result['total'] = $this->modx->getCount('slStoresRemainsVendorReports', $query);
             // Устанавливаем лимит 1/10 от общего количества записей
             // со сдвигом 1/20 (offset)
             if($properties['page'] && $properties['perpage']){
@@ -816,9 +1006,9 @@ class objectsHandler
                 $offset = ($properties['page'] - 1) * $properties['perpage'];
                 $query->limit($limit, $offset);
             }
-            $query->prepare();
-            $this->modx->log(1, $query->toSQL());
+            // $this->modx->log(1, $query->toSQL());
             if ($query->prepare() && $query->stmt->execute()) {
+                // $result['total'] = $query->stmt->rowCount();;
                 $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach($result['items'] as $key => $item){
                     if(!$item['vendor_id']){
@@ -828,6 +1018,27 @@ class objectsHandler
                         $result['items'][$key]["vendor_price"] = number_format($item['vendor_price'], 2, '.', ' ');
                     }
                 }
+                // $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $result['items'], "copo_file_".$properties["id"]."_".$properties['brand_id']);
+
+                $limit = 1000;
+                for($i = 0; $i <= $result['total']; $i += $limit){
+                    $query = $xlsx_query;
+                    $query->limit($limit, $i);
+                    if($query->prepare() && $query->stmt->execute()){
+                        $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        foreach($data as $key => $item){
+                            if(!$item['vendor_id']){
+                                $data[$key]["name"] = "Не найдено";
+                            }
+                            if($item['vendor_price']){
+                                $data[$key]["vendor_price"] = number_format($item['vendor_price'], 2, '.', ' ');
+                            }
+                        }
+                        $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $data, "copo_file_details_".$properties["id"], 0, $xlsx["config"]);
+                    }
+                }
+                $result["file"] = $xlsx["filename"];
+
                 return $result;
             }
         }
@@ -898,7 +1109,7 @@ class objectsHandler
             $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach($result['items'] as $key => $val){
                 if($val["image"]){
-                    $result['items'][$key]['image'] = $this->modx->getOption("site_url")."assets/files/".$val["image"];
+                    $result['items'][$key]['image'] = $this->modx->getOption("site_url")."assets/content/".$val["image"];
                 }else{
                     $result['items'][$key]['image'] = $this->modx->getOption("site_url").$this->modx->getOption("shoplogistic_blank_image");
                 }

@@ -44,10 +44,24 @@ Ext.extend(shopLogistic.window.CreateExportFile, shopLogistic.window.Default, {
             id: config.id + '-vendor',
             anchor: '99%'
         }, {
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_export_files_vendor_check'),
+            name: 'vendor_check',
+            hiddenName: 'vendor_check',
+            id: config.id + '-vendor_check',
+            anchor: '99%',
+            checked: false
+        }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_export_files_file'),
             name: 'file',
             id: config.id + '-file',
+            anchor: '99%'
+        }, {
+            xtype: 'statictextfield',
+            fieldLabel: _('shoplogistic_export_files_vendors'),
+            name: 'vendors',
+            id: config.id + '-vendors',
             anchor: '99%'
         }, {
             xtype: 'statictextfield',

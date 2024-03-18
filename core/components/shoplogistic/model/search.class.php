@@ -73,7 +73,6 @@ class slSearch
             $query->limit(1);
         }
         if ($query->prepare() && $query->stmt->execute()) {
-            echo $query->toSQL();
             $rows = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             return $rows;
         }

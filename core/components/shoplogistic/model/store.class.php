@@ -88,6 +88,12 @@ class storeHandler
         return false;
     }
 
+    /**
+     * Берем доступны бонусы для организации
+     *
+     * @param $properties
+     * @return array
+     */
     public function getBonuses($properties){
         if($properties['bonus_id']){
             $query = $this->modx->newQuery("slBonuses");
@@ -114,7 +120,6 @@ class storeHandler
                         $query->where(array("id:IN" => explode(",", $data['conditions_programs'])));
                         $query->select(array("slBonuses.id", "slBonuses.name"));
                         if($query->prepare() && $query->stmt->execute()){
-                            $this->modx->log(1, $query->toSQL());
                             $bonuses = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                             $data['trigger_programs'] = $bonuses;
                         }
@@ -142,7 +147,7 @@ class storeHandler
                         if($data['banner']){
                             $url = $data['banner'];
                         }else{
-                            $url = "assets/files/img/nopic.png";
+                            $url = "assets/content/img/nopic.png";
                         }
                         $image = $this->modx->getOption("base_path") . $url;
                         $small_file = $this->modx->runSnippet("phpThumbOn", array(
@@ -246,7 +251,6 @@ class storeHandler
                     $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
                 }
                 $q->prepare();
-                $this->modx->log(1, $q->toSQL());
                 if($q->prepare() && $q->stmt->execute()){
                     $results['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                     foreach($results['items'] as $key => $val) {
@@ -260,10 +264,10 @@ class storeHandler
                             if ($results['items'][$key]['banner']) {
                                 $url = $results['items'][$key]['banner'];
                             } else {
-                                $url = "assets/files/img/nopic.png";
+                                $url = "assets/content/img/nopic.png";
                             }
                             $image = $this->modx->getOption("base_path") . $url;
-                            //$this->modx->log(1, $image);
+                            // $this->modx->log(1, $image);
                             $small_file = $this->modx->runSnippet("phpThumbOn", array(
                                 "input" => $image,
                                 "options" => "w=742&h=420=99&zc=1"
@@ -337,6 +341,54 @@ class storeHandler
             return $results;
         }
         return array();
+    }
+
+    /**
+     * Берем колво заказов магазина
+     *
+     * @param $store_id
+     * @return int
+     */
+    public function getOrdersCount($store_id){
+        if($store_id){
+            $query = $this->modx->newQuery("slOrder");
+            $query->where(array(
+                "slOrder.store_id:=" => $store_id
+            ));
+            $query->select(array("COUNT(*) as count"));
+            if($query->prepare() && $query->stmt->execute()){
+                $response = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                if($response){
+                    return $response["count"];
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Берем отгрузки
+     *
+     * @param $store_id
+     * @return int
+     */
+    public function getShipsCount($store_id){
+        if($store_id){
+            $query = $this->modx->newQuery("slWarehouseShipment");
+            $query->leftJoin("slWarehouseShip", "slWarehouseShip", "slWarehouseShip.id = slWarehouseShipment.ship_id");
+            $query->where(array(
+                "slWarehouseShip.warehouse_id:=" => $store_id,
+                "slWarehouseShipment.date:>=" => time()
+            ));
+            $query->select(array("COUNT(*) as count"));
+            if($query->prepare() && $query->stmt->execute()){
+                $response = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                if($response){
+                    return $response["count"];
+                }
+            }
+        }
+        return 0;
     }
 
     /**

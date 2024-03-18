@@ -309,85 +309,202 @@ if ($transport->xpdo) {
                 $status_name = $properties['name'];
             }
 
-        // Статусы баланса
-        $statuses = [
-            [
-                'name' => 'На рассмотрении',
-                'color' => '000000',
-                'active' => 1,
-                'id' => 1
-            ],[
-                'name' => 'Выполнена',
-                'color' => '003366',
-                'active' => 1,
-                'id' => 2
-            ],
-            [
-                'name' => 'Отклонена',
-                'color' => '003300',
-                'active' => 1,
-                'id' => 3
-            ]
-        ];
+            // Статусы баланса
+            $statuses = [
+                [
+                    'name' => 'На рассмотрении',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'Выполнена',
+                    'color' => '003366',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Отклонена',
+                    'color' => '003300',
+                    'active' => 1,
+                    'id' => 3
+                ]
+            ];
 
-        foreach ($statuses as $properties) {
-            $id = $properties['id'];
-            unset($properties['id']);
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
 
-            $level = $modx->getObject('slStoreBalancePayRequestStatus', [
-                'id' => $id,
-                'OR:name:=' => $properties['name']
-            ]);
-            if (!$level) {
-                $level = $modx->newObject('slStoreBalancePayRequestStatus', $properties);
+                $level = $modx->getObject('slStoreBalancePayRequestStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slStoreBalancePayRequestStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
             }
-            $level->save();
 
-            $status_id = $level->get('id');
-            $status_name = $properties['name'];
-        }
+            // Статусы карточек товара
+            $statuses = [
+                [
+                    'name' => 'Укажите бренд',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'Укажите артикул',
+                    'color' => 'C0C0C0',
+                    'active' => 1,
+                    'id' => 2
+                ],[
+                    'name' => 'Сопоставлен',
+                    'color' => '00FF00',
+                    'active' => 1,
+                    'id' => 4
+                ],[
+                    'name' => 'Нет карточки товара',
+                    'color' => 'FF0000',
+                    'active' => 1,
+                    'id' => 5
+                ],[
+                    'name' => 'Укажите цену',
+                    'color' => '969696',
+                    'active' => 1,
+                    'id' => 6
+                ]
+            ];
 
-        // Статусы карточек товара
-        $statuses = [
-            [
-                'name' => 'Укажите бренд',
-                'color' => '000000',
-                'active' => 1,
-                'id' => 1
-            ],[
-                'name' => 'Укажите артикул',
-                'color' => 'C0C0C0',
-                'active' => 1,
-                'id' => 2
-            ],[
-                'name' => 'Сопоставлен',
-                'color' => '00FF00',
-                'active' => 1,
-                'id' => 4
-            ],[
-                'name' => 'Нет карточки товара',
-                'color' => 'FF0000',
-                'active' => 1,
-                'id' => 5
-            ]
-        ];
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
 
-        foreach ($statuses as $properties) {
-            $id = $properties['id'];
-            unset($properties['id']);
+                $level = $modx->getObject('slStoresRemainsStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slStoresRemainsStatus', $properties);
+                }
+                $level->save();
 
-            $level = $modx->getObject('slStoresRemainsStatus', [
-                'id' => $id,
-                'OR:name:=' => $properties['name']
-            ]);
-            if (!$level) {
-                $level = $modx->newObject('slStoresRemainsStatus', $properties);
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
             }
-            $level->save();
 
-            $status_id = $level->get('id');
-            $status_name = $properties['name'];
-        }
+            // Статусы parserdata
+            $statuses = [
+                [
+                    'name' => 'Новый',
+                    'status_key' => 'NEW',
+                    'color' => '33CCCC',
+                    'active' => 1,
+                    'id' => 1
+                ],
+                [
+                    'name' => 'В очереди на обработку',
+                    'status_key' => 'WAITING_DATA_PROCESSING',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Завершен',
+                    'status_key' => 'OK',
+                    'color' => '00FF00',
+                    'active' => 1,
+                    'id' => 3
+                ],
+                [
+                    'name' => 'Ошибка',
+                    'status_key' => 'ERROR',
+                    'color' => 'FF0000',
+                    'active' => 1,
+                    'id' => 4
+                ],
+                [
+                    'name' => 'Обработка данных',
+                    'status_key' => 'DATA_PROCESSING',
+                    'color' => 'С0С0С0',
+                    'active' => 1,
+                    'id' => 5
+                ],
+                [
+                    'name' => 'Ожидание парсинга',
+                    'status_key' => 'WAITING_PARSING',
+                    'color' => 'FFFFFF',
+                    'active' => 1,
+                    'id' => 6
+                ],
+                [
+                    'name' => 'Парсинга',
+                    'status_key' => 'PARSING',
+                    'color' => 'FFFFFF',
+                    'active' => 1,
+                    'id' => 7
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slParserDataTasksStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slParserDataTasksStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
+            // Сервисы parserdata
+            $services = [
+                [
+                    'name' => 'Яндекс.Маркет',
+                    'service_key' => 'market.yandex',
+                    'url' => 'https://market.yandex.ru/',
+                    'active' => 1,
+                    'id' => 1
+                ],
+                [
+                    'name' => 'Wildberries',
+                    'service_key' => 'wildberries',
+                    'url' => 'https://www.wildberries.ru/',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Все инструменты',
+                    'service_key' => 'vseinstrumenti',
+                    'url' => 'https://www.vseinstrumenti.ru/',
+                    'active' => 1,
+                    'id' => 3
+                ]
+            ];
+
+            foreach ($services as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slParserDataService', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slParserDataService', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
             break;
 
         case xPDOTransport::ACTION_UNINSTALL:
@@ -399,6 +516,8 @@ if ($transport->xpdo) {
             $modx->removeCollection('slStoreBalancePayRequestStatus', []);
             $modx->removeCollection('slStoresRemainsStatus', []);
             $modx->removeCollection('slParserTasksStatus', []);
+            $modx->removeCollection('slParserDataTasksStatus', []);
+            $modx->removeCollection('slParserDataService', []);
             break;
     }
 }

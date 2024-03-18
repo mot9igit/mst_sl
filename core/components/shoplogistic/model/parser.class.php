@@ -32,10 +32,15 @@ class parser
         $this->config = array(
             "out" => "YML",
             "chunk" => "parser_yml",
-            'base_path' => $this->modx->getOption("assets_path").'files/parser/'
+            'base_path' => $this->modx->getOption("assets_path").'files/parser/',
+            'exclude' => array(),
+            'table_config' => array(
+                "fields" => array()
+            )
         );
 
         $this->output = array(
+            "history" => array(),
             "categories" => array(),
             "offers" => array()
         );
@@ -60,6 +65,7 @@ class parser
 
         $output['content'] = curl_exec($ch);
         $output['httpcode'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // $this->modx->log(1, print_r($output));
         usleep(500000);
         curl_close($ch);
         return $output;
@@ -71,14 +77,20 @@ class parser
      * @param $str
      * @return array
      */
-    public function filter_parse($str){
+    public function filter_parse($str, $delimeter = "||", $delimeter_params = ":[", $clean = 0){
         $out = array();
-        $filters = explode("||", $str);
-        foreach($filters as $filter){
-            $f = explode(":[", $filter);
+        $filters = explode($delimeter, $str);
+        foreach($filters as $filter) {
+            $f = explode($delimeter_params, $filter);
             $filter_name = $f[0];
-            $f[1] = str_replace(array("=>", "[", "]"), array(":", "{", "}"), '['.$f[1]);
-            $this->error($f[1]);
+            if ($f[1]) {
+                if ($clean) {
+                    $f[1] = str_replace(array("=>", "(", ")", "/"), array(":", "{", "}", ""), $f[1]);
+                } else {
+                    $f[1] = str_replace(array("=>", "[", "]"), array(":", "{", "}"), '[' . $f[1]);
+                }
+            }
+            $this->modx->log(1, print_r($f[1], 1));
             $filter_param = json_decode($f[1], 1);
             $out[$filter_name] = $filter_param;
         }
@@ -92,7 +104,9 @@ class parser
      * @return array
      */
     public function get_cats($url, $parent = ''){
-        $output = array();
+        $output = array(
+            "categories" => array()
+        );
         if(is_array($url)){
             $url = $url[0];
         }
@@ -120,10 +134,15 @@ class parser
                 }else{
                     $data['parent'] = "";
                 }
-                if($data["name"]){
-                    $data['id'] =  md5($data["name"]);
+                if($data["title"]){
+                    $data['id'] =  md5($data["title"]);
                 }
-                $output['categories'][] = array_merge($data, $inner_data);
+
+                $tmp = array_merge($data, $inner_data);
+                if($tmp["title"]){
+                    $output['categories'][] = $tmp;
+                }
+                // $this->modx->log(1, print_r($output, 1));
             }
         }else{
             $this->checkprogress("На странице ".print_r($url, 1)." НЕ найдены категории");
@@ -205,6 +224,7 @@ class parser
                     $href = $data['href'][0];
                     $inner_data = $this->get_inner_products($href);
                 }
+                $this->checkprogress(print_r($inner_data, 1));
                 foreach($this->config['table_config']['fields'] as $key => $value){
                     if($value['default']){
                         $data[$key] = "";
@@ -224,6 +244,7 @@ class parser
                 }else{
                     $productes[] = $tmp;
                 }
+                $this->checkprogress(print_r($tmp, 1));
             }
         }else{
             $this->checkprogress("Товаров нет \n");
@@ -246,17 +267,271 @@ class parser
             $data = array();
             foreach($this->config["products"]["inner_page_selectors"] as $key => $value){
                 $data[$key] = $this->get_field($key, $value, $inner_content);
+                $this->modx->log(1, print_r($key, 1));
+                $this->modx->log(1, print_r($value, 1));
+                if(isset($value['filters']['tofields'])) {
+                    $val = $this->get_field($key, $value, $inner_content);
+                    foreach($val as $k => $v){
+                        if($k == "weight_brutto_alt"){
+                            $data["weight_brutto"] = $v;
+                        }else{
+                            $data[$k] = $v;
+                        }
+                    }
+                    if($val["metrix"]){
+                        foreach($val["metrix"] as $k => $v){
+                            $data[$k] = $v;
+                        }
+                    }
+                    if($val["metrix_alt"]){
+                        foreach($val["metrix_alt"] as $k => $v){
+                            $data[$k] = $v;
+                        }
+                    }
+                }
                 if(isset($value['filters']['split'])){
                     foreach($data[$key] as $k => $v){
                         $data[$k] = $v;
                     }
                 }
             }
+            if($data["weight_brutto"]){
+                $weight = explode("-", $data["weight_brutto"]);
+                if(count($weight) > 1){
+                    $w = str_replace(",", ".", trim($weight[1]));
+                }else{
+                    $w = str_replace(",", ".", trim($weight[0]));
+                }
+                $data["weight_brutto"] = $w;
+            }
             return $data;
         }else{
             $this->checkprogress("Ответ от серевера - ".$request["httpcode"]." - страница - ".$url);
             return array();
         }
+    }
+
+    /**
+     * @param $name
+     * @param $config
+     * @param $value
+     * @return array
+     */
+    public function filterField($name, $config, $value = null, $element = null){
+        $field_value = '';
+        switch ($name) {
+            case 'tofields':
+                $field_value = array();
+                $field_value['params'] = $value;
+                foreach($value as $k => $v){
+                    foreach($config['config'] as $ck => $cv){
+                        if($cv == $k){
+                            if($config["filters"][$ck]){
+                                $filters = $this->filter_parse($config["filters"][$ck], "~", "-:", 1);
+                                foreach($filters as $key => $val){
+                                    $field_value[$ck] = $this->filterField($key, $val, $v);
+                                }
+                            }else{
+                                $field_value[$ck] = $v;
+                            }
+                        }
+                    }
+                }
+                break;
+            case 'koef':
+                if($config["koef"]){
+                    $field_value = floatval(str_replace(",", ".", $value)) * $config["koef"];
+                }
+                break;
+            case 'plaintext':
+                $field_value = html_entity_decode(trim($value));
+                break;
+            case 'breadcrumbs':
+                $field_value = array();
+                if($element){
+                    $elems = $element->find($config['selector']);
+                    foreach($elems as $elem){
+                        $field_value[] = html_entity_decode(trim($elem->plaintext));
+                    }
+                }
+                break;
+            case 'add_base_url':
+                if(is_array($value)){
+                    $field_value = array();
+                    // $this->modx->log(1, print_r($value, 1));
+                    // $this->modx->log(1, print_r($this->config["base_url"], 1));
+                    foreach($value as $key => $item){
+                        if($item) {
+                            $last = mb_substr($this->config["base_url"], -1);
+                            $first = mb_substr($item, 0, 1);
+                            if ($last == "/" && $first == "/") {
+                                $sitem = substr($item, 1);
+                            } else {
+                                $sitem = $item;
+                            }
+                            $field_value[$key] = $this->config["base_url"] . $sitem;
+                        }
+                    }
+                }else{
+                    $last = mb_substr($this->config["base_url"], -1);
+                    $first = mb_substr($value, 0, 1);
+                    if($last == "/" && $first == "/"){
+                        $sitem = substr($value, 1);
+                        $field_value = $this->config["base_url"].$sitem;
+                    }else{
+                        $field_value = $this->config["base_url"].$value;
+                    }
+
+                }
+                break;
+            case 'numeric':
+                if(is_array($value)){
+                    $field_value = array();
+                    foreach($value as $key => $item){
+                        $field_value[$key] = preg_replace('/[^\d.]+/', '', $item);
+                    }
+                }else{
+                    $field_value = preg_replace('/[^\d.]+/', '', $value);
+                }
+                break;
+            case 'replace':
+                if(is_array($value)){
+                    $field_value = array();
+                    foreach($value as $key => $item){
+                        foreach($config as $k => $v){
+                            $field_value[$key] = html_entity_decode(trim(str_replace($k, $v, $item)));
+                        }
+                    }
+                }else{
+                    foreach($config as $k => $v){
+                        $field_value = html_entity_decode(trim(str_replace($k, $v, $value)));
+                    }
+                }
+                break;
+            case 'split':
+                $elems = explode($config['delimeter'], $value);
+                $field_value = array();
+                foreach($config['elements'] as $key => $elem){
+                    if($config['koef']){
+                        $v = trim($elems[floatval($key)]);
+                        $field_value[$elem] = floatval($v) * $config['koef'];
+                    }else{
+                        $field_value[$elem] = html_entity_decode(trim($elems[$key]));
+                    }
+                }
+                break;
+            case "strip_tags":
+                if(is_array($value)){
+                    $field_value = array();
+                    foreach($value as $key => $item){
+                        $field_value[$key] = html_entity_decode(strip_tags($item));
+                    }
+                }else{
+                    $field_value = html_entity_decode(strip_tags($value));
+                }
+                break;
+            case "last_word":
+                if(is_array($value)){
+                   // ничего
+                }else{
+                    $array = explode(" ", trim($value));
+                    $array = array_reverse($array);
+                    $field_value = html_entity_decode(strip_tags(trim($array[0])));
+                }
+                break;
+            case 'elements':
+                $field_value = array();
+                if($config['row'] && $element){
+                    if($config['row'] == 'this'){
+                        foreach($element as $k => $row){
+                            if(isset($config['title_source'])){
+                                if($config['title_source'] == 'attribute'){
+                                    $lab = $row->find($config['title'], 0)->{$config['source_name']};
+                                }
+                                $val = $row->find($config['value'], 0)->plaintext;
+                            }else{
+                                $lab = $row->find($config['title'], 0)->plaintext;
+                                $val = $row->find($config['value'], 0)->plaintext;
+                            }
+                            if($lab){
+                                $field_value[html_entity_decode(trim($lab))] = html_entity_decode(trim($val));
+                            }
+                        }
+                    }else{
+                        if(is_array($element)){
+                            foreach($element as $k => $el) {
+                                $rows = $el->find($config['row']);
+                                foreach ($rows as $row) {
+                                    if (isset($config['title_source'])) {
+                                        if ($config['title_source'] == 'attribute') {
+                                            $lab = $row->find($config['title'], 0)->{$config['source_name']};
+                                        }
+                                        $val = $row->find($config['value'], 0)->plaintext;
+                                    } else {
+                                        $lab = $row->find($config['title'], 0)->plaintext;
+                                        $val = $row->find($config['value'], 0)->plaintext;
+                                    }
+                                    if ($lab) {
+                                        $field_value[html_entity_decode(trim($lab))] = html_entity_decode(trim($val));
+                                    }
+                                }
+                            }
+                        }else{
+                            $rows = $element->find($config['row']);
+                            foreach ($rows as $row) {
+                                if (isset($config['title_source'])) {
+                                    if ($config['title_source'] == 'attribute') {
+                                        $lab = $row->find($config['title'], 0)->{$config['source_name']};
+                                    }
+                                    $val = $row->find($config['value'], 0)->plaintext;
+                                } else {
+                                    $lab = $row->find($config['title'], 0)->plaintext;
+                                    $val = $row->find($config['value'], 0)->plaintext;
+                                }
+                                if ($lab) {
+                                    $field_value[html_entity_decode(trim($lab))] = html_entity_decode(trim($val));
+                                }
+                            }
+                        }
+
+                    }
+                }else{
+                    $this->modx->log(1, "Не передан элемент");
+                }
+                break;
+            case 'table_to_fields':
+                // TODO: CHECK table mode
+                $field_value = array();
+                if(is_array($element)) {
+                    foreach ($element as $k => $el) {
+                        if ($config["type"] == "row") {
+                            if ($el) {
+                                $rows = $el->find('tr');
+                                foreach ($rows as $row) {
+                                    $tds = $row->find("td");
+                                    if (trim($tds[0]->plaintext) != $config["head"] && trim($tds[1]->plaintext)) {
+                                        $field_value[html_entity_decode(trim($tds[0]->plaintext))] = html_entity_decode(trim($tds[1]->plaintext));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    if ($config["type"] == "row") {
+                        if ($element) {
+                            $rows = $element->find('tr');
+                            foreach ($rows as $row) {
+                                $tds = $row->find("td");
+                                if (trim($tds[0]->plaintext) != $config["head"] && trim($tds[1]->plaintext)) {
+                                    $field_value[html_entity_decode(trim($tds[0]->plaintext))] = html_entity_decode(trim($tds[1]->plaintext));
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+        }
+        return $field_value;
     }
 
     /**
@@ -353,6 +628,7 @@ class parser
             $tmp["name"] = $field["element_name"];
         }
         if($field["index_search"]){
+            $tmp["index_search"] = $field["index_search"];
             $tmp["index"] = $field["index"];
             $tmp["sub_element"] = $field["subelement"];
             $tmp["sub_index"] = $field["subindex"];
@@ -372,6 +648,7 @@ class parser
      * @return array|string|string[]|null
      */
     public function get_field($field, $config, $cat){
+        //$this->modx->log(1, print_r($field, 1));
         switch ($config['type']) {
             case "this":
                 switch ($config['goal_type']) {
@@ -385,7 +662,7 @@ class parser
                 break;
             case "field":
                 $elems = $cat->find($config['selector']);
-                if($config["index"] && isset($elems[$config["index"]])){
+                if($config["index_search"] && isset($elems[$config["index"]])){
                     if(isset($config["sub_element"])){
                         if(isset($config["sub_index"])){
                             $elem = $elems[$config["index"]]->find($config["sub_element"]);
@@ -409,9 +686,16 @@ class parser
 
                 break;
             case "attribute":
+                $this->modx->log(1, print_r($config,1));
                 $elems = $cat->find($config["selector"]);
                 foreach($elems as $key => $elem){
-                    $field_value[] = $elem->{$config['name']};
+                    $dt[] = $elem->{$config['name']};
+                }
+                $this->modx->log(1, print_r($dt,1));
+                if($config["index_search"] && isset($dt[$config["index"]])){
+                    $field_value = trim($dt[$config["index"]]);
+                }else{
+                    $field_value = $dt;
                 }
                 break;
             case "css":
@@ -423,7 +707,7 @@ class parser
                 }
                 break;
             case "table":
-                $cat = $cat->find($config['selector'], 0);
+                $cat = $cat->find($config['selector']);
                 break;
             case "tables":
                 $cat = $cat->find($config['selector']);
@@ -434,129 +718,16 @@ class parser
 
         }
         if($config['filters']){
-            foreach($config['filters'] as $key => $conf){
-                switch ($key) {
-                    case 'plaintext':
-                        $field_value = trim($cat->find($config['selector'], 0)->plaintext);
-                        break;
-                    case 'breadcrumbs':
-                        $field_value = array();
-                        $elems = $cat->find($config['selector']);
-                        foreach($elems as $elem){
-                            $field_value[] = trim($elem->plaintext);
-                        }
-                        break;
-                    case 'add_base_url':
-                        if(is_array($field_value)){
-                            foreach($field_value as $key => $item){
-                                if($conf['exclude']){
-                                    $pos = strpos($item, $conf['exclude']);
-                                    if ($pos === false) {
-                                        $field_value[$key] = $this->config["base_url"].$item;
-                                    }else{
-                                        $field_value[$key] = $item;
-                                    }
-                                }else{
-                                    $field_value[$key] = $this->config["base_url"].$item;
-                                }
-                            }
-                        }else{
-                            $field_value = $this->config["base_url"].$field_value;
-                        }
-                        break;
-                    case 'numeric':
-                        if(is_array($field_value)){
-                            foreach($field_value as $key => $item){
-                                $field_value[$key] = preg_replace('/[^0-9.]+/', '', $item);
-                            }
-                        }else{
-                            $field_value = preg_replace('/[^0-9.]+/', '', $field_value);
-                        }
-                        break;
-                    case 'replace':
-                        if(is_array($field_value)){
-                            foreach($field_value as $key => $item){
-                                foreach($conf as $k => $v){
-                                    $field_value[$key] = trim(str_replace($k, $v, $item));
-                                }
-                            }
-                        }else{
-                            foreach($conf as $k => $v){
-                                $field_value = trim(str_replace($k, $v, $field_value));
-                            }
-                        }
-                        break;
-                    case 'split':
-                        $elems = explode($conf['delimeter'], $field_value);
-                        $field_value = array();
-                        foreach($conf['elements'] as $key => $elem){
-                            if($conf['koef']){
-                                $v = preg_replace("/[^,.0-9]/", '', trim($elems[intval($key)]));
-                                $field_value[$elem] = floatval($v) * $conf['koef'];
-                            }else{
-                                $field_value[$elem] = trim($elems[$key]);
-                            }
-                        }
-                        break;
-                    case "strip_tags":
-                        if(is_array($field_value)){
-                            foreach($field_value as $key => $item){
-                                $field_value[$key] = strip_tags($item);
-                            }
-                        }else{
-                            $field_value = strip_tags($field_value);
-                        }
-                        break;
-                    case 'elements':
-                        if($conf['row']){
-                            if($conf['row'] == 'this'){
-                                foreach($cat as $k => $row){
-                                    if(isset($conf['title_source'])){
-                                        if($conf['title_source'] == 'attribute'){
-                                            $label = $row->find($conf['title'], 0)->{$conf['source_name']};
-                                        }
-                                        $value = $row->find($conf['value'], 0)->plaintext;
-                                    }else{
-                                        $label = $row->find($conf['title'], 0)->plaintext;
-                                        $value = $row->find($conf['value'], 0)->plaintext;
-                                    }
-                                    $field_value[trim($label)] = trim($value);
-                                }
-                            }else{
-                                $rows = $cat->find($conf['row']);
-                                foreach($rows as $row){
-                                    if(isset($conf['title_source'])){
-                                        if($conf['title_source'] == 'attribute'){
-                                            $label = $row->find($conf['title'], 0)->{$conf['source_name']};
-                                        }
-                                        $value = $row->find($conf['value'], 0)->plaintext;
-                                    }else{
-                                        $label = $row->find($conf['title'], 0)->plaintext;
-                                        $value = $row->find($conf['value'], 0)->plaintext;
-                                    }
-                                    $field_value[trim($label)] = trim($value);
-                                }
-                            }
-                        }
-                        break;
-                    case 'table_to_fields':
-                        // TODO: CHECK table mode
-                        $field_value = array();
-                        if($conf["type"] == "row"){
-                            if($cat){
-                                $rows = $cat->find('tr');
-                                foreach($rows as $row){
-                                    $tds = $row->find("td");
-                                    if(trim($tds[0]->plaintext) != $conf["head"]){
-                                        $field_value[trim($tds[0]->plaintext)] = trim($tds[1]->plaintext);
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                }
+            //$this->modx->log(1, print_r(count($cat), 1));
+            foreach($config["filters"] as $key => $val){
+                $this->modx->log(1, print_r($key, 1));
+                $this->modx->log(1, print_r($val, 1));
+                $this->modx->log(1, print_r($field_value, 1));
+                $field_value = $this->filterField($key, $val, $field_value, $cat);
+                //$this->modx->log(1, print_r($field_value, 1));
             }
         }
+        // $this->modx->log(1, print_r($field_value, 1));
         return $field_value;
     }
 
@@ -567,35 +738,45 @@ class parser
      * @return void
      */
     public function parse($url, $parent = ""){
-        $cats = $this->get_cats($url, $parent);
-        if(!count($cats['categories'])){
-            if(!$parent){
-                $cats['cat']['id'] = md5($cats['cat']['title']);
-                $this->output['categories'][] = $cats['cat'];
-            }
-            foreach($cats['pages'] as $page){
-                $products = $this->get_products($page, $cats['cat']['title']);
-                foreach($products as $k => $product){
-                    $products[$k]['category'] = implode("||", $cats['cat']['breadcrumbs']);
-                    $products[$k]['parent'] = md5($cats['cat']['title']);
-                    $this->output['offers'][] = $products[$k];
+        if(!in_array($url, $this->output['history'])){
+            $this->output['history'][] = $url;
+            $cats = $this->get_cats($url, $parent);
+            if(!count($cats['categories'])){
+                if(!$parent){
+                    $cats['cat']['id'] = md5($cats['cat']['title']);
+                    $this->output['categories'][] = $cats['cat'];
                 }
-                if($this->config["out"] == "XLSX"){
-                    $this->generateXLSX($products);
+                foreach($cats['pages'] as $page){
+                    $products = $this->get_products($page, $cats['cat']['title']);
+                    foreach($products as $k => $product){
+                        if($cats['cat']['breadcrumbs']){
+                            $products[$k]['category'] = implode("||", $cats['cat']['breadcrumbs']);
+                        }
+                        $products[$k]['parent'] = md5($cats['cat']['title']);
+                        $this->output['offers'][] = $products[$k];
+                    }
+                    if($this->config["out"] == "XLSX"){
+                        $this->generateXLSX($products);
+                    }
+                }
+            }else{
+                $this->output['categories'] = array_merge($this->output['categories'], $cats['categories']);
+                foreach($this->output['categories'] as $k => $cat){
+                    if(!$cat["id"]){
+                        unset($this->output['categories'][$k]);
+                    }
+                }
+                foreach($cats['categories'] as $c){
+                    if(!in_array($c["href"][0], $this->config["exclude"])){
+                        $this->parse($c["href"][0], $cats['cat']['title']);
+                    }
                 }
             }
-        }else{
-            $this->output['categories'] = array_merge($this->output['categories'], $cats['categories']);
-            foreach($cats['categories'] as $c){
-                if(!in_array($c["href"][0], $this->config["exclude"])){
-                    $this->parse($c["href"][0], $cats['cat']['title']);
-                }
+            if($this->config["out"] == "YML"){
+                $this->generateYML();
             }
+            $this->checkprogress(print_r($this->output, 1));
         }
-        if($this->config["out"] == "YML"){
-            $this->generateYML();
-        }
-        $this->checkprogress(print_r($this->output, 1));
     }
 
     /**
@@ -608,12 +789,20 @@ class parser
     public function handleTasks(){
         $tasks = $this->modx->getCollection("slParserTasks", array("status:=" => 1));
         foreach($tasks as $task){
+            $this->output = array(
+                "categories" => array(),
+                "offers" => array()
+            );
             $task->set("status", 4);
             $task->save();
             $this->getConfig($task->get("id"));
             $file_name = $this->config["base_path"].$this->config["file_name"];
             $file_url = '/assets/files/parser/'.$this->config["file_name"];
             $this->config["file_name"] = $file_name;
+            $exclude = $task->get("exclude");
+            if($exclude){
+                $this->config["exclude"] = explode(",", $exclude);
+            }
             $url = $task->get("url");
             $this->parse($url);
             $task->set("file", $file_url);

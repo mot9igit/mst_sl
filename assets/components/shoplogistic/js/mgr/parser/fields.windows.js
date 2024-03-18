@@ -115,7 +115,7 @@ Ext.extend(shopLogistic.window.CreateConfigField, shopLogistic.window.Default, {
             id: config.id + '-element_name',
             anchor: '99%'
         },{
-            xtype: 'textfield',
+            xtype: 'textarea',
             fieldLabel: _('shoplogistic_parser_config_fields_filters'),
             name: 'field_filters',
             id: config.id + '-field_filters',

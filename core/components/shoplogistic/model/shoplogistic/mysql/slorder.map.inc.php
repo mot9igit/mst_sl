@@ -13,17 +13,23 @@ $xpdo_meta_map['slOrder']= array (
     'warehouse_id' => 0,
     'store_id' => 0,
     'order_id' => 0,
+    'crm_id' => 0,
+    'ship_id' => 0,
     'status' => 0,
     'num' => '',
     'cost' => 0.0,
     'cart_cost' => 0.0,
     'delivery_cost' => 0.0,
+    'delivery_date' => NULL,
     'date' => NULL,
     'createdon' => NULL,
     'updatedon' => NULL,
     'active' => 1,
     'description' => '',
+    'code' => '',
+    'code_until' => NULL,
     'comment' => NULL,
+    'tk_id' => '',
     'properties' => NULL,
   ),
   'fieldMeta' => 
@@ -47,6 +53,24 @@ $xpdo_meta_map['slOrder']= array (
       'default' => 0,
     ),
     'order_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'crm_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'ship_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -96,6 +120,12 @@ $xpdo_meta_map['slOrder']= array (
       'null' => true,
       'default' => 0.0,
     ),
+    'delivery_date' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
+    ),
     'date' => 
     array (
       'dbtype' => 'datetime',
@@ -130,11 +160,33 @@ $xpdo_meta_map['slOrder']= array (
       'null' => true,
       'default' => '',
     ),
+    'code' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'code_until' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
+    ),
     'comment' => 
     array (
       'dbtype' => 'text',
       'phptype' => 'string',
       'null' => true,
+    ),
+    'tk_id' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
     ),
     'properties' => 
     array (
@@ -209,6 +261,65 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
+    'crm_id' => 
+    array (
+      'alias' => 'crm_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'crm_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'ship_id' => 
+    array (
+      'alias' => 'ship_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'ship_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'tk_id' => 
+    array (
+      'alias' => 'tk_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'tk_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+  ),
+  'composites' => 
+  array (
+    'Products' => 
+    array (
+      'class' => 'slOrderProduct',
+      'local' => 'id',
+      'foreign' => 'order_id',
+      'cardinality' => 'many',
+      'owner' => 'local',
+    ),
   ),
   'aggregates' => 
   array (
@@ -228,7 +339,7 @@ $xpdo_meta_map['slOrder']= array (
       'cardinality' => 'one',
       'owner' => 'foreign',
     ),
-    'Order' => 
+    'msOrder' => 
     array (
       'class' => 'msOrder',
       'local' => 'order_id',
@@ -238,8 +349,16 @@ $xpdo_meta_map['slOrder']= array (
     ),
     'Status' => 
     array (
-      'class' => 'slOrderStatus',
+      'class' => 'slCRMStage',
       'local' => 'status',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'slWarehouseShipment' => 
+    array (
+      'class' => 'slWarehouseShipment',
+      'local' => 'ship_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',
