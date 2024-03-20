@@ -34,7 +34,7 @@ Ext.extend(shopLogistic.grid.ParserdataServices, shopLogistic.grid.Default, {
             },
             {
                 header: _('shoplogistic_parserdata_service_service_key'),
-                dataIndex: 'color',
+                dataIndex: 'service_key',
                 sortable: true,
                 width: 100,
             },

@@ -1,9 +1,9 @@
 <?php
 
-class slParserDataOptionsGetListProcessor extends modObjectGetListProcessor
+class slParserDataCatsOptionsGetListProcessor extends modObjectGetListProcessor
 {
-    public $objectType = 'slParserDataOptions';
-    public $classKey = 'slParserDataOptions';
+    public $objectType = 'slParserDataCatsOptions';
+    public $classKey = 'slParserDataCatsOptions';
     public $defaultSortField = 'id';
     public $defaultSortDirection = 'DESC';
     //public $permission = 'list';
@@ -39,6 +39,19 @@ class slParserDataOptionsGetListProcessor extends modObjectGetListProcessor
             ]);
         }
 
+        $cat_id = trim($this->getProperty('cat_id'));
+        if ($cat_id) {
+            $c->where([
+                'cat_id:=' => $cat_id
+            ]);
+        }
+
+        $c->leftJoin('msOption', 'msOption', '`msOption`.`id` = `slParserDataCatsOptions`.`option_id`');
+
+        $c->select(
+            $this->modx->getSelectColumns('slParserDataCatsOptions', 'slParserDataCatsOptions', '', array(), true) . ',
+            msOption.caption as opt'
+        );
         // $c->prepare();
         // $this->modx->log(1, $c->toSQL());
 
@@ -62,7 +75,7 @@ class slParserDataOptionsGetListProcessor extends modObjectGetListProcessor
             'icon' => 'icon icon-edit',
             'title' => $this->modx->lexicon('shoplogistic_menu_update'),
             //'multiple' => $this->modx->lexicon('shoplogistic_items_update'),
-            'action' => 'updateOption',
+            'action' => 'updateOptions',
             'button' => true,
             'menu' => true,
         ];
@@ -73,7 +86,7 @@ class slParserDataOptionsGetListProcessor extends modObjectGetListProcessor
             'icon' => 'icon icon-trash-o action-red',
             'title' => $this->modx->lexicon('shoplogistic_menu_remove'),
             'multiple' => $this->modx->lexicon('shoplogistic_menu_remove'),
-            'action' => 'removeOption',
+            'action' => 'removeOptions',
             'button' => true,
             'menu' => true,
         ];
@@ -83,4 +96,4 @@ class slParserDataOptionsGetListProcessor extends modObjectGetListProcessor
 
 }
 
-return 'slParserDataOptionsGetListProcessor';
+return 'slParserDataCatsOptionsGetListProcessor';

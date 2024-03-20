@@ -1,9 +1,9 @@
 <?php
 
-class slParserDataOptionsGetProcessor extends modObjectGetProcessor
+class slParserDataCatsOptionsGetProcessor extends modObjectGetProcessor
 {
-    public $objectType = 'slParserDataOptions';
-    public $classKey = 'slParserDataOptions';
+    public $objectType = 'slParserDataCatsOptions';
+    public $classKey = 'slParserDataCatsOptions';
     public $languageTopics = ['shoplogistic:default'];
     //public $permission = 'view';
 
@@ -25,4 +25,4 @@ class slParserDataOptionsGetProcessor extends modObjectGetProcessor
 
 }
 
-return 'slParserDataOptionsGetProcessor';
+return 'slParserDataCatsOptionsGetProcessor';

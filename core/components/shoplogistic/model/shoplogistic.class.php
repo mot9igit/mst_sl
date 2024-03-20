@@ -203,6 +203,10 @@ class shopLogistic
             require_once dirname(__FILE__) . '/parser.class.php';
             $this->parser = new parser($this, $this->modx);
         }
+        if (!class_exists('parserdata')) {
+            require_once dirname(__FILE__) . '/parserdata.class.php';
+            $this->parserdata = new parserdata($this, $this->modx);
+        }
         if (!class_exists('filters')) {
             require_once dirname(__FILE__) . '/filters.class.php';
             $this->filter = new filters($this, $this->modx);

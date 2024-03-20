@@ -1,9 +1,9 @@
 <?php
 
-class slParserDataOptionsCreateProcessor extends modObjectCreateProcessor
+class slParserDataCatsOptionsCreateProcessor extends modObjectCreateProcessor
 {
-    public $objectType = 'slParserDataOptions';
-    public $classKey = 'slParserDataOptions';
+    public $objectType = 'slParserDataCatsOptions';
+    public $classKey = 'slParserDataCatsOptions';
     public $languageTopics = ['shoplogistic'];
     //public $permission = 'create';
 
@@ -25,4 +25,4 @@ class slParserDataOptionsCreateProcessor extends modObjectCreateProcessor
 
 }
 
-return 'slParserDataOptionsCreateProcessor';
+return 'slParserDataCatsOptionsCreateProcessor';

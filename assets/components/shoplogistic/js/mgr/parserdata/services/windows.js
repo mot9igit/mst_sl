@@ -61,7 +61,7 @@ shopLogistic.window.UpdateParserdataServices = function (config) {
     config = config || {};
 
     Ext.applyIf(config, {
-        title: _('shoplogistic_parser_tasks_status_update'),
+        title: _('shoplogistic_parserdata_service_update'),
         width: 600,
         baseParams: {
             action: 'mgr/parserdata/service/update',
@@ -72,7 +72,28 @@ shopLogistic.window.UpdateParserdataServices = function (config) {
 Ext.extend(shopLogistic.window.UpdateParserdataServices, shopLogistic.window.CreateParserdataServices, {
 
     getFields: function (config) {
-        return shopLogistic.window.CreateParserdataServices.prototype.getFields.call(this, config);
+
+        return {
+            xtype: 'modx-tabs',
+            autoHeight: true,
+            deferredRender: false,
+            forceLayout: true,
+            width: '98%',
+            items: [{
+                title: _('shoplogistic_parserdata_service_update'),
+                layout: 'form',
+                items: shopLogistic.window.CreateParserdataServices.prototype.getFields.call(this, config)
+            }, {
+                title: _('shoplogistic_parserdata_cats'),
+                items: [{
+                    html: 'Будьте внимательны при заполнений соответствий.',
+                    cls: 'panel-desc'
+                },{
+                    xtype: 'shoplogistic-grid-parserdata-cats',
+                    record: config.record,
+                }]
+            }]
+        };
     }
 
 });

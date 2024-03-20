@@ -32,6 +32,8 @@ class slParserDataCatsGetListProcessor extends modObjectGetListProcessor
      */
     public function prepareQueryBeforeCount(xPDOQuery $c)
     {
+        $c->leftJoin('modResource', 'modResource', '`modResource`.`id` = `slParserDataCats`.`cat_id`');
+
         $query = trim($this->getProperty('query'));
         if ($query) {
             $c->where([
@@ -39,8 +41,17 @@ class slParserDataCatsGetListProcessor extends modObjectGetListProcessor
             ]);
         }
 
-        // $c->prepare();
-        // $this->modx->log(1, $c->toSQL());
+        $service_id = trim($this->getProperty('service_id'));
+        if ($service_id) {
+            $c->where([
+                'service_id:=' => $service_id
+            ]);
+        }
+
+        $c->select(
+            $this->modx->getSelectColumns('slParserDataCats', 'slParserDataCats', '', array(), true) . ',
+            modResource.pagetitle as cat'
+        );
 
         return $c;
     }

@@ -2079,6 +2079,7 @@
         <field key="export_parents" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="cat_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="service_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="check" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
         <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
         <field key="updatedby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
@@ -2092,6 +2093,9 @@
         </index>
         <index alias="cat_id" name="cat_id" primary="false" unique="false" type="BTREE">
             <column key="cat_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="check" name="check" primary="false" unique="false" type="BTREE">
+            <column key="check" length="" collation="A" null="false"/>
         </index>
         <index alias="name" name="name" primary="false" unique="false" type="BTREE">
             <column key="name" length="" collation="A" null="false"/>

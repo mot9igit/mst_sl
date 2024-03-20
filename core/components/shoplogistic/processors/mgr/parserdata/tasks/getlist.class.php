@@ -32,6 +32,8 @@ class slParserDataTasksGetListProcessor extends modObjectGetListProcessor
      */
     public function prepareQueryBeforeCount(xPDOQuery $c)
     {
+        $c->leftJoin('slParserDataTasksStatus', 'Status');
+
         $query = trim($this->getProperty('query'));
         if ($query) {
             $c->where([
@@ -41,6 +43,10 @@ class slParserDataTasksGetListProcessor extends modObjectGetListProcessor
 
         // $c->prepare();
         // $this->modx->log(1, $c->toSQL());
+        $c->select(
+            $this->modx->getSelectColumns('slParserDataTasks', 'slParserDataTasks', '', array(), true) . ',
+            Status.name as status_name, Status.color as color'
+        );
 
         return $c;
     }

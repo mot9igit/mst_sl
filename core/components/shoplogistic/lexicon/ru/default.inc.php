@@ -1182,6 +1182,7 @@ $_lang['shoplogistic_parserdata_statuses_remove_confirm'] = 'Вы уверены
 $_lang["shoplogistic_parserdata_services"] = "Сервисы";
 $_lang["shoplogistic_parserdata_services_intro"] = "Управление сервисами задач парсера. Соотношение характеристик.";
 $_lang["shoplogistic_parserdata_service_create"] = "Создать сервис";
+$_lang["shoplogistic_parserdata_service_update"] = "Редактировать сервис";
 $_lang["shoplogistic_parserdata_service_err_ns"] = "Сервис не найден";
 $_lang["shoplogistic_parserdata_service_err_name"] = "Не заполнено имя сервиса";
 $_lang["shoplogistic_parserdata_service_err_ae"] = "Сервис с таким именем уже существует";
@@ -1195,3 +1196,41 @@ $_lang['shoplogistic_parserdata_service_remove'] = 'Удалить сервис'
 $_lang['shoplogistic_parserdata_services_remove'] = 'Удалить сервисы';
 $_lang['shoplogistic_parserdata_service_remove_confirm'] = 'Вы уверены, что хотите удалить этот сервис?';
 $_lang['shoplogistic_parserdata_services_remove_confirm'] = 'Вы уверены, что хотите удалить эти сервисы?';
+
+$_lang["shoplogistic_parserdata_cats"] = "Категории";
+$_lang["shoplogistic_parserdata_cats_intro"] = "Управление категориями сервиса. Соотношение характеристик.";
+$_lang["shoplogistic_parserdata_cats_create"] = "Создать категорию";
+$_lang["shoplogistic_parserdata_cats_update"] = "Редактировать категорию";
+$_lang["shoplogistic_parserdata_cats_err_ns"] = "Категория не найден";
+$_lang["shoplogistic_parserdata_cats_err_name"] = "Не заполнено имя категории";
+$_lang["shoplogistic_parserdata_cats_err_ae"] = "Категория с таким именем уже существует";
+$_lang["shoplogistic_parserdata_cats_name"] = "Наименование";
+$_lang["shoplogistic_parserdata_cats_service_id"] = "Сервис";
+$_lang["shoplogistic_parserdata_cats_export_parents"] = "Родители";
+$_lang["shoplogistic_parserdata_cats_cat_id"] = "Категория";
+$_lang["shoplogistic_parserdata_cats_check"] = "Категория проверена";
+$_lang["shoplogistic_parserdata_cats_description"] = "Описание";
+$_lang["shoplogistic_parserdata_cats_active"] = "Активен";
+
+$_lang['shoplogistic_parserdata_cat_remove'] = 'Удалить категорию';
+$_lang['shoplogistic_parserdata_cats_remove'] = 'Удалить категории';
+$_lang['shoplogistic_parserdata_cat_remove_confirm'] = 'Вы уверены, что хотите удалить эту категорию?';
+$_lang['shoplogistic_parserdata_cats_remove_confirm'] = 'Вы уверены, что хотите удалить эти категории?';
+
+
+$_lang["shoplogistic_parserdata_cats_options"] = "Опции";
+$_lang["shoplogistic_parserdata_cats_options_create"] = "Создать опцию";
+$_lang["shoplogistic_parserdata_cats_options_update"] = "Редактировать опцию";
+
+$_lang["shoplogistic_parserdata_options_err_ae"] = "Опция с таким именем в категории уже существует";
+$_lang["shoplogistic_parserdata_options_err_ns"] = "Ну указан ID опции";
+$_lang["shoplogistic_parserdata_options_err_nf"] = "Опция не найдена";
+
+$_lang["shoplogistic_parserdata_cats_options_name"] = "Наименование";
+$_lang["shoplogistic_parserdata_cats_options_filter"] = "Фильтр";
+$_lang["shoplogistic_parserdata_cats_options_examples"] = "Примеры значений опции";
+$_lang["shoplogistic_parserdata_cats_options_to_field"] = "Сохранить в поле товара";
+$_lang["shoplogistic_parserdata_cats_options_option_id"] = "Опция";
+$_lang["shoplogistic_parserdata_cats_options_cat_id"] = "Категория";
+$_lang["shoplogistic_parserdata_cats_options_ignore"] = "Игнорировать";
+$_lang["shoplogistic_parserdata_cats_options_description"] = "Описание";

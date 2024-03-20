@@ -1,9 +1,9 @@
 <?php
 
-class slParserDataOptionsUpdateProcessor extends modObjectUpdateProcessor
+class slParserDataCatsOptionsUpdateProcessor extends modObjectUpdateProcessor
 {
-    public $objectType = 'slParserDataOptions';
-    public $classKey = 'slParserDataOptions';
+    public $objectType = 'slParserDataCatsOptions';
+    public $classKey = 'slParserDataCatsOptions';
     public $languageTopics = ['shoplogistic'];
     //public $permission = 'save';
 
@@ -31,11 +31,12 @@ class slParserDataOptionsUpdateProcessor extends modObjectUpdateProcessor
     {
         $id = (int)$this->getProperty('id');
         $name = (int)$this->getProperty('name');
+        $cat_id = (int)$this->getProperty('cat_id');
         if (empty($id)) {
             return $this->modx->lexicon('shoplogistic_parserdata_options_err_ns');
         }
 
-        if ($this->modx->getCount($this->classKey, ['name' => $name, 'id:!=' => $id])) {
+        if ($this->modx->getCount($this->classKey, ['name' => $name, 'id:!=' => $id, 'cat_id' => $cat_id])) {
             $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_parserdata_options_err_ae'));
         }
 
@@ -43,4 +44,4 @@ class slParserDataOptionsUpdateProcessor extends modObjectUpdateProcessor
     }
 }
 
-return 'slParserDataOptionsUpdateProcessor';
+return 'slParserDataCatsOptionsUpdateProcessor';

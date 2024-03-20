@@ -439,11 +439,25 @@ if ($transport->xpdo) {
                     'id' => 6
                 ],
                 [
-                    'name' => 'Парсинга',
+                    'name' => 'Парсинг',
                     'status_key' => 'PARSING',
                     'color' => 'FFFFFF',
                     'active' => 1,
                     'id' => 7
+                ],
+                [
+                    'name' => 'Готов к импорту',
+                    'status_key' => '',
+                    'color' => 'FFFFFF',
+                    'active' => 1,
+                    'id' => 8
+                ],
+                [
+                    'name' => 'Импортирован',
+                    'status_key' => '',
+                    'color' => '00FF00',
+                    'active' => 1,
+                    'id' => 9
                 ]
             ];
 
@@ -468,21 +482,21 @@ if ($transport->xpdo) {
             $services = [
                 [
                     'name' => 'Яндекс.Маркет',
-                    'service_key' => 'market.yandex',
+                    'service_key' => 'market.yandex.ru',
                     'url' => 'https://market.yandex.ru/',
                     'active' => 1,
                     'id' => 1
                 ],
                 [
                     'name' => 'Wildberries',
-                    'service_key' => 'wildberries',
+                    'service_key' => 'wildberries.ru',
                     'url' => 'https://www.wildberries.ru/',
                     'active' => 1,
                     'id' => 2
                 ],
                 [
                     'name' => 'Все инструменты',
-                    'service_key' => 'vseinstrumenti',
+                    'service_key' => 'vseinstrumenti.ru',
                     'url' => 'https://www.vseinstrumenti.ru/',
                     'active' => 1,
                     'id' => 3

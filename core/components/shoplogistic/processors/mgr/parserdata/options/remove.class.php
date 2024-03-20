@@ -1,9 +1,9 @@
 <?php
 
-class slParserDataOptionsRemoveProcessor extends modObjectProcessor
+class slParserDataCatsOptionsRemoveProcessor extends modObjectProcessor
 {
-    public $objectType = 'slParserDataOptions';
-    public $classKey = 'slParserDataOptions';
+    public $objectType = 'slParserDataCatsOptions';
+    public $classKey = 'slParserDataCatsOptions';
     public $languageTopics = ['shoplogistic'];
     //public $permission = 'remove';
 
@@ -36,4 +36,4 @@ class slParserDataOptionsRemoveProcessor extends modObjectProcessor
 
 }
 
-return 'slParserDataOptionsRemoveProcessor';
+return 'slParserDataCatsOptionsRemoveProcessor';
