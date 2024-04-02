@@ -81,7 +81,6 @@ var dart_filters = {
         sortbutton: ".df_sort",
         instockbutton: "#toggle-button-catalog-df_instock",
         page: 1,
-
         values_delimeter: ","
     },
     elements: ['filters', 'results', 'pagination', 'total', 'sort', 'selected', 'limit', 'tpl'],
@@ -99,15 +98,15 @@ var dart_filters = {
                 var parent = $(this).closest(".modal-sort");
                 var sortdir = $(this).data("sortdir");
                 var sortby = $(this).data("sortby");
-                var csortdir = parent.data("sortdir");
-                var csortby = parent.data("sortby");
+                var csortdir = $("#" + dart_filters.options.form).find("input[name=sortdir]").val();
+                var csortby = $("#" + dart_filters.options.form).find("input[name=sortby]").val();
                 var text = $(this).text();
 
                 parent.find(".modalSortToggle span").text(text);
                 if(sortby != csortby){
                     parent.removeClass("active active_" + csortdir);
                 }
-                if(parent.hasClass("active")){
+                if(csortdir && csortby){
                     if(sortdir == csortdir){
                         if(csortdir == 'asc'){
                             sortdir = "desc";
@@ -133,8 +132,22 @@ var dart_filters = {
                     parent.addClass("active active_" + sortdir);
                 }
                 $(".modal-sort__close").trigger("click");
+                const page = 1
+                const old_page = dart_filters.options.page
+                dart_filters.pageHandler(page, old_page)
+                filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
             });
-
+            $(dart_filters.options.instockbutton).click(function(){
+                if ($(this).is(':checked')){
+                    $("#" + dart_filters.options.form).find("input[name=instock]").val(1);
+                }else{
+                    $("#" + dart_filters.options.form).find("input[name=instock]").val(0);
+                }
+                const page = 1
+                const old_page = dart_filters.options.page
+                dart_filters.pageHandler(page, old_page)
+                filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
+            });
 
             $(".sliderui .polzunok-5").slider({
                 min: $(".sliderui .sliderui-min input").attr('data-min') / 1,
@@ -186,7 +199,9 @@ var dart_filters = {
             const inputs = filterForm.querySelectorAll('input');
             inputs.forEach((input) => {
                 input.addEventListener("change", (e) => {
-                    dart_filters.options.page = 1
+                    const page = 1
+                    const old_page = dart_filters.options.page
+                    dart_filters.pageHandler(page, old_page)
                     filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
                 })
             })
@@ -202,6 +217,7 @@ var dart_filters = {
                 e.preventDefault()
                 const obj = Object.fromEntries(new FormData(e.target))
                 obj.sl_action = "get/filterdata"
+                dart_filters.pageHandler(1, dart_filters.options.page)
                 this.send(obj)
             });
             this.pagesInit()
@@ -237,19 +253,49 @@ var dart_filters = {
                     e.preventDefault()
                     const page = e.target.dataset.number
                     const old_page = dart_filters.options.page
-                    dart_filters.options.page = page
-                    if(dart_filters.options.page != old_page){
-                        const params = new URLSearchParams(window.location.search)
-                        params.delete('page');
-                        params.set('page', dart_filters.options.page);
-                        window.history.replaceState({ }, "", decodeURIComponent(`${ window.location.pathname}?${ params}`));
-                        filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
-                    }else{
-                        const params = new URLSearchParams(window.location.search)
-                        params.delete('page');
-                    }
+                    dart_filters.pageHandler(page, old_page)
                 })
             })
+        }
+    },
+    pageHandler: function(page, old_page){
+        const filterForm = document.getElementById(this.options.form)
+        dart_filters.options.page = page
+        if(dart_filters.options.page != old_page){
+            const params = new URLSearchParams(window.location.search)
+            params.delete('page');
+            if(dart_filters.options.page != 1){
+                params.set('page', dart_filters.options.page);
+                window.history.replaceState({ }, "", decodeURIComponent(`${ window.location.pathname}?${ params}`));
+
+            }else{
+                window.history.replaceState({ }, "", decodeURIComponent(`${ window.location.pathname}`));
+            }
+            dart_filters.setMeta(dart_filters.options.page)
+            filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
+        }else{
+            const params = new URLSearchParams(window.location.search)
+            params.delete('page');
+        }
+    },
+    setMeta: function(page){
+        const head = $("head")
+        if(page > 1){
+            if(!$("head meta[name=robots]").length){
+                var meta = document.createElement('meta');
+                meta.name = "robots";
+                meta.content = "noindex,follow";
+                document.getElementsByTagName('head')[0].appendChild(meta);
+            }
+            if(!$("head link[rel=canonical]").length) {
+                var meta = document.createElement('link');
+                meta.rel = "canonical";
+                meta.href = window.location.protocol + '//' + window.location.host + window.location.pathname;
+                document.getElementsByTagName('head')[0].appendChild(meta);
+            }
+        }else{
+            $("head meta[name=robots]").remove();
+            $("head link[rel=canonical]").remove();
         }
     },
     getFilters: function(){
@@ -492,7 +538,7 @@ var sl_delivery = {
             onSelect: sl_delivery.setDeliveryFields
         });
         this.viewAddress();
-        $(this.options.wrapper + ' input[type=radio][name=delivery]').change(function() {
+        $(document).on("change", this.options.wrapper + ' input[type=radio][name=delivery]', function() {
             sl_delivery.viewAddress();
             $(sl_delivery.options.pvz).text('Выберите пункт выдачи');
             $(sl_delivery.options.choosed_pvz).removeClass('active');
@@ -511,18 +557,8 @@ var sl_delivery = {
             }
         });
         // radio fix in miniShop2 default.js (order.add)
-        $(this.options.wrapper + ' input[type=radio][name=sl_service]').change(function() {
-            var main_data = $('input[type=radio][name=sl_service]:checked').data('data');
-            sl_delivery.setData(JSON.parse(main_data));
-            var pvz = $('input[type=radio][name=sl_service]:checked').closest(".visual_block").data("pvz");
-            var d = $('input[type=radio][name=delivery]:checked').val();
-            $(sl_delivery.options.pvz).text('Выберите пункт выдачи');
-            $(sl_delivery.options.choosed_pvz).removeClass('active');
-            if(d == shoplogisticConfig['punkt_delivery'] && pvz){
-                $(sl_delivery.options.pvz_map).addClass("active");
-            }else{
-                $(sl_delivery.options.pvz_map).removeClass("active");
-            }
+        $(document).on("change", this.options.wrapper + ' input[type=radio][name=sl_service]', function() {
+            sl_delivery.updateSlService();
         });
 
         miniShop2.Callbacks.add('Cart.change.response.success', 'ShopLogisticCartChange', function (response) {
@@ -615,6 +651,9 @@ var sl_delivery = {
             $(sl_delivery.options.map).removeClass("active");
             //$(sl_delivery.options.services).show();
         }
+        if($('input[type=radio][name=sl_service]:checked').length){
+            sl_delivery.updateSlService();
+        }
         // TODO: check this block
         /*
         if(d == shoplogisticConfig['post_delivery']){
@@ -625,6 +664,19 @@ var sl_delivery = {
             $(sl_delivery.options.services).removeClass('active');
         }
         */
+    },
+    updateSlService: function(){
+        var main_data = $('input[type=radio][name=sl_service]:checked').data('data');
+        sl_delivery.setData(JSON.parse(main_data));
+        var pvz = $('input[type=radio][name=sl_service]:checked').closest(".visual_block").data("pvz");
+        var d = $('input[type=radio][name=delivery]:checked').val();
+        $(sl_delivery.options.pvz).text('Выберите пункт выдачи');
+        $(sl_delivery.options.choosed_pvz).removeClass('active');
+        if(d == shoplogisticConfig['punkt_delivery'] && pvz){
+            $(sl_delivery.options.pvz_map).addClass("active");
+        }else{
+            $(sl_delivery.options.pvz_map).removeClass("active");
+        }
     },
     getDeliveryPrices: function(address){
         if(address){
@@ -661,13 +713,15 @@ var sl_delivery = {
         data.method = prop;
         if(data[data.main_key].price){
             if(data[data.main_key].price.hasOwnProperty(prop) && data[data.main_key].price[prop].hasOwnProperty('price')){
-                var price = data[data.main_key].price[prop].price;
-                var srok = data[data.main_key].price[prop].time;
-                $('.'+data.main_key+'_price').text(price);
-                $('.'+data.main_key+'_srok').text(srok);
-                $('.'+data.main_key+'_price').closest('.service_info_'+data.main_key).show();
-                $('input#service_'+data.main_key).removeAttr("disabled");
-				$('.'+data.main_key+'_price').closest('.visual_block').removeClass('loading');
+                if(data[data.main_key].price[prop].price){
+                    var price = data[data.main_key].price[prop].price;
+                    var srok = data[data.main_key].price[prop].time;
+                    $('.'+data.main_key+'_price').text(price);
+                    $('.'+data.main_key+'_srok').text(srok);
+                    $('.'+data.main_key+'_price').closest('.service_info_'+data.main_key).show();
+                    $('input#service_'+data.main_key).removeAttr("disabled");
+                    $('.'+data.main_key+'_price').closest('.visual_block').removeClass('loading');
+                }
             }else{
                 $('input#service_'+data.main_key).attr("disabled", "disabled");
                 $('input#service_'+data.main_key).removeAttr("checked");

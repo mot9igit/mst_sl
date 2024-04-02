@@ -409,15 +409,15 @@ class productHandler
         }
     }
 
-    public function buildCategoriesTree (array &$categories, $parentId = 0, $idKey = 'id') {
+    public function buildCategoriesTree (array $categories, $parentId = 0, $idKey = 'id') {
         $branch = array();
-        foreach ($categories as &$element) {
+        foreach ($categories as $element) {
             if ($element['parent'] == $parentId) {
                 $children = $this->buildCategoriesTree($categories, $element[$idKey]);
                 if ($children) {
                     $element['children'] = $children;
                 }
-                $elem_id = $element['id'];
+                // $elem_id = $element['id'];
                 unset($element['id']);
                 unset($element['parent']);
                 $branch[] = $element;

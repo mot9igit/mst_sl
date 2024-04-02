@@ -21,7 +21,7 @@ class Yandex
         $delivery_url_test = $this->modx->getOption('shoplogistic_yandex_delivery_url_test', $config, '');
         $express_url = $this->modx->getOption('shoplogistic_yandex_express_url', $config, '');
         $express_url_test = $this->modx->getOption('shoplogistic_yandex_express_url_test', $config, '');
-        $delivery_log = $this->modx->getOption('shoplogistic_yandex_delivery_log', $config, false);
+        $delivery_log = $this->modx->getOption('shoplogistic_yandex_delivery_log', $config, true);
 
         $this->config = array_merge([
             'corePath' => $corePath,
@@ -56,7 +56,7 @@ class Yandex
      * @return bool|mixed
      */
     public function getYaDeliveryPrice($type, $product_id = 0, $sdata = array()){
-        //$this->modx->log(1, print_r($sdata, 1));
+        $this->modx->log(1, print_r($sdata, 1));
         if($sdata['location']){
             $position = $sdata['location'];
         }else{
@@ -66,14 +66,11 @@ class Yandex
         $start_coodinats = array();
         if($sdata['cart']){
             if($sdata['cart']['object'] && $sdata['cart']['type']){
-                $object = $this->modx->getObject($sdata['cart']['type'], $sdata['cart']['object']);
-                if($object){
-                    $start_coodinats = explode(",", $object->get('coordinats'));
-                    foreach($start_coodinats as $key => $val){
-                        $start_coodinats[$key] = (float) $val;
-                    }
+                $start_coodinats = explode(",", $sdata['cart']['data']['coordinats']);
+                foreach($start_coodinats as $key => $val){
+                    $start_coodinats[$key] = (float) trim($val);
                 }
-            }
+           }
         }
         if(isset($position['geo_lon'])){
             $to = array(
@@ -83,15 +80,17 @@ class Yandex
         }else{
             $to = array(
                 (float) $position['data']['geo_lon'],
-                (float) $position['data']['geo_lat']
+                (float) $position['data']['geo_lat'] 
             );
         }
         $data = array();
         $data['route_points'] = array(
             0 => array(
+                "id" => 1,
                 "coordinates" => array_reverse($start_coodinats)
             ),
             1 => array(
+                "id" => 2,
                 "coordinates" => $to
             )
         );
@@ -99,37 +98,18 @@ class Yandex
         if($type == 'card'){
             if($product_id){
                 $product = $this->modx->getObject("modResource", $product_id);
-                $tmp = array();
                 if($product){
-                    $par = json_decode($product->getTVValue("delivery_attributes"), true);
-                    if($par){
-                        foreach($par as $p) {
-                            $tmplr = array();
-                            $tmplr['weight'] = $p['weight'];
-                            $tmplr['dimensions'] = explode('*', $p['dimensions']);
-                            $data['items'][] = array(
-                                "quantity" => 1,
-                                "size" => array(
-                                    "length" => str_replace(",", ".", $tmplr['dimensions'][0]) * 0.01,
-                                    "width" => str_replace(",", ".", $tmplr['dimensions'][1]) * 0.01,
-                                    "height" => str_replace(",", ".", $tmplr['dimensions'][2]) * 0.01,
-                                ),
-                                "weight" => $tmplr['weight']
-                            );
-                        }
-                    }else{
-                        $pos = $this->sl->cart->getProductParams($product_id);
+                    $pos = $this->sl->cart->getProductParams($product_id);
 
-                        $data['items'][] = array(
-                            "quantity" => 1,
-                            "size" => array(
-                                "length" => (float) $pos[0]['length'] * 0.01,
-                                "width" => (float) $pos[0]['width'] * 0.01,
-                                "height" => (float) $pos[0]['height'] * 0.01,
-                            ),
-                            "weight" => (float) $pos[0]['weight']
-                        );
-                    }
+                    $data['items'][] = array(
+                        "quantity" => 1,
+                        "size" => array(
+                            "length" => (float) $pos[0]['length'] * 0.01,
+                            "width" => (float) $pos[0]['width'] * 0.01,
+                            "height" => (float) $pos[0]['height'] * 0.01,
+                        ),
+                        "weight" => (float) $pos[0]['weight']
+                    );
                     $ya_delivery_data = $this->yaDeliveryRequest($url, $data);
                     if(isset($ya_delivery_data['code'])){
                         $this->yaDeliveryReport($url.' '.$ya_delivery_data['code'].' '.$ya_delivery_data['message']);
@@ -147,37 +127,17 @@ class Yandex
             $price_data['route_points'] = $data['route_points'];
             foreach ($cart as $pr) {
                 $product = $this->modx->getObject("modResource", $pr['id']);
-                $tmp = array();
                 if($product) {
-                    $par = json_decode($product->getTVValue("delivery_attributes"), true);
-                    if ($par) {
-                        foreach ($par as $p) {
-                            $tmplr = array();
-                            $tmplr['weight'] = $p['weight'];
-                            $tmplr['dimensions'] = explode('*', $p['dimensions']);
-                            $price_data['items'][] = array(
-                                "quantity" => 1,
-                                "size" => array(
-                                    "length" => str_replace(",", ".", $tmplr['dimensions'][0]) * 0.01,
-                                    "width" => str_replace(",", ".", $tmplr['dimensions'][1]) * 0.01,
-                                    "height" => str_replace(",", ".", $tmplr['dimensions'][2]) * 0.01,
-                                ),
-                                "weight" => $tmplr['weight']
-                            );
-                        }
-                    } else {
-                        $pos = $this->sl->cart->getProductParams($pr['id']);
-
-                        $price_data['items'][] = array(
-                            "quantity" => 1,
-                            "size" => array(
-                                "length" => (float)$pos[0]['length'] * 0.01,
-                                "width" => (float)$pos[0]['width'] * 0.01,
-                                "height" => (float)$pos[0]['height'] * 0.01,
-                            ),
-                            "weight" => (float)$pos[0]['weight']
-                        );
-                    }
+                    $pos = $this->sl->cart->getProductParams($pr['id']);
+                    $price_data['items'][] = array(
+                        "quantity" => 1,
+                        "size" => array(
+                            "length" => (float)$pos[0]['length'] * 0.01,
+                            "width" => (float)$pos[0]['width'] * 0.01,
+                            "height" => (float)$pos[0]['height'] * 0.01,
+                        ),
+                        "weight" => (float)$pos[0]['weight']
+                    );
                 }
             }
             $this->modx->log(1, print_r($price_data, 1));
@@ -316,6 +276,7 @@ class Yandex
     public function yaDeliveryRequest($url, $data){
         $ch = curl_init();
 
+        $this->modx->log(1, print_r($data, 1));
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE));
@@ -337,7 +298,12 @@ class Yandex
             $this->modx->log(xPDO::LOG_LEVEL_ERROR,  'YA Delivery Error:' . curl_error($ch));
         }
         curl_close ($ch);
-
+        if($this->config["delivery_log"]){
+            $this->modx->log(1, print_r($http_code, 1));
+            $this->modx->log(1, print_r(json_decode($result, 1), 1));
+            $this->yaDeliveryReport($http_code);
+            $this->yaDeliveryReport(json_decode($result, 1));
+        }
         return json_decode($result, 1);
     }
 
@@ -345,7 +311,7 @@ class Yandex
         $this->modx->log(xPDO::LOG_LEVEL_ERROR, print_r($text, 1), array(
             'target' => 'FILE',
             'options' => array(
-                'filename' => 'ya_delivery_log.log'
+                'filename' => 'delivery_yandex.log'
             )
         ));
     }

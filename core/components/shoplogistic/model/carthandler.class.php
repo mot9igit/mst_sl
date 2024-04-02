@@ -1303,13 +1303,21 @@ class cartDifficultHandler
 	public function getDeliveryPrice($data){
 		$services = array("main_key" => $data['service']);
 		$data['location'] = json_decode($data['address'], 1);
-		// $this->modx->log(1, print_r($data['service'], 1));
+		// $this->modx->log(1, print_r($data, 1));
+        // чекаем индекс на всякий случай
+        $postrf_data = array_values($this->sl->postrf->getNearPVZ($data['location']['geo_lat'], $data['location']['geo_lon']));
+        $this->modx->log(1, print_r($postrf_data, 1));
+        if($postrf_data){
+            $data['location']['postal_code'] = $postrf_data[0]['postal-code'];
+        }
+        $this->modx->log(1, print_r($data, 1));
 		if ($data) {
 			$offset = $this->getDeliveryDateOffset('cart');
 			$cart = $this->checkCart();
 			if (in_array($data['service'], $this->config['our_services'])) {
                 // $this->modx->log(1, "Наша система");
 				if($data['service'] == 'yandex'){
+                    $this->modx->log(1, print_r($cart, 1));
 					if($offset){
 						$days = $this->sl->tools->decl($offset, "день|дня|дней", true);
 					}else{
@@ -1317,29 +1325,34 @@ class cartDifficultHandler
 					}
 					$services['yandex'] = false;
 					foreach($cart as $item){
+                        $all_price = 0;
 						// магазины считаем сразу
-						if(!isset($item['type']) || $item['type'] == 'slStores'){
+						if(isset($item['type']) || $item['type'] == 'slStores'){
 							$data['cart'] = $item;
 							$ya_data = $this->sl->yandex->getYaDeliveryPrice('cart', 0, $data);
 							if(isset($ya_data['price'])){
 								// складываем цену
 								if(isset($services['yandex']['door']['price'])){
 									$services['yandex']['door']['price'] = round($services['yandex']['door']['price'] + $ya_data['price']);
-								}
-								$services['yandex'] = array(
-									"price" => array(
-										"door" => array(
-											"price" => round($ya_data['price']),
-											"time" => $days,
-										)
-									)
-								);
+								}else{
+                                    $services['yandex'] = array(
+                                        "price" => array(
+                                            "door" => array(
+                                                "price" => round($ya_data['price']),
+                                                "time" => $days,
+                                            )
+                                        )
+                                    );
+                                }
+                                $all_price += $ya_data['price'];
                                 // ADD price
-                                $services['delivery'][$item['object']]['yandex'] = round($services['yandex']['price']);
+                                $services['delivery'][$item['object']]['yandex'] = round($all_price);
+
 							}else{
 								$services['yandex'] = false;
 							}
 						}else{
+                            /*
                             // TODO: will be corrected
 							// если у нас склад, отправляем пока отправляем как из магазина
 							$data['cart'] = $item;
@@ -1360,6 +1373,7 @@ class cartDifficultHandler
 							}else{
 								$services['yandex'] = false;
 							}
+                            */
 						}
 					}
 				}
@@ -1399,8 +1413,8 @@ class cartDifficultHandler
                     // $this->modx->log(1, print_r($cart, 1));
                     unset($cart['stores']);
                     foreach($cart as $item) {
-                        if($item['type'] && $item['object']){
-                            $object = $this->modx->getObject($item['type'], $item['object']);
+                        if($item['object']){
+                            $object = $this->modx->getObject("slStores", $item['object']);
                             if ($object) {
                                 $city = $object->getOne("City");
                                 if ($city) {
@@ -1601,15 +1615,24 @@ class cartDifficultHandler
                 }
                 // генерируем код выдачи, если необходимо
                 if($st->get("check_code")){
+                    /*
                     $code = $this->sl->tools->generate_code();
                     $order->set("code", $code['code']);
                     if($code['date_until']){
                         $order->set("code_until", $code['date_until']);
                     }
                     $order->save();
+                    */
                 }
                 // обработка заявки в ТК
                 if($st->get("to_tk")){
+                    // TODO: предусмотреть обновление заявки в ТК
+                    $code = $this->sl->tools->generate_code();
+                    $order->set("code", $code['code']);
+                    if($code['date_until']){
+                        $order->set("code_until", $code['date_until']);
+                    }
+                    $order->save();
                     $delivery = $order_data["ms_order"]["properties"]["sl"]["key"];
                     // TODO: process shipping order
                     if($delivery == "yandex"){

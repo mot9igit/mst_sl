@@ -37,6 +37,11 @@ Ext.extend(shopLogistic.window.CreateParserdataTask, shopLogistic.window.Default
             id: config.id + '-status',
             anchor: '99%'
         }, {
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_parserdata_tasks_article_last_word'),
+            name: 'article_last_word',
+            id: config.id + '-article_last_word'
+        }, {
             xtype: 'statictextfield',
             fieldLabel: _('shoplogistic_parserdata_tasks_external_id'),
             name: 'external_id',

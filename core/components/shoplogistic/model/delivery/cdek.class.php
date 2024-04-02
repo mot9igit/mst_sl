@@ -205,8 +205,10 @@
                         curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
                     }
                 }
-                if($this->checkToken()){
+                if($this->checkToken() || $action != 'oauth/token?parameters'){
                     $headers[] = "Authorization: Bearer ".$this->modx->getOption("shoplogistic_cdek_token");
+                }else{
+                    // $this->auth();
                 }
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
                 $out = curl_exec($curl);
@@ -267,7 +269,7 @@
             $setting->save();
         }
 
-        public function log($data, $file = 'cdek'){
+        public function log($data, $file = 'delivery_cdek'){
             $this->modx->log(xPDO::LOG_LEVEL_ERROR, print_r($data, 1), array(
                 'target' => 'FILE',
                 'options' => array(

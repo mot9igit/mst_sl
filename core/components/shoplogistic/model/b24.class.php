@@ -14,6 +14,11 @@ class b24Handler
 		$this->sl =& $sl;
 		$this->modx =& $modx;
 		$this->modx->lexicon->load('shoplogistic:default');
+        $webhook = $this->modx->getOption("shoplogistic_crm_webhook");
+        if($webhook) {
+            define('C_REST_WEB_HOOK_URL', $webhook);
+            $this->crest = new CRest;
+        }
 	}
 
     public function initialize(){
@@ -30,7 +35,7 @@ class b24Handler
                     $this->ms2->initialize($ctx);
                 }
             }
-            $response = $this->updateFields();
+            // $response = $this->updateFields();
             return true;
         }else{
             $this->modx->log(MODX_LOG_LEVEL_ERROR, 'shopLogistic :: CRM - Не заполнен Webhook в системных настройках');
@@ -145,9 +150,6 @@ class b24Handler
 						);
 						$stage = $this->modx->getObject("slCRMStage", $criteria);
 						if(!$stage){
-                            $this->toLog(print_r($obj->toArray(), 1));
-                            $this->toLog(print_r($stagen, 1));
-                            $this->toLog(print_r($criteria, 1));
 							// если поле не найдено - создаем
 							$stage = $this->modx->newObject("slCRMStage");
 							$stage->set("crm_id", $stagen['STATUS_ID']);

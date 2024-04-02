@@ -140,6 +140,15 @@ class parserdata
                                                     $id = $synonim->get("id");
                                                     $opt->set("option_id", $id);
                                                 }
+                                                $criteria = array(
+                                                    "name" => $option,
+                                                    "option_id:>" => 0
+                                                );
+                                                $precedent = $this->modx->getObject("slParserDataCatsOptions", $criteria);
+                                                if($precedent){
+                                                    $id = $precedent->get("option_id");
+                                                    $opt->set("option_id", $id);
+                                                }
                                             }else{
                                                 $ex = $opt->get("examples");
                                                 $examples = explode("||", $opt->get("examples"));
@@ -187,8 +196,15 @@ class parserdata
                             if($check && $cat_id){
                                 // импортируем товар
                                 $parent = $parent->get("cat_id");
-                                $article = 'vseinstrumenti_'.$item["specs"]['code'];
-                                $varticle = 'vseinstrumenti_'.$item["specs"]['code'];
+                                if($task["article_last_word"]){
+                                    $words = explode(" ", $item["specs"]['title']);
+                                    $rwords = array_reverse($words);
+                                    $article = $rwords[0];
+                                    $varticle = $rwords[0];
+                                }else{
+                                    $article = 'vseinstrumenti_'.$item["specs"]['code'];
+                                    $varticle = 'vseinstrumenti_'.$item["specs"]['code'];
+                                }
                                 if($parent && ($article || $varticle)) {
                                     $data = array();
                                     $data['pagetitle'] = $item["specs"]['title'];
@@ -210,6 +226,31 @@ class parserdata
                                     $data['volume'] = 0;
                                     $data['b24id'] = '';
                                     $data['image'] = $item["specs"]['photos'];
+                                    if($item["specs"]['brand']){
+                                        $vendor = $this->modx->getObject("msVendor", array("name" => $item["specs"]['brand']["name"]));
+                                        if($vendor){
+                                            $data['vendor'] = $vendor->get("id");
+                                        }
+                                    }
+                                    foreach($item["specs"]['package_info'] as $pack){
+                                        if($pack["name"] == "Единица товара"){
+                                            $data['measure'] = $pack["value"];
+                                        }
+                                        if($pack["name"] == "Вес, кг"){
+                                            $data['weight'] = $pack["value"];
+                                            $data['weight_brutto'] = $pack["value"];
+                                            $data['weight_netto'] = $pack["value"];
+                                        }
+                                        if($pack["name"] == "Длина, мм"){
+                                            $data['length'] = $pack["value"] * 0.1;
+                                        }
+                                        if($pack["name"] == "Ширина, мм"){
+                                            $data['width'] = $pack["value"] * 0.1;
+                                        }
+                                        if($pack["name"] == "Высота, мм"){
+                                            $data['height'] = $pack["value"] * 0.1;
+                                        }
+                                    }
                                     foreach($item["specs"]['specifications'] as $specification){
                                         $opt_query = $this->modx->newQuery("slParserDataCatsOptions");
                                         $opt_query->leftJoin("msOption", "msOption", "msOption.id = slParserDataCatsOptions.option_id");
@@ -218,8 +259,6 @@ class parserdata
                                             "name" => $specification["name"]
                                         ));
                                         $opt_query->select(array("slParserDataCatsOptions.*, msOption.id as option_id, msOption.key as option_key"));
-                                        $opt_query->prepare();
-                                        $this->modx->log(1, $opt_query->toSQL());
                                         if($opt_query->prepare() && $opt_query->stmt->execute()){
                                             $conf_option = $opt_query->stmt->fetch(PDO::FETCH_ASSOC);
                                             if($conf_option){

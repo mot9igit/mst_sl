@@ -67,7 +67,7 @@ class eShopLogistic
 
 				$dirty_data = json_decode($data['data'], 1);
 
-				// $this->modx->log(1, print_r($dirty_data, 1));
+				$this->modx->log(1, print_r($dirty_data, 1));
 				$method = $dirty_data['service']['method'];
 				$service = $dirty_data['service']['main_key'];
 				$save_data = [
@@ -75,7 +75,7 @@ class eShopLogistic
                     'method' => $dirty_data['service']['method'],
 					'price' => $dirty_data['service'][$service]['price'][$method]['price'],
 					'time' => $dirty_data['service'][$service]['price'][$method]['time'],
-					'service' => $dirty_data['service'][$service]['name'],
+					'service' => $dirty_data['service']['main_key'],
                     'delivery' => $dirty_data['service']['delivery']
 				];
 				$save_data['mode'] = $this->modx->lexicon('shoplogistic_frontend_mode_' . $method);
@@ -85,7 +85,7 @@ class eShopLogistic
 				if($method == 'door' || $service == 'postrf'){
 					// $save_data['address'] = $this->modx->lexicon('shoplogistic_frontend_no_address');
 				}
-				//$this->modx->log(1, print_r($save_data, 1));
+				$this->modx->log(1, print_r($save_data, 1));
 				//$this->modx->log(1, json_encode($save_data, JSON_UNESCAPED_UNICODE));
 				$this->ms2->order->remove('sl_data');
 				$response = $this->ms2->order->add('sl_data', json_encode($save_data, JSON_UNESCAPED_UNICODE));

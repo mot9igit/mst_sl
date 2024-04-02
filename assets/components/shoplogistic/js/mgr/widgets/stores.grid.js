@@ -209,6 +209,7 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
             'bank_bik',
             'bank_name',
             'unique_id',
+            'btx24_id',
             'address' ,
             'ur_address',
             'city',
@@ -229,6 +230,7 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
             'name',
             'apikey',
             'city',
+            'btx24_id',
             'description'
         ];
         var checks = [

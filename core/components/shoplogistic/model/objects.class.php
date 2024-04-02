@@ -429,6 +429,9 @@ class objectsHandler
         if($properties['type'] == 'storedata'){
             return $this->getStoreMatrixData($properties);
         }
+        if($properties['type'] == 'msproducts'){
+            return $this->getMSProducts($properties);
+        }
         if($properties['type'] == 'reporttypes'){
             return $this->getReportTypes($properties);
         }
@@ -512,6 +515,82 @@ class objectsHandler
             "items" => array()
         );
     }
+
+    /**
+     *
+     * Берем товары из каталога
+     *
+     * @param $properties
+     * @return array
+     */
+    public function getMSProducts($properties){
+        if(isset($properties['id'])){
+            $q = $this->modx->newQuery("modResource");
+            $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
+            $q->leftJoin('msVendor', 'msVendor', 'msVendor.id = msProduct.vendor');
+            $q->leftJoin('modResource', 'Parent', 'Parent.id = modResource.parent');
+            $q->where(array(
+                "modResource.class_key:=" => "msProduct"
+            ));
+            if($properties['filter']){
+                $words = explode(" ", $properties['filter']);
+                foreach($words as $word){
+                    $criteria = array();
+                    $criteria['modResource.pagetitle:LIKE'] = '%'.trim($word).'%';
+                    $criteria['OR:msProduct.vendor_article:LIKE'] = '%'.trim($word).'%';
+                    $criteria['OR:msVendor.name:LIKE'] = '%'.trim($word).'%';
+                    $q->where($criteria);
+                }
+            }
+            if($properties['filtersdata']){
+                if(isset($properties['filtersdata']['vendor'])){
+                    $q->where(array(
+                        "msProduct.vendor:=" => $properties['filtersdata']['vendor']
+                    ));
+                }
+                if(isset($properties['filtersdata']['parent'])){
+                    $q->where(array(
+                        "modResource.parent:=" => $properties['filtersdata']['parent']
+                    ));
+                }
+            }
+
+            $q->select(array(
+                'modResource.*',
+                'msProduct.*',
+                'msVendor.name as vendor_name',
+                'Parent.pagetitle as parent_name'
+            ));
+
+            // Подсчитываем общее число записей
+            $result['total'] = $this->modx->getCount('modResource', $q);
+
+            // Устанавливаем лимит 1/10 от общего количества записей
+            // со сдвигом 1/20 (offset)
+            if($properties['page'] && $properties['perpage']){
+                $limit = $properties['perpage'];
+                $offset = ($properties['page'] - 1) * $properties['perpage'];
+                $q->limit($limit, $offset);
+            }
+
+            // И сортируем по ID в обратном порядке
+            if($properties['sort']){
+                $keys = array_keys($properties['sort']);
+                $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+            }
+            $q->prepare();
+            $this->modx->log(1, $q->toSQL());
+            if($q->prepare() && $q->stmt->execute()){
+                $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            return $result;
+        }
+        return array(
+            "items" => array(),
+            "total" => 0
+        );
+    }
+
 
     public function getReportCopoDetailsAll($properties){
         if(isset($properties['vendor_id'])){

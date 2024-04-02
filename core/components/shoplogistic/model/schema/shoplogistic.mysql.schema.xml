@@ -2032,6 +2032,7 @@
         <field key="url" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="config_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="1"/>
+        <field key="article_last_word" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
         <field key="createdby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
@@ -2146,6 +2147,7 @@
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="url" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="1"/>
+        <field key="article_last_word" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
         <field key="createdby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />

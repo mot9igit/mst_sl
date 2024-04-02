@@ -1150,6 +1150,7 @@ $_lang["shoplogistic_parserdata_tasks"] = "Задачи парсера";
 $_lang["shoplogistic_parserdata_tasks_intro"] = "Управляйте задачами парсера";
 $_lang["shoplogistic_parserdata_tasks_create"] = "Создать задачу парсера";
 $_lang["shoplogistic_parserdata_tasks_name"] = "Наименование";
+$_lang["shoplogistic_parserdata_tasks_article_last_word"] = "Артикул в последнем слове";
 $_lang["shoplogistic_parserdata_tasks_description"] = "Описание";
 $_lang["shoplogistic_parserdata_tasks_external_id"] = "Внешний ID";
 $_lang["shoplogistic_parserdata_tasks_url"] = "URL";

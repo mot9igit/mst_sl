@@ -17,7 +17,7 @@ shopLogistic.grid.ParserdataTasks = function (config) {
 Ext.extend(shopLogistic.grid.ParserdataTasks, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'name', 'external_id', 'description', 'data', 'updatedon', 'url', 'status', 'status_name', 'color', 'properties', 'actions'];
+        return ['id', 'name', 'external_id', 'article_last_word', 'description', 'data', 'updatedon', 'url', 'status', 'status_name', 'color', 'properties', 'actions'];
     },
 
     getColumns: function () {
@@ -43,6 +43,13 @@ Ext.extend(shopLogistic.grid.ParserdataTasks, shopLogistic.grid.Default, {
                 dataIndex: 'external_id',
                 sortable: true,
                 width: 100,
+            },
+            {
+                header: _('shoplogistic_parserdata_tasks_article_last_word'),
+                dataIndex: 'article_last_word',
+                sortable: true,
+                width: 100,
+                renderer: shopLogistic.utils.renderBoolean
             },
             {
                 header: _('shoplogistic_parserdata_tasks_status'),

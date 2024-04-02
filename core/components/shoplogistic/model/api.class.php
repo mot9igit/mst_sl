@@ -20,7 +20,7 @@ class minishop2_fast_api{
 			'start_rows' => 1,
 			'parse_rows' => 999999,
 			'author_id' => 439,
-			'images_mode' => 'files',
+			'images_mode' => 'gallery',
 			'defaults_new_categories' => array(
 				'template' => 21,
 				'template_last' => 3,
@@ -33,7 +33,8 @@ class minishop2_fast_api{
 				'template' => 4,
 				'published' => 1,
 				'class_key' => 'msProduct',
-				'show_in_tree' => 0
+				'show_in_tree' => 0,
+                'source' => 2
 				//'tvs' => 1
 			),
 		);
@@ -525,16 +526,39 @@ class minishop2_fast_api{
 			$id = $this->setResource($data);
 			if($id){
 				$data['id'] = $id;
-				$id = $this->create("msProductData", $data);
-                if(count($tvs)){
-                    $this->setTVs($tvs, $id);
+                $resource = $this->modx->newObject("modResource");
+                if($resource) {
+                    $class_key = $data['class_key'];
+                    $pagetitle = $data['pagetitle'];
+                    if ($class_key == 'msCategory') {
+                        $alias = $id . "_" . $resource->cleanAlias($pagetitle);
+                        $up_data = array(
+                            "alias" => $alias,
+                            "uri" => "category/" . $alias,
+                            "uri_override" => 1
+                        );
+                        $this->update("modResource", $up_data, $id);
+                    }
+                    if ($class_key == 'msProduct') {
+                        $alias = $id . "_" . $resource->cleanAlias($pagetitle);
+                        $up_data = array(
+                            "alias" => $alias,
+                            "uri" => "products/" . $alias,
+                            "uri_override" => 1
+                        );
+                        $this->update("modResource", $up_data, $id);
+                    }
+                    $id = $this->create("msProductData", $data);
+                    if (count($tvs)) {
+                        $this->setTVs($tvs, $id);
+                    }
+                    if (count($options)) {
+                        $this->setOptions($options, $id);
+                    }
+                    if ($images) {
+                        $this->setImages($images, $id);
+                    }
                 }
-                if(count($options)) {
-                    $this->setOptions($options, $id);
-                }
-				if($images){
-					$this->setImages($images, $id);
-				}
 			}
 			$this->checkprogress("Создан товар {$data['pagetitle']} ({$id})");
             return array(

@@ -414,6 +414,11 @@ class postrf{
     public function getNearPVZ($latitude, $longitude){
         $url = "postoffice/1.0/nearby?latitude={$latitude}&longitude={$longitude}&filter=ALL";
         $response = $this->request($url, array(), "GET");
+        foreach($response as $key => $resp){
+            if($resp["type-code"] == "ПОЧТОМАТ"){
+                unset($response[$key]);
+            }
+        }
         return $response;
     }
 

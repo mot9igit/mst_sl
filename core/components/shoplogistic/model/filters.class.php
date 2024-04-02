@@ -43,6 +43,11 @@ class filters
         );
     }
 
+    /**
+     * @param $category
+     * @param $records
+     * @return array
+     */
     public function getRangePrices($category, $records = array()){
         // 1. Берем местоположение пользователя.
         $checked_store = array();
@@ -171,6 +176,8 @@ class filters
                     if($this->category){
                         $query->where(array("modResource.parent:=" => $this->category));
                     }
+					$query->where(array("msProductData.image:!=" => ""));
+					$query->where(array("msProductData.vendor_article:!=" => ""));
                     $query->limit($limit, $i);
                     if($query->prepare() && $query->stmt->execute()){
                         $products = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -317,40 +324,88 @@ class filters
                     "last" => $config["pages"],
                     "records" => $config["records"]
                 );
-                $output["pagination"] = $this->preparePagination($config);
-                // $this->modx->log(1, print_r($config, 1));
-                $config['sortby'] = "Data.available";
-                $config['sortdir'] = "ASC";
-                if($filter_price){
-                    if($filter_price["min"] != $filter_price["default_min"] && $filter_price["max"] != $filter_price["default_max"]){
-                        $location = $this->sl->getLocationData('web');
-                        $store_id = $location["pls"]["store_id"];
-                        $config['loadModels'] = 'shoplogistic';
-                        $config['leftJoin'] = array(
-                            "slStoresRemainsStore" => [
-                                "class" => "slStoresRemains",
-                                "on" => "msProduct.id = slStoresRemains.product_id AND slStoresRemains.store_id = {$store_id}"
-                            ],
-                            "slStoresRemainsMIN" => [
-                                "class" => "slStoresRemains",
-                                "on" => "msProduct.id = slStoresRemains.product_id AND slStoresRemains.store_id != {$store_id} AND slStoresRemains.price = (
-                                select min(price)
-                                from slStoresRemains
-                                where msProduct.id = slStoresRemains.product_id AND slStoresRemains.remains > 0 AND slStoresRemains.price > 0
-                            )"
-                            ]
-                        );
-                        $config['select'] = array(
-                            "msProduct" => "*",
-                            "slStoresRemainsStore" => "slStoresRemainsStore.remains as sl_remains, coalesce(slStoresRemainsStore.price, slStoresRemainsMIN.price, 0) AS sl_price"
-                        );
-                        $config['where'] = array(
-                            "sl_price:>=" => $filter_price["min"],
-                            "AND:sl_price:<=" => $filter_price["max"]
-                        );
+                $output["pagination"] = $this->preparePagination($output["config"]);
+                if($_POST["sortby"] && $_POST["sortdir"]){
+                    if($_POST["sortby"] == "price"){
+                        $config['sortby'] = '{"Data.available":"ASC","sl_price":"'.$_POST["sortdir"].'"}';
+                    }else{
+                        $config['sortby'] = '{"Data.available":"ASC","'.$_POST["sortby"].'":"'.$_POST["sortdir"].'"}';
                     }
+                }else{
+                    $config['sortby'] = '{"Data.available":"ASC","sl_price":"ASC"}';
                 }
-                $output["products"] = $this->modx->runSnippet("msProducts", $config);
+                $location = $this->sl->getLocationData('web');
+                $store_id = $location["pls"]["store_id"];
+                $remainsTable = $this->modx->getTableName('slStoresRemains');
+                $storesTable = $this->modx->getTableName('slStores');
+                $config['loadModels'] = 'shoplogistic';
+                $config['leftJoin'] = array(
+                    "slStoresRemainsStore" => [
+                        "class" => "slStoresRemains",
+                        "on" => "msProduct.id = slStoresRemainsStore.product_id AND slStoresRemainsStore.store_id = {$store_id} AND slStoresRemainsStore.price > 0  AND slStoresRemainsStore.remains > 0"
+                    ],
+                    "slStoresRemainsMIN" => [
+                        "class" => "slStoresRemains",
+                        "on" => "msProduct.id = slStoresRemainsMIN.product_id AND slStoresRemainsMIN.store_id != {$store_id} AND slStoresRemainsMIN.price = (
+                            SELECT min(slStoresRemains.price)
+                            FROM {$remainsTable} `slStoresRemains`
+                            LEFT JOIN {$storesTable} `slStores` ON `slStores`.`id` = `slStoresRemains`.`store_id`
+                            WHERE slStoresRemains.product_id = msProduct.id AND slStoresRemains.remains > 0 AND slStoresRemains.price > 0 AND slStores.active = 1
+                        )"
+                    ]
+                );
+                $config['select'] = array(
+                    "msProduct" => "*",
+                    "slStoresRemainsStore" => "CAST(coalesce(slStoresRemainsStore.remains, 0) as UNSIGNED) * 1 as sl_remains, CAST(coalesce(slStoresRemainsStore.price, slStoresRemainsMIN.price, 0) as DECIMAL) * 1 AS sl_price"
+                );
+                if($filter_price){
+                    $config['having'] = array(
+                        "sl_price:>=" => $filter_price["min"],
+                        "sl_price:<=" => $filter_price["max"]
+                    );
+                }
+                if($_POST["instock"]){
+                    $config['having']["sl_remains:>"] = 0;
+                }
+                $config["return"] = 'sql';
+                // $config["showLog"] = 1;
+                // $this->modx->log(1, print_r($config, 1));
+                // $this->modx->log(1, print_r($filter_price, 1));
+                $sql = $this->modx->runSnippet("msProducts", $config);
+                $sql = str_replace("`msProduct`.`sl_price`", "`sl_price`", $sql);
+                $sql = str_replace("`msProduct`.`sl_remains`", "`sl_remains`", $sql);
+                $this->modx->log(1, print_r($sql, 1));
+                $statement = $this->modx->query($sql);
+                $array = $statement->fetchAll(PDO::FETCH_ASSOC);
+                $total_sql = "SELECT COUNT(*) as count FROM ({$sql}) t";
+                $total_sql = str_replace("LIMIT ".$config['limit'], "", $total_sql);
+                $q = $this->modx->prepare($total_sql);
+                $this->modx->log(1, print_r($total_sql, 1));
+                $q->execute();
+                $total_data = $q->fetch(PDO::FETCH_COLUMN);
+                $this->modx->log(1, print_r($total_data, 1));
+                $output["config"]["total"] = $total_data;
+                $output["config"]["pages"] = ceil($output["config"]["total"] / $output["config"]['limit']);
+                $this->modx->setPlaceholder("total", $config["total"]);
+                $output["pagination"] = $this->preparePagination($output["config"]);
+                $products = "";
+                $pdo = $this->modx->getService('pdoFetch');
+                $product = $this->modx->newObject('msProductData');
+                foreach($array as $arr){
+                    $arr['price'] = $product->getPrice($arr);
+                    $arr['weight'] = $product->getWeight($arr);
+                    if ($arr['price'] < $tmp) {
+                        $arr['old_price'] = $tmp;
+                    }
+                    $arr = $product->modifyFields($arr);
+                    $products .= $pdo->getChunk($config["tpl"], $arr);
+                }
+                $output["products"] = $products;
+                // if($config["page"] == 1){
+
+                // }
+                // $this->modx->log(1, print_r($output["products"], 1));
+                // $output["products"] = $this->modx->runSnippet("msProducts", $config);
             }
         }
         // $this->modx->log(1, print_r($output, 1));
@@ -374,6 +429,7 @@ class filters
             "first" => 1,
             "last" => $config["pages"]
         );
+        $this->modx->log(1, print_r($pls, 1));
         if($pls["page"] - 1 != 0){
             $pls["prev"] = $pls["page"] - 1;
         }else{
