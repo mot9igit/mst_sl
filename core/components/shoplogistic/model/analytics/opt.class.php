@@ -26,16 +26,16 @@ class optAnalyticsHandler
      * @param $properties
      * @return mixed
      */
-    public function handlePages($action, $properties){
+    public function handlePages($action, $properties = array()){
         switch ($action) {
             case 'get/mainpage':
-                $response = $this->getMainPage();
+                $response = $this->getMainPage($properties);
                 break;
             case 'get/catalog':
-                $response = $this->getCatalog();
+                $response = $this->getCatalog($properties);
                 break;
             case 'get/cart':
-                $response = $this->getCart();
+                $response = $this->getCart($properties);
                 break;
         }
         return $response;
@@ -44,7 +44,7 @@ class optAnalyticsHandler
     /**
      * @return array
      */
-    public function getMainPage(){
+    public function getMainPage($properties){
         $object = $this->modx->getObject("modResource", $this->modx->getOption("analytics_start_page"));
         if($object){
             $data = $object->toArray();
