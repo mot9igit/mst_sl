@@ -928,6 +928,7 @@ $_lang["shoplogistic_parser_config_update"] = "Редактировать кон
 $_lang["shoplogistic_parser_config_name"] = "Наименование";
 $_lang["shoplogistic_parser_config_description"] = "Описание";
 $_lang["shoplogistic_parser_config_base_url"] = "Базовый URL";
+$_lang["shoplogistic_parser_config_once_cats"] = "Брать категории только один раз";
 $_lang["shoplogistic_parser_config_unique"] = "Проверять на уникальность";
 $_lang["shoplogistic_parser_config_key_product_field"] = "Ключевое поле";
 $_lang["shoplogistic_parser_config_categories_base"] = "Селектор категорий в списке";

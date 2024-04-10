@@ -72,6 +72,12 @@ Ext.extend(shopLogistic.window.CreateConfig, shopLogistic.window.Default, {
             }]
         }, {
             xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_parser_config_once_cats'),
+            name: 'once_cats',
+            id: config.id + '-once_cats',
+            anchor: '99%'
+        }, {
+            xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_parser_config_unique'),
             name: 'unique',
             id: config.id + '-unique',

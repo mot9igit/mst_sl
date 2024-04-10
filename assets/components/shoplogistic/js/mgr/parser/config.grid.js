@@ -17,7 +17,7 @@ shopLogistic.grid.ParserConfigs = function (config) {
 Ext.extend(shopLogistic.grid.ParserConfigs, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'name', 'unique', 'key_product_field', 'description', 'base_url', 'categories_base', 'categories_base_inner', 'products_base', 'products_base_inner', 'pagination', 'pagination_selector', 'pagination_filters', 'properties', 'actions'];
+        return ['id', 'name', 'unique', 'key_product_field', 'once_cats', 'description', 'base_url', 'categories_base', 'categories_base_inner', 'products_base', 'products_base_inner', 'pagination', 'pagination_selector', 'pagination_filters', 'properties', 'actions'];
     },
 
     getColumns: function () {
@@ -25,12 +25,14 @@ Ext.extend(shopLogistic.grid.ParserConfigs, shopLogistic.grid.Default, {
             {
                 header: _('shoplogistic_id'),
                 dataIndex: 'id',
+                sortable: true,
                 width: 20
             },
             {
                 header: _('shoplogistic_parser_config_name'),
                 width: 50,
-                dataIndex: 'name'
+                dataIndex: 'name',
+                sortable: true,
             },
             {
                 header: _('shoplogistic_parser_config_base_url'),

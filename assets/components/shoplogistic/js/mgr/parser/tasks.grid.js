@@ -25,11 +25,13 @@ Ext.extend(shopLogistic.grid.ParserTasks, shopLogistic.grid.Default, {
             {
                 header: _('shoplogistic_id'),
                 dataIndex: 'id',
+                sortable: true,
                 width: 20
             },
             {
                 header: _('shoplogistic_parser_tasks_name'),
                 width: 50,
+                sortable: true,
                 dataIndex: 'name'
             },
             {

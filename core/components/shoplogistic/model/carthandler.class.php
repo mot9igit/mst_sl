@@ -71,7 +71,9 @@ class cartDifficultHandler
         $output = array(
             "location_store" => array(),
             "stores" => array(),
-            "stores_city" => array()
+            "stores_city" => array(),
+            "selected_store" => array(),
+            "selected_store_warehouses" => array()
         );
         $location = $this->sl->getLocationData($ctx);
         $output['location'] = $location;
@@ -244,7 +246,7 @@ class cartDifficultHandler
         // $this->modx->log(1, $product_id.' | '.$type.' | '.$from_id.' | ');
         // Считаем примерные сроки доставки
         // Вариант 1: считаем самовывоз + доставку от поставщика
-        $delivery_data = $this->getPickupPrice($product_id, $type, 1, $from_id);
+        $delivery_data['pickup'] = $this->getPickupPrice($product_id, $type, 1, $from_id);
         // TODO: контекст!
         $location = $this->sl->getLocationData('web');
         $delivery_data['location'] = $location;
@@ -997,58 +999,66 @@ class cartDifficultHandler
 		}else{
 			$from['store'] = $this->sl->store->getStore($from_id);
 		}
-		$remain = $this->getStoreRemain($product_id, $count, $from['store']['id']);
-		if($remain){
-            // если нашли возращаем остаток
-            $delivery_data['pickup']['store'] = $from['store'];
-            $delivery_data['pickup']['price'] = 0;
-            $delivery_data['pickup']['term'] = 'сегодня';
-            $delivery_data['pickup']['term_default'] = 0;
-
-            /*
-			if($type == 'slStores'){
-
-			}else{
-				// меняем адрес самовывоза
-				$from['store']['address'] = $loc['data']['store']['address'];
-				if($from['store']['delivery_tk']){
-					// проверем склад, если стоит галка "Доставка ТК", игнорируем поле отгрузок
-					// считаем доставку ТК
-					// $this->modx->log(1, $product_id.', 1, slWarehouse, '.$from['store']['id'].', '.$loc['data']['store']['id']);
-					$delivery_data = $this->getTKPrice($product_id, 1, 'slWarehouse', $from['store']['id'], $loc['data']['store']['id']);
-					$delivery_data['pickup'] = $delivery_data['delivery'];
-					$delivery_data['pickup']['store'] = $from['store'];
-					unset($delivery_data['delivery']);
-				}else{
-
-				}
-			}*/
-			return $delivery_data;
-		}else{
-            // ищем у поставщиков, в приоритете поставщики, подключенные к магазину
-            // смотрим отгрузки
-            $warehouses = $this->sl->store->getWarehouses($from['store']['id']);
-            $shipment = 999;
-            foreach($warehouses as $warehouse){
-                $ship = $this->getNearShipWh($product_id, $count, $warehouse['id'], $from['store']['id']);
-                // $this->modx->log(1, $ship);
-                if($ship < $shipment){
-                    $newDate = new DateTime();
-                    $interval = 'P'.$ship.'D';
-                    $newDate->add(new DateInterval($interval));
-                    $delivery_data['pickup']['term_default'] = $newDate->format('Y-m-d H:i:s');
-                    $delivery_data['pickup']['term'] = $newDate->format('Y-m-d H:i:s');
-                    $delivery_data['pickup']['price'] = 0;
+        $city = $this->modx->getObject("dartLocationCity", $from['store']['city']);
+        if($city){
+            $city_data = $city->toArray();
+            $this->modx->log(1, print_r($city_data, 1));
+            $this->modx->log(1, print_r($location, 1));
+            if($city_data['properties']['postal_code'] == $location["postal_code"]){
+                $remain = $this->getStoreRemain($product_id, $count, $from['store']['id']);
+                if($remain){
+                    // если нашли возращаем остаток
                     $delivery_data['pickup']['store'] = $from['store'];
-                    // $this->modx->log(1, print_r($delivery_data, 1));
+                    $delivery_data['pickup']['price'] = 0;
+                    $delivery_data['pickup']['term'] = 'сегодня';
+                    $delivery_data['pickup']['term_default'] = 0;
+
+                    /*
+                    if($type == 'slStores'){
+
+                    }else{
+                        // меняем адрес самовывоза
+                        $from['store']['address'] = $loc['data']['store']['address'];
+                        if($from['store']['delivery_tk']){
+                            // проверем склад, если стоит галка "Доставка ТК", игнорируем поле отгрузок
+                            // считаем доставку ТК
+                            // $this->modx->log(1, $product_id.', 1, slWarehouse, '.$from['store']['id'].', '.$loc['data']['store']['id']);
+                            $delivery_data = $this->getTKPrice($product_id, 1, 'slWarehouse', $from['store']['id'], $loc['data']['store']['id']);
+                            $delivery_data['pickup'] = $delivery_data['delivery'];
+                            $delivery_data['pickup']['store'] = $from['store'];
+                            unset($delivery_data['delivery']);
+                        }else{
+
+                        }
+                    }*/
+                    return $delivery_data;
+                }else{
+                    // ищем у поставщиков, в приоритете поставщики, подключенные к магазину
+                    // смотрим отгрузки
+                    $warehouses = $this->sl->store->getWarehouses($from['store']['id']);
+                    $shipment = 999;
+                    foreach($warehouses as $warehouse){
+                        $ship = $this->getNearShipWh($product_id, $count, $warehouse['id'], $from['store']['id']);
+                        // $this->modx->log(1, $ship);
+                        if($ship < $shipment){
+                            $newDate = new DateTime();
+                            $interval = 'P'.$ship.'D';
+                            $newDate->add(new DateInterval($interval));
+                            $delivery_data['pickup']['term_default'] = $newDate->format('Y-m-d H:i:s');
+                            $delivery_data['pickup']['term'] = $newDate->format('Y-m-d H:i:s');
+                            $delivery_data['pickup']['price'] = 0;
+                            $delivery_data['pickup']['store'] = $from['store'];
+                            // $this->modx->log(1, print_r($delivery_data, 1));
+                        }
+                    }
+
+                    if($shipment == 999){
+                        // смотрим поставщиков, которые могу доставить с помощью ТК
+                        // TODO: прописать условия
+                    }
+                    return $delivery_data;
                 }
             }
-
-            if($shipment == 999){
-                // смотрим поставщиков, которые могу доставить с помощью ТК
-                // TODO: прописать условия
-            }
-            return $delivery_data;
         }
 		return false;
 	}

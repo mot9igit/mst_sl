@@ -34,7 +34,7 @@ class Yandex
             'cssUrl' => $assetsUrl . 'css/',
             'jsUrl' => $assetsUrl . 'js/',
 
-            'delivery_log' => $delivery_log,
+            'delivery_log' => 1,
 
             'token' => $token,
             'delivery_url' => $delivery_url,

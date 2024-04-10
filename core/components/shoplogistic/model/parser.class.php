@@ -33,6 +33,7 @@ class parser
             "out" => "YML",
             "chunk" => "parser_yml",
             'base_path' => $this->modx->getOption("assets_path").'files/parser/',
+            'test_mode' => 0,
             'exclude' => array(),
             'table_config' => array(
                 "fields" => array()
@@ -104,6 +105,7 @@ class parser
      * @return array
      */
     public function get_cats($url, $parent = ''){
+        $this->checkprogress($url);
         $output = array(
             "categories" => array()
         );
@@ -113,7 +115,16 @@ class parser
         $request = $this->connect($url);
         $cat = new simple_html_dom;
         $cat->load($request["content"]);
-        $cats = $cat->find($this->config["categories"]["base"]);
+        // $this->checkprogress(print_r($this->config, 1));
+        if($this->config['once_cats']) {
+            if(!count($this->output['categories'])){
+                $cats = $cat->find($this->config["categories"]["base"]);
+            }else{
+                $cats = array();
+            }
+        }else{
+            $cats = $cat->find($this->config["categories"]["base"]);
+        }
         if(count($cats)){
             $this->checkprogress("На странице ".print_r($url, 1)." найдены категории в размере ".count($cats)." идем вглубь");
             $categories = array();
@@ -165,6 +176,7 @@ class parser
             $output['pages'] = $p;
             $this->checkprogress("Найдено страниц - ".count($p));
         }
+        $this->checkprogress("На странице ".print_r($output, 1));
         return $output;
     }
 
@@ -454,6 +466,18 @@ class parser
                                 $val = $row->find($config['value'], 0)->plaintext;
                             }
                             if($lab){
+                                if($config['replace_label']){
+                                    $replace = explode("==", $config['replace_label']);
+                                    if(count($replace) > 1){
+                                        $lab = str_replace($replace[0], $replace[1], $lab);
+                                    }
+                                }
+                                if($config['replace_value']){
+                                    $replace = explode("==", $config['replace_value']);
+                                    if(count($replace) > 1){
+                                        $val = str_replace($replace[0], $replace[1], $val);
+                                    }
+                                }
                                 $field_value[html_entity_decode(trim($lab))] = html_entity_decode(trim($val));
                             }
                         }
@@ -472,6 +496,18 @@ class parser
                                         $val = $row->find($config['value'], 0)->plaintext;
                                     }
                                     if ($lab) {
+                                        if($config['replace_label']){
+                                            $replace = explode("==", $config['replace_label']);
+                                            if(count($replace) > 1){
+                                                $lab = str_replace($replace[0], $replace[1], $lab);
+                                            }
+                                        }
+                                        if($config['replace_value']){
+                                            $replace = explode("==", $config['replace_value']);
+                                            if(count($replace) > 1){
+                                                $val = str_replace($replace[0], $replace[1], $val);
+                                            }
+                                        }
                                         $field_value[html_entity_decode(trim($lab))] = html_entity_decode(trim($val));
                                     }
                                 }
@@ -489,6 +525,18 @@ class parser
                                     $val = $row->find($config['value'], 0)->plaintext;
                                 }
                                 if ($lab) {
+                                    if($config['replace_label']){
+                                        $replace = explode("==", $config['replace_label']);
+                                        if(count($replace) > 1){
+                                            $lab = str_replace($replace[0], $replace[1], $lab);
+                                        }
+                                    }
+                                    if($config['replace_value']){
+                                        $replace = explode("==", $config['replace_value']);
+                                        if(count($replace) > 1){
+                                            $val = str_replace($replace[0], $replace[1], $val);
+                                        }
+                                    }
                                     $field_value[html_entity_decode(trim($lab))] = html_entity_decode(trim($val));
                                 }
                             }
@@ -557,6 +605,7 @@ class parser
                         $this->config["base_url"] = $config["base_url"];
                         $this->output["base_url"] = $config["base_url"];
                         $this->config["file_name"] = $task_id . ".xml";
+                        $this->config["once_cats"] = $config["once_cats"];
                         $this->config["unique"] = $config["unique"];
                         $this->config["key_product_field"] = $config["key_product_field"];
                         $this->config["categories"]["base"] = $config["categories_base"];
@@ -740,11 +789,25 @@ class parser
     public function parse($url, $parent = ""){
         if(!in_array($url, $this->output['history'])){
             $this->output['history'][] = $url;
-            $cats = $this->get_cats($url, $parent);
+            if($this->config['once_cats']) {
+                if(!count($this->output['categories'])){
+                    $cats = $this->get_cats($url, $parent);
+                    if($this->config["test_mode"]){
+                        $cats['categories'] = array($cats['categories'][0]);
+                    }
+                }else{
+                    $cats = $this->get_cats($url, $parent);
+                    $cats['categories'] = array();
+                }
+            }else{
+                $cats = $this->get_cats($url, $parent);
+            }
             if(!count($cats['categories'])){
                 if(!$parent){
                     $cats['cat']['id'] = md5($cats['cat']['title']);
-                    $this->output['categories'][] = $cats['cat'];
+                    if(!count($this->output['categories'])) {
+                        $this->output['categories'][] = $cats['cat'];
+                    }
                 }
                 foreach($cats['pages'] as $page){
                     $products = $this->get_products($page, $cats['cat']['title']);
@@ -760,6 +823,9 @@ class parser
                     }
                 }
             }else{
+                foreach($cats['categories'] as $key => $cat){
+                    $cats['categories'][$key]['id'] = md5($cat['title']);
+                }
                 $this->output['categories'] = array_merge($this->output['categories'], $cats['categories']);
                 foreach($this->output['categories'] as $k => $cat){
                     if(!$cat["id"]){

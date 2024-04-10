@@ -39,7 +39,7 @@
          *
          * @return bool
          */
-        protected function auth(){
+        public function auth(){
             $data = array(
                 "grant_type" => "client_credentials",
                 "client_id" => $this->config['account'],
@@ -223,7 +223,7 @@
          *
          * @return bool
          */
-        protected function checkToken(){
+        public function checkToken(){
             $expired = $this->modx->getOption("shoplogistic_cdek_token_expired_in");
             $token = $this->modx->getOption("shoplogistic_cdek_token");
             if($token){

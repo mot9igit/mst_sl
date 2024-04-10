@@ -320,6 +320,35 @@
         <aggregate alias="City" class="dartLocationCity" local="city" foreign="id" cardinality="one" owner="foreign"/>
     </object>
 
+    <object class="slStoresWeekWork" table="sl_stores_week_work" extends="xPDOSimpleObject">
+        <field key="store_id" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
+        <field key="date" dbtype="timestamp" phptype="datetime" null="true" />
+        <field key="week_day" dbtype="integer" phptype="integer" null="true" />
+        <field key="date_from" dbtype="timestamp" phptype="datetime" null="true" />
+        <field key="date_to" dbtype="timestamp" phptype="datetime" null="true" />
+        <field key="weekend" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="timezone" dbtype="text" phptype="text" null="true"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
+            <column key="store_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date" name="date" primary="false" unique="false" type="BTREE">
+            <column key="date" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date_from" name="date_from" primary="false" unique="false" type="BTREE">
+            <column key="date_from" length="" collation="A" null="false"/>
+        </index>
+        <index alias="date_to" name="date_to" primary="false" unique="false" type="BTREE">
+            <column key="date_to" length="" collation="A" null="false"/>
+        </index>
+        <index alias="weekend" name="weekend" primary="false" unique="false" type="BTREE">
+            <column key="weekend" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="Store" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
+
     <object class="slWarehouseStores" table="sl_warehouses_stores" extends="xPDOSimpleObject">
         <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="warehouse_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
@@ -1963,6 +1992,7 @@
         <field key="products_base" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="products_base_inner" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="unique" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="once_cats" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="key_product_field" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="pagination" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="pagination_selector" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>

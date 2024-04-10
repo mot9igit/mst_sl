@@ -547,7 +547,7 @@ class shopLogistic
             $sphinx->SetFilter('available', array(1));
         }
         $sphinx->SetLimits($offset, $limit, 1000);
-        $result = $sphinx->Query($string, 'dev_mst_tools');
+        $result = $sphinx->Query($string, 'mst_tools');
         if ($result && isset($result['matches'])){
             return $result;
         }else{

@@ -2642,6 +2642,12 @@ class objectsHandler
         if($properties['type'] == 'toggleOpts') {
             $response = $this->toggleOpts($properties);
         }
+        if($properties['type'] == 'work_week' && $properties['action'] == 'set'){
+            $response = $this->sl->store->setWork($properties);
+        }
+        if($properties['type'] == 'work_week_date' && $properties['action'] == 'set'){
+            $response = $this->sl->store->setWorkDate($properties);
+        }
         return $response;
     }
 
@@ -3445,6 +3451,19 @@ class objectsHandler
                         return true;
                     }else{
                         $this->modx->log(1, "Проверьте удаление плана ". $properties['store']['store_id']);
+                        return false;
+                    }
+                }
+            }
+        }
+        if($properties['type'] == 'work_week_date'){
+            if(isset($properties['object_id'])){
+                $work_day = $this->modx->getObject("slStoresWeekWork", array("store_id" => $properties['id'], "id" => $properties['object_id']));
+                if($work_day){
+                    if ($work_day->remove() !== false) {
+                        return true;
+                    }else{
+                        $this->modx->log(1, "Проверьте удаление времени работы ". $properties['id']);
                         return false;
                     }
                 }

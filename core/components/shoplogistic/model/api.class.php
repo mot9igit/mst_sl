@@ -625,6 +625,9 @@ class minishop2_fast_api{
 			$values = [];
 			foreach ($data as $key => $value) {
 				$keys[] = "`$key`";
+                if(!is_int($value)){
+                    $value = addslashes($value);
+                }
 				$values[] = is_int($value) || $value == 'now()' ? $value : "'$value'";
 			}
 			$keys = implode(', ', $keys);
@@ -662,6 +665,9 @@ class minishop2_fast_api{
 			}
 			$update_data = [];
 			foreach ($data as $key => $value) {
+                if(!is_int($value)){
+                    $value = addslashes($value);
+                }
 				$v = is_int($value) ? $value : "'{$value}'";
 				$update_data[] = "`{$key}` = {$v}";
 			}

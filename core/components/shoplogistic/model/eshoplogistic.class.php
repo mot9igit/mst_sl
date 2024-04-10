@@ -87,9 +87,10 @@ class eShopLogistic
 				}
 				$this->modx->log(1, print_r($save_data, 1));
 				//$this->modx->log(1, json_encode($save_data, JSON_UNESCAPED_UNICODE));
-				$this->ms2->order->remove('sl_data');
+				// $this->ms2->order->remove('sl_data');
 				$response = $this->ms2->order->add('sl_data', json_encode($save_data, JSON_UNESCAPED_UNICODE));
-				//$this->modx->log(1, json_encode($response, JSON_UNESCAPED_UNICODE));
+				$this->modx->log(1, json_encode($response, JSON_UNESCAPED_UNICODE));
+                $this->modx->log(1, print_r($_SESSION["minishop2"], 1));
 				return array(
 					"success" => true,
 					"data" => array(
@@ -104,7 +105,7 @@ class eShopLogistic
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
 			$this->ms2 = $this->modx->getService('miniShop2');
 			if ($this->ms2 instanceof miniShop2) {
-				$context = $this->modx->context->key ? $this->modx->context->key : 'web';
+				$context = 'web';
 				$this->ms2->initialize($context, ['json_response' => true]);
 				return true;
 			}

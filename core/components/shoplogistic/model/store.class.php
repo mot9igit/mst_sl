@@ -88,6 +88,59 @@ class storeHandler
         return false;
     }
 
+    public function setWork($properties){
+        foreach($properties["dates"] as $key => $val){
+            $criteria = array(
+                "store_id" => $properties["id"],
+                "week_day" => $key
+            );
+            $week = $this->modx->getObject("slStoresWeekWork", $criteria);
+            if(!$week){
+                $week = $this->modx->newObject("slStoresWeekWork");
+                $week->set("store_id", $properties["id"]);
+                $week->set("week_day", $key);
+            }
+            if($val["active"]){
+                $week->set("weekend", 0);
+                $week->set("date_from", $val["time_start"]);
+                $week->set("date_to", $val["time_end"]);
+            }else{
+                $week->set("weekend", 1);
+            }
+            $week->set("timezone", $val["timezone"]);
+            $week->save();
+        }
+    }
+
+    public function setWorkDate($properties){
+        if($properties["id"]){
+            $week = $this->modx->getObject("slStoresWeekWork", $properties["data"]["id"]);
+        }else{
+            $criteria = array(
+                "store_id:=" => $properties["id"],
+                "week_day:=" => 0,
+                "date:>=" => $properties["data"]["condition_date_from"],
+                "date:<=" => $properties["data"]["condition_date_to"]
+            );
+            $week = $this->modx->getObject("slStoresWeekWork", $criteria);
+        }
+        if(!$week){
+            $week = $this->modx->newObject("slStoresWeekWork");
+            $week->set("store_id", $properties["id"]);
+        }
+        if($properties["data"]["type"] == "shortday"){
+            $week->set("weekend", 0);
+            $week->set("date_from", $properties["data"]["time_start"]);
+            $week->set("date_to", $properties["data"]["time_end"]);
+        }else{
+            $week->set("weekend", 1);
+        }
+        $week->set("date", $properties["data"]["date_record"]);
+        $week->set("week_day", 0);
+        $week->set("timezone", $properties["data"]["timezone"]);
+        $week->save();
+    }
+
     /**
      * Берем доступны бонусы для организации
      *

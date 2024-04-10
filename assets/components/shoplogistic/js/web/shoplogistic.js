@@ -555,6 +555,7 @@ var sl_delivery = {
                     sl_delivery.getDeliveryPrices(geo_data);
                 }
             }
+
         });
         // radio fix in miniShop2 default.js (order.add)
         $(document).on("change", this.options.wrapper + ' input[type=radio][name=sl_service]', function() {
@@ -745,7 +746,7 @@ var sl_delivery = {
                 save_data.service = JSON.parse(main_data);
             }
             var send_data = JSON.stringify(save_data);
-            $(sl_delivery.options.wrapper).find('.delivery_data').val(JSON.stringify(send_data));
+            $(sl_delivery.options.wrapper).find('.delivery_data').val(send_data);
             var data = {
                 sl_action: 'delivery/add_order',
                 data: send_data
@@ -791,7 +792,7 @@ var sl_delivery = {
             save_data.service = JSON.parse(main_data);
         }
         var send_data = JSON.stringify(save_data);
-        $(sl_delivery.options.wrapper).find('.delivery_data').val(JSON.stringify(send_data));
+        $(sl_delivery.options.wrapper).find('.delivery_data').val(send_data);
         var data = {
             sl_action: 'delivery/add_order',
             data: send_data
@@ -1190,7 +1191,7 @@ $(document).ready(function(){
     }
     sl_marketplace.initialize();
     // ms2 pseudo submit
-    $(".pseudo_submit").click(function(e) {
+    $(document).on("click", ".pseudo_submit", function(e) {
         e.preventDefault();
 		// check validation
 		$('.error-desc').remove();
@@ -1264,11 +1265,11 @@ $(document).ready(function(){
 			$('.summary-block__title').append("<div class='alert alert-danger'>Проверьте форму на наличие ошибок.</div>")
 		}else{
 			// $('body').addClass("sl_noscroll");
-			$('.dart-order__container').addClass('loading');
-			if(!$(this).attr("disabled")){
-				$(this).attr("disabled", "disabled");
-				$("#msOrder .ms2_link").trigger("click");
-			}
+			$('.dart-order__content').addClass('loading');
+            if (!$(this).attr("disabled")) {
+                $(this).attr("disabled", "disabled");
+                $("#msOrder .ms2_link").trigger("click");
+            }
 		}
     });
 })
