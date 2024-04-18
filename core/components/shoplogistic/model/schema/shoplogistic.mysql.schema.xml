@@ -2255,4 +2255,93 @@
         </index>
     </object>
     <!-- / parserdata -->
+
+    <object class="slReturnStatus" table="sl_return_status" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="action" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="color" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+    </object>
+
+    <object class="slReturn" table="sl_return" extends="xPDOSimpleObject">
+        <field key="order_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="num" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="date" dbtype="timestamp" phptype="datetime" null="true" />
+        <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="decision" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="comments" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="timeframe" dbtype="timestamp" phptype="datetime" null="true" />
+        <field key="full_name" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="bank_number" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="bank_bik" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="corr_account" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="pay_account" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="createdby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updatedby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+
+
+        <index alias="status" name="status" primary="false" unique="false" type="BTREE">
+            <column key="status" length="" collation="A" null="false"/>
+        </index>
+
+        <index alias="order_id" name="order_id" primary="false" unique="false" type="BTREE">
+            <column key="order_id" length="" collation="A" null="false"/>
+        </index>
+
+        <index alias="num" name="num" primary="false" unique="false" type="BTREE">
+            <column key="num" length="" collation="A" null="false"/>
+        </index>
+
+        <index alias="date" name="date" primary="false" unique="false" type="BTREE">
+            <column key="date" length="" collation="A" null="false"/>
+        </index>
+
+        <index alias="status" name="status" primary="false" unique="false" type="BTREE">
+            <column key="status" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="Orders" class="slOrder" local="order_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="Status" class="slReturnStatus" local="status" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="CreatedUser" class="modUser" local="createdby" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="CreatedUserProfile" class="modUserProfile" local="createdby" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUser" class="modUser" local="updatedby" foreign="id" cardinality="many" owner="foreign"/>
+        <aggregate alias="UpdatedUserProfile" class="modUserProfile" local="updatedby" foreign="id" cardinality="many" owner="foreign"/>
+    </object>
+
+    <object class="slProductsReturnFile" table="sl_products_return_file" extends="xPDOSimpleObject">
+        <field key="product_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="file" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+
+        <index alias="product_id" name="product_id" primary="false" unique="false" type="BTREE">
+            <column key="product_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="slProductsReturn" class="slProductsReturn" local="product_id" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
+
+    <object class="slProductsReturn" table="sl_products_return" extends="xPDOSimpleObject">
+        <field key="product_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="return_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="count" dbtype="int" precision="10" phptype="integer" null="true" default="0" />
+        <field key="reason" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="comments" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="requirement" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+
+        <index alias="product_id" name="product_id" primary="false" unique="false" type="BTREE">
+            <column key="product_id" length="" collation="A" null="false"/>
+        </index>
+
+        <index alias="return_id" name="return_id" primary="false" unique="false" type="BTREE">
+            <column key="return_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="Product" class="msProduct" local="product_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="slReturn" class="slReturn" local="return_id" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
 </model>
+

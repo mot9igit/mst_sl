@@ -508,4 +508,95 @@ class storeHandler
             return true;
         }
     }
+
+    /**
+     * Получаем информацию о работе магазина
+     *
+     * @param $store_id
+     * @return bool
+     */
+    public function getShoreWorkTime($store_id){
+        $query = $this->modx->newQuery("slStoresWeekWork");
+
+        $query->select(array(
+            "`slStoresWeekWork`.*"
+        ));
+
+        //TODO Нужно выставлять часовой пояс пользователя
+        $start = new DateTime("now");
+        $start->setTime(00,00);
+        $timeStart = $start->getTimestamp();
+        $end = new DateTime("now");
+        $start->setTime(23,59);
+        $timeEnd = $end->getTimestamp();
+
+        $query->where(array(
+            "`slStoresWeekWork`.`store_id`:=" => $store_id,
+            "`slStoresWeekWork`.`date`:>=" => date('Y-m-d H:i', $timeStart),
+            "`slStoresWeekWork`.`date`:<=" => date('Y-m-d H:i', $timeEnd),
+        ));
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
+
+        if ($query->prepare() && $query->stmt->execute()) {
+            $work = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if(!$work){
+                $q = $this->modx->newQuery("slStoresWeekWork");
+                $q->select(array(
+                    "`slStoresWeekWork`.*"
+                ));
+
+                $dateinfo = getdate();
+                $wday = $dateinfo['wday'];
+
+                $q->where(array(
+                    "`slStoresWeekWork`.`store_id`:=" => $store_id,
+                    "`slStoresWeekWork`.`week_day`:=" => $wday,
+                ));
+
+                if ($q->prepare() && $q->stmt->execute()) {
+                    $getWork = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+
+                if($getWork){
+                    $usertimezone = $this->sl->getLocationData('web')['usertimezone'];
+
+
+                    $date_to = new DateTime($getWork[0]['date_to']);
+                    $date_from = new DateTime($getWork[0]['date_from']);
+
+                    date_timezone_set($date_to, timezone_open($usertimezone));
+                    date_timezone_set($date_from, timezone_open($usertimezone));
+
+                    $getWork[0]['date_from'] = $date_from;
+                    $getWork[0]['date_to'] = $date_to;
+
+                    $getWork[0]['date_from_format'] = $date_from->format('H:i');
+                    $getWork[0]['date_to_format'] = $date_to->format('H:i');
+
+                    $data['work'] = $getWork;
+                    return $data;
+                }
+            }else{
+                $date_to = new DateTime($work[0]['date_to']);
+                $date_from = new DateTime($work[0]['date_from']);
+
+                $usertimezone = $this->sl->getLocationData('web')['usertimezone'];
+
+                date_timezone_set($date_to, timezone_open($usertimezone));
+                date_timezone_set($date_from, timezone_open($usertimezone));
+
+                $work[0]['date_from'] = $date_from;
+                $work[0]['date_to'] = $date_to;
+
+                $work[0]['date_from_format'] = $date_from->format('H:i');
+                $work[0]['date_to_format'] = $date_to->format('H:i');
+
+                $data['work'] = $work;
+                return $data;
+            }
+        }
+        return null;
+    }
 }

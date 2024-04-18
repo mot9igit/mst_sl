@@ -215,6 +215,10 @@ class shopLogistic
             require_once dirname(__FILE__) . '/analytics/opt.class.php';
             $this->analyticsOpt = new optAnalyticsHandler($this, $this->modx);
         }
+        if (!class_exists('trainingHandler')) {
+            require_once dirname(__FILE__) . '/training/training.class.php';
+            $this->training = new trainingHandler($this, $this->modx);
+        }
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
 			$this->ms2 = $this->modx->getService('miniShop2');
