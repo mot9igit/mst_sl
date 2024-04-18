@@ -38,8 +38,8 @@ class shopLogistic
 		$this->modx->addPackage('shoplogistic', $this->config['modelPath']);
 		$this->modx->lexicon->load('shoplogistic:default');
 
-		if ($this->pdoTools = $this->modx->getService('pdoFetch')) {
-			$this->pdoTools->setConfig($this->config);
+		if ($this->pdoTools = $this->modx->getParser()->pdoTools) {
+			// $this->pdoTools->setConfig($this->config);
 		}
 		$this->dartLocation = $this->modx->getService('dartLocation', 'dartLocation', MODX_CORE_PATH . 'components/dartlocation/model/', array());
 		if (!$this->dartLocation) {
@@ -311,7 +311,7 @@ class shopLogistic
 		if($ids = $cache->get($parent, $options) && !$without_cache) {
 			return $ids;
 		}else{
-			$pdo = $this->modx->getService('pdoFetch');
+			$pdo = $this->modx->getParser()->pdoTools;
 			$pids = array_merge(array($parent), $pdo->getChildIds("modResource", $parent, 10, array()));
 
 			$ids = array();
@@ -481,7 +481,7 @@ class shopLogistic
         $output['categories'] = array_unique($output['categories']);
         $output['requests'] = $this->getRequests($data['search']);
         $output['search'] = $data['search'];
-        $pdo = $this->modx->getService('pdoFetch');
+        $pdo = $this->modx->getParser()->pdoTools;
         $chunk = "@FILE chunks/search_pre_results.tpl";
         if($html){
             $this->search->addRequest($data['search']);
@@ -517,11 +517,11 @@ class shopLogistic
         $sphinx->SetSortMode(SPH_SORT_EXTENDED, "@relevance DESC, source_id ASC");
         $sphinx->SetFieldWeights(array('vendor_article' => 20, 'pagetitle' => 10));
         $sphinx->SetFilterString('class_key', $type);
-        if($type == 'class_key'){
+        if($type == 'msProduct'){
             $sphinx->SetFilter('available', array(1));
         }
         $sphinx->SetLimits($offset, $limit, 1000);
-        $result = $sphinx->Query($string, 'dev_mst_tools');
+        $result = $sphinx->Query($string, 'mst_tools');
         if ($result && isset($result['matches'])){
             $res = array();
             foreach($result['matches'] as $key => $val){
@@ -543,7 +543,7 @@ class shopLogistic
         $sphinx->SetSortMode(SPH_SORT_EXTENDED, "@relevance DESC, source_id ASC");
         $sphinx->SetFieldWeights(array('vendor_article' => 20, 'pagetitle' => 10));
         $sphinx->SetFilterString('class_key', $type);
-        if($type == 'class_key'){
+        if($type == 'msProduct'){
             $sphinx->SetFilter('available', array(1));
         }
         $sphinx->SetLimits($offset, $limit, 1000);
@@ -580,12 +580,12 @@ class shopLogistic
             $query->select(array("modResource.*"));
             if($query->prepare() && $query->stmt->execute()){
                 $output["items"] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-                $pdo = $this->modx->getService('pdoFetch');
+                $pdo = $this->modx->getParser()->pdoTools;
                 $chunk = "@FILE chunks/sitemap_small.tpl";
                 $out = $pdo->getChunk($chunk, $output);
             }
         }else{
-            $pdo = $this->modx->getService('pdoFetch');
+            $pdo = $this->modx->getParser()->pdoTools;
             $chunk = "@FILE chunks/sitemap_big.tpl";
             $out = $pdo->getChunk($chunk, $output);
         }
@@ -1214,7 +1214,7 @@ class shopLogistic
 	 */
 	public function getFields($domain_id) {
 		/* @var pdoFetch $pdoFetch */
-		if (!$pdo = $this->modx->getService('pdoFetch')) {
+		if (!$pdo = $this->modx->getParser()->pdoTools) {
 			return 'Could not load pdoFetch class!';
 		}
 

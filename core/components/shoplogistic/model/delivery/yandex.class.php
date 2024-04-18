@@ -42,9 +42,51 @@ class Yandex
             'express_url' => $express_url,
             'express_url_test' => $express_url_test,
 
-            'callback_url' => $this->modx->getOption("site_url").'assets/components/shoplogistic/yandex_handler.php?'
+            'callback_url' => $this->modx->getOption("site_url").'assets/components/shoplogistic/yandex_handler.php'
 
         ], $config);
+    }
+
+    /**
+     * Проверка статусов заявок
+     *
+     * @return void
+     */
+    public function checkDelivery () {
+        $url = $this->config["express_url"]."claims/search";
+        $data = array("claim_id" => "018ee06ca79b85eb98890dc2ba490100");
+        $query = $this->modx->newQuery("slOrder");
+        $query->leftJoin("slCRMStage", "slCRMStage", "slCRMStage.id = slOrder.status");
+        $query->where(array(
+            "slCRMStage.check_deal" => 1,
+            "slOrder.tk:=" => "yandex"
+        ));
+        $query->select(array("slOrder.*, slCRMStage.transition_fail"));
+        if($query->prepare() && $query->stmt->execute()){
+            $orders = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($orders as $order){
+                $response = $this->getRequest($order["tk_id"]);
+                if($response[0]){
+                    $success_statuses = array(
+                        "delivered",
+                        "delivered_finish"
+                    );
+                    if(in_array($response[0]['status'], $success_statuses)){
+                        $this->sl->cart->setDeliveryStage($order['claim_id']);
+                    }
+                    $error_statuses = array(
+                        "failed",
+                        "estimating_failed",
+                        "performer_not_found",
+                        "returned",
+                        "returned_finish"
+                    );
+                    if(in_array($response[0]['status'], $error_statuses)){
+                        $this->sl->cart->changeOrderStage($order["id"], $order["transition_fail"], 1);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -220,6 +262,7 @@ class Yandex
                     ),
                     "point_id" => 1,
                     "type" => "source",
+					"skip_confirmation" => true,
                     "visit_order" => 1
                 ),
                 array(
@@ -238,6 +281,7 @@ class Yandex
                         "email" => $result["user"]["email"]
                     ),
                     "point_id" => 2,
+					"skip_confirmation" => true,
                     "type" => "destination",
                     "visit_order" => 2
                 )
@@ -273,10 +317,10 @@ class Yandex
      * @param $data
      * @return mixed
      */
-    public function yaDeliveryRequest($url, $data){
+    public function yaDeliveryRequest($url, $data = array()){
         $ch = curl_init();
 
-        $this->modx->log(1, print_r($data, 1));
+        $this->modx->log(1, print_r(json_encode($data, JSON_UNESCAPED_UNICODE), 1));
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE));

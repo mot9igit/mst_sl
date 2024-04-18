@@ -314,6 +314,7 @@ class parser
                 }else{
                     $w = str_replace(",", ".", trim($weight[0]));
                 }
+                $w = str_replace(" кг", "", trim($w));
                 $data["weight_brutto"] = $w;
             }
             return $data;
@@ -462,8 +463,15 @@ class parser
                                 }
                                 $val = $row->find($config['value'], 0)->plaintext;
                             }else{
-                                $lab = $row->find($config['title'], 0)->plaintext;
-                                $val = $row->find($config['value'], 0)->plaintext;
+                                if($config['mode'] == "split"){
+                                    $text = $row->plaintext;
+                                    $t = explode($config['separator'], $text);
+                                    $lab = $t[0];
+                                    $val = $t[1];
+                                }else{
+                                    $lab = $row->find($config['title'], 0)->plaintext;
+                                    $val = $row->find($config['value'], 0)->plaintext;
+                                }
                             }
                             if($lab){
                                 if($config['replace_label']){
@@ -492,8 +500,15 @@ class parser
                                         }
                                         $val = $row->find($config['value'], 0)->plaintext;
                                     } else {
-                                        $lab = $row->find($config['title'], 0)->plaintext;
-                                        $val = $row->find($config['value'], 0)->plaintext;
+                                        if($config['mode'] == "split"){
+                                            $text = $row->plaintext;
+                                            $t = explode($config['separator'], $text);
+                                            $lab = $t[0];
+                                            $val = $t[1];
+                                        }else{
+                                            $lab = $row->find($config['title'], 0)->plaintext;
+                                            $val = $row->find($config['value'], 0)->plaintext;
+                                        }
                                     }
                                     if ($lab) {
                                         if($config['replace_label']){
@@ -521,8 +536,15 @@ class parser
                                     }
                                     $val = $row->find($config['value'], 0)->plaintext;
                                 } else {
-                                    $lab = $row->find($config['title'], 0)->plaintext;
-                                    $val = $row->find($config['value'], 0)->plaintext;
+                                    if($config['mode'] == "split"){
+                                        $text = $row->plaintext;
+                                        $t = explode($config['separator'], $text);
+                                        $lab = $t[0];
+                                        $val = $t[1];
+                                    }else{
+                                        $lab = $row->find($config['title'], 0)->plaintext;
+                                        $val = $row->find($config['value'], 0)->plaintext;
+                                    }
                                 }
                                 if ($lab) {
                                     if($config['replace_label']){

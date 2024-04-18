@@ -18,6 +18,27 @@ class storeHandler
         $this->modx->lexicon->load('shoplogistic:default');
     }
 
+    /**
+     * Берем активные магазины
+     *
+     * @return array
+     */
+    public function getActiveStores(){
+        $output = array();
+        $query = $this->modx->newQuery("slStores");
+        $query->where(array(
+            "slStores.active:=" => 1
+        ));
+        $query->select(array("slStores.id"));
+        if($query->prepare() && $query->stmt->execute()){
+            $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($stores as $store){
+                $output[] = $store["id"];
+            }
+        }
+        return $output;
+    }
+
     public function isStore($id){
         $store = $this->modx->getObject("slStores", $id);
         if($store){

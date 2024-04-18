@@ -19,6 +19,78 @@ class productHandler
     }
 
     /**
+     * Берем данные по стоимости товара
+     *
+     * @param $store_id
+     * @param $product_id
+     * @return array|void
+     */
+    public function getRemainAndPriceForStore($store_id, $product_id){
+        $remain = $this->getStoreRemain($store_id, $product_id);
+        if(!$remain){
+            $remain = $this->getMinStoreRemain($product_id);
+            $remain['remains'] = 0;
+        }else{
+            $remain = array(
+                "price" => 0,
+                "remains" => 0
+            );
+        }
+        return $remain;
+    }
+
+    /**
+     * Берем остаток по ID товара и магазину
+     *
+     * @param $store_id
+     * @param $product_id
+     * @return array
+     */
+    public function getMinStoreRemain($product_id){
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "slStores.active:=" => 1,
+            "slStoresRemains.remains:>" => 0,
+            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.product_id:=" => $product_id,
+        ));
+        $query->select(array("slStoresRemains.*"));
+        $query->sortby("price", "ASC");
+        $query->limit(1);
+        if($query->prepare() && $query->stmt->execute()){
+            $response = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            return $response;
+        }
+        return array();
+    }
+
+    /**
+     * Берем остаток по ID товара и магазину
+     *
+     * @param $store_id
+     * @param $product_id
+     * @return array
+     */
+    public function getStoreRemain($store_id, $product_id){
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "slStores.active:=" => 1,
+            "slStores.id:=" => $store_id,
+            "slStoresRemains.remains:>" => 0,
+            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.product_id:=" => $product_id,
+        ));
+        $query->select(array("slStoresRemains.*"));
+        if($query->prepare() && $query->stmt->execute()){
+            $response = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            return $response;
+        }
+        return array();
+    }
+
+    /**
      *
      * Берем параметры товара, габариты в см, вес в кг, объем в куб.м.
      *

@@ -327,7 +327,7 @@
         <field key="date_from" dbtype="timestamp" phptype="datetime" null="true" />
         <field key="date_to" dbtype="timestamp" phptype="datetime" null="true" />
         <field key="weekend" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
-        <field key="timezone" dbtype="text" phptype="text" null="true"/>
+        <field key="timezone" dbtype="varchar" precision="255" phptype="string" null="true"/>
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
         <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
@@ -1799,6 +1799,7 @@
         <field key="code" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="code_until" dbtype="datetime" phptype="datetime" null="true" />
         <field key="comment" dbtype="text" phptype="string" null="true"/>
+        <field key="tk" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="tk_id" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
@@ -1819,6 +1820,9 @@
         </index>
         <index alias="ship_id" name="ship_id" primary="false" unique="false" type="BTREE">
             <column key="ship_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="tk" name="tk_id" primary="false" unique="false" type="BTREE">
+            <column key="tk" length="" collation="A" null="false"/>
         </index>
         <index alias="tk_id" name="tk_id" primary="false" unique="false" type="BTREE">
             <column key="tk_id" length="" collation="A" null="false"/>
@@ -1936,6 +1940,7 @@
         <field key="name" dbtype="varchar" precision="100" phptype="string" null="false" default=""/>
         <field key="color" dbtype="char" precision="6" phptype="string" null="true" default="000000"/>
         <field key="transition_to" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
+        <field key="transition_fail" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
         <field key="transition_anchor" dbtype="varchar" precision="100" phptype="string" null="false" default=""/>
         <field key="user_description" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
         <field key="category_id" dbtype="int" precision="11" phptype="integer" null="false" default=""/>
@@ -1946,6 +1951,7 @@
         <field key="check_code" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="pay" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="to_tk" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="check_deal" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="properties" dbtype="text" phptype="string" null="true"/>
 
@@ -1967,6 +1973,9 @@
         <index alias="to_tk" name="to_tk" primary="false" unique="false" type="BTREE">
             <column key="to_tk" length="" collation="A" null="false"/>
         </index>
+        <index alias="check_deal" name="check_deal" primary="false" unique="false" type="BTREE">
+            <column key="check_deal" length="" collation="A" null="false"/>
+        </index>
         <index alias="sort" name="sort" primary="false" unique="false" type="BTREE">
             <column key="sort" length="" collation="A" null="false"/>
         </index>
@@ -1976,9 +1985,13 @@
         <index alias="transition_to" name="transition_to" primary="false" unique="false" type="BTREE">
             <column key="transition_to" length="" collation="A" null="false"/>
         </index>
+        <index alias="transition_fail" name="transition_fail" primary="false" unique="false" type="BTREE">
+            <column key="transition_fail" length="" collation="A" null="false"/>
+        </index>
 
         <aggregate alias="Category" class="slCRMCategory" local="category_id" foreign="id" owner="foreign" cardinality="one"/>
         <aggregate alias="Transition" class="slCRMStage" local="transition_to" foreign="id" owner="foreign" cardinality="one"/>
+        <aggregate alias="TransitionFail" class="slCRMStage" local="transition_fail" foreign="id" owner="foreign" cardinality="one"/>
     </object>
 
     <!-- parser -->

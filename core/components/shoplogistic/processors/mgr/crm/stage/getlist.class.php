@@ -39,7 +39,10 @@ class slCRMStageGetListProcessor extends modObjectGetListProcessor
 				'OR:crm_id:LIKE' => "%{$query}%",
 			]);
 		}
-		$c->where(array("category_id" => trim($this->getProperty('category_id'))));
+        $category_id = trim($this->getProperty('category_id'));
+        if ($category_id) {
+            $c->where(array("category_id" => $category_id));
+        }
 		return $c;
 	}
 

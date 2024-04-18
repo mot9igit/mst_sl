@@ -54,6 +54,12 @@ Ext.extend(shopLogistic.window.UpdateStage, MODx.Window, {
             id: config.id + '-transition_to',
             anchor: '99%'
         },{
+            xtype: 'shoplogistic-combo-stage',
+            fieldLabel: _('shoplogistic_crm_deal_stage_transition_fail'),
+            name: 'transition_fail',
+            id: config.id + '-transition_fail',
+            anchor: '99%'
+        },{
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_crm_deal_stage_transition_anchor'),
             name: 'transition_anchor',
@@ -70,6 +76,12 @@ Ext.extend(shopLogistic.window.UpdateStage, MODx.Window, {
             boxLabel: _('shoplogistic_crm_deal_stage_to_tk'),
             name: 'to_tk',
             id: config.id + '-to_tk',
+            checked: false,
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_crm_deal_stage_check_deal'),
+            name: 'check_deal',
+            id: config.id + '-check_deal',
             checked: false,
         },{
             xtype: 'xcheckbox',

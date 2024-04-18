@@ -230,7 +230,7 @@ class slSearch
         $result = array_unique($req);
         foreach($result as $key => $res){
             $data = $this->getSearchObjects($res, 1);
-            print_r($data);
+            // print_r($data);
         }
         return $result;
     }
