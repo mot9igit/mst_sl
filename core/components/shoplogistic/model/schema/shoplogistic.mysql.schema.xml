@@ -1954,6 +1954,8 @@
         <field key="check_deal" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="properties" dbtype="text" phptype="string" null="true"/>
+        <field key="show_in_analytics" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+
 
         <index alias="crm_id" name="crm_id" primary="false" unique="false" type="BTREE">
             <column key="crm_id" length="" collation="A" null="false"/>
@@ -2274,7 +2276,7 @@
         <field key="comments" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
         <field key="timeframe" dbtype="timestamp" phptype="datetime" null="true" />
         <field key="full_name" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
-        <field key="bank_number" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
+        <field key="bank_name" dbtype="varchar" precision="255" phptype="string" null="true" default="" />
         <field key="bank_bik" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="corr_account" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="pay_account" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>

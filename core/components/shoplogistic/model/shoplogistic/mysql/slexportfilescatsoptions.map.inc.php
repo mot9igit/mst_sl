@@ -12,6 +12,8 @@ $xpdo_meta_map['slExportFilesCatsOptions']= array (
   array (
     'name' => '',
     'filter' => '',
+    'examples' => '',
+    'to_field' => '',
     'option_id' => 0,
     'cat_id' => 0,
     'ignore' => 0,
@@ -31,6 +33,21 @@ $xpdo_meta_map['slExportFilesCatsOptions']= array (
       'default' => '',
     ),
     'filter' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'examples' => 
+    array (
+      'dbtype' => 'text',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'to_field' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',

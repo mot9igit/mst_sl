@@ -59,6 +59,7 @@ class optAnalyticsHandler
             $urlMain = $this->modx->getOption("site_url");
 
             //Слайдер "Готовимся к сезону"
+
             $season_slider = json_decode($object->getTVValue("season_slider"));
             foreach ($season_slider as $key => $value) {
                 $data["season_slider"][$key]['id'] = $value->MIGX_id;

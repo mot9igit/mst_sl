@@ -3168,77 +3168,126 @@ class objectsHandler
 
     public function getAvailableProducts($store_id, $properties = array(), $include = 1){
         $results = array();
-        $criteria = array(
-            "store_id" => $store_id
-        );
-        $vs = array();
-        $vendors = $this->modx->getCollection("slStoresBrands", $criteria);
-        foreach($vendors as $v) {
-            $vs[] = $v->get("brand_id");
+
+        $q = $this->modx->newQuery("modResource");
+        $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
+        $q->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.product_id = modResource.id');
+        $q->where(array(
+            "modResource.class_key:=" => "msProduct",
+            "slStoresRemains.store_id:=" => $properties['id']
+        ));
+
+        $q->select(array(
+            'modResource.id',
+            'slStoresRemains.price as price',
+            'modResource.pagetitle as name',
+            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+            'msProduct.vendor_article as article'
+        ));
+
+        $idsProducts = array();
+        //Если нет выбранных, выдаём весь список
+        if($properties['selected']){
+
+            for($i = 0; $i < count($properties['selected']); $i++){
+                $idsProducts[$i] = $properties['selected'][$i]['id'];
+            }
+
+            $q->where(array(
+                "modResource.id:NOT IN" => $idsProducts
+            ));
         }
-        if($properties['sel_arr']){
-            if($include){
-                $q = $this->modx->newQuery("slStoresMatrixProducts");
-                $q->leftJoin("modResource", "modResource", "modResource.id = slStoresMatrixProducts.product_id");
-                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresMatrixProducts.product_id');
+
+        $idsProductsCategory = array();
+
+        if($properties['filter']){
+            if($properties['filter']['name']) {
                 $q->where(array(
-                    "slStoresMatrixProducts.matrix_id:=" => $properties['matrix_id'],
-                    "modResource.class_key:=" => "msProduct",
-                    "msProduct.vendor:IN" => $vs
+                    "modResource.pagetitle:LIKE" => "%{$properties['filter']['name']}%",
+                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']['name']}%"
                 ));
+            }
+
+
+            if($properties['filter']['category']){
+                foreach ($properties['filter']['category'] as $key => $value) {
+                    if($value['checked']){
+                        array_push($idsProductsCategory, $key);
+                    }
+                }
+
                 $q->where(array(
-                    "modResource.id:IN" => $properties['sel_arr']
-                ));
-                $q->select(array(
-                    'modResource.id',
-                    'modResource.pagetitle as name',
-                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
-                    'msProduct.vendor_article as article',
-                    'slStoresMatrixProducts.count',
-                    'slStoresMatrixProducts.days'
-                ));
-            }else{
-                $q = $this->modx->newQuery("modResource");
-                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
-                $q->where(array(
-                    "modResource.class_key:=" => "msProduct",
-                    "msProduct.vendor:IN" => $vs
-                ));
-                $q->where(array(
-                    "modResource.id:NOT IN" => $properties['sel_arr']
-                ));
-                $q->select(array(
-                    'modResource.id',
-                    'modResource.pagetitle as name',
-                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
-                    'msProduct.vendor_article as article'
+                    "modResource.parent:IN" => $idsProductsCategory
                 ));
             }
         }
 
-        if($properties['filter']){
-            $q->where(array(
-                "modResource.pagetitle:LIKE" => "%{$properties['filter']}%",
-                "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']}%"
-            ));
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $q->limit($limit, $offset);
+        }else{
+            $limit = 50;
+            $offset = 0;
+            $q->limit($limit, $offset);
         }
+
         // Подсчитываем общее число записей
         // $result['total'] = $this->modx->getCount('slStoresRemains', $q);
         $q->prepare();
         if($q->prepare() && $q->stmt->execute()){
             $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
-            if($properties['sel_arr']){
-                $results = $out;
+            if(!$properties['selected']){
+                $results['products'] = $out;
+
             }else{
-                $results['products'][] = $out;
-                if($properties['selected']){
-                    $results['products'][] = $properties['selected'];
-                }else{
-                    $results['products'][] = array();
-                }
+                $results['products'] = $out;
+                $results['selected'] = $properties['selected'];
             }
             return $results;
         }
+
+        //TODO
+//        $criteria = array(
+//            "store_id" => $store_id
+//        );
+//        $vs = array();
+//        $vendors = $this->modx->getCollection("slStoresBrands", $criteria);
+//        foreach($vendors as $v) {
+//            $vs[] = $v->get("brand_id");
+//        }
+
+
+
+
+
+//        if($properties['sel_arr']){
+//            if($include){
+//                $q = $this->modx->newQuery("slStoresMatrixProducts");
+//                $q->leftJoin("modResource", "modResource", "modResource.id = slStoresMatrixProducts.product_id");
+//                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresMatrixProducts.product_id');
+//                $q->where(array(
+//                    "slStoresMatrixProducts.matrix_id:=" => $properties['matrix_id'],
+//                    "modResource.class_key:=" => "msProduct",
+//                    //"msProduct.vendor:IN" => $vs
+//                ));
+//                $q->where(array(
+//                    "modResource.id:IN" => $properties['sel_arr']
+//                ));
+//                $q->select(array(
+//                    'modResource.id',
+//                    'modResource.pagetitle as name',
+//                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+//                    'msProduct.vendor_article as article',
+//                    'slStoresMatrixProducts.count',
+//                    'slStoresMatrixProducts.days'
+//                ));
+//            }else{
+
+//            }
+//        }
+
+
         return array();
     }
 

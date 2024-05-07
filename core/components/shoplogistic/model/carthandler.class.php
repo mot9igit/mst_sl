@@ -10,7 +10,7 @@ class cartDifficultHandler
 		$this->sl =& $sl;
 		$this->modx =& $modx;
 		$this->modx->lexicon->load('shoplogistic:default');
-		$this->config['our_services'] = array('postrf', 'yandex', 'cdek');
+		$this->config['our_services'] = array('yandex', 'evening', 'postrf', 'cdek');
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
 			$ctx = 'web';
@@ -32,6 +32,11 @@ class cartDifficultHandler
             "data" => array(
                 "yandex" => array(
                     "name" => "Яндекс.Доставка",
+                    "logo" => "/assets/content/images/delivery/yandex.png",
+                    "pvz" => 0
+                ),
+                "evening" => array(
+                    "name" => "Вечерняя доставка с 17:00 до 22:00",
                     "logo" => "/assets/content/images/delivery/yandex.png",
                     "pvz" => 0
                 ),
@@ -1473,6 +1478,20 @@ class cartDifficultHandler
                         }
 
                     }
+                }
+                if($data['service'] == 'evening'){
+                    $price = $this->sl->evening->getPrice(0, 0, $data);
+                    if($price){
+                        $services['evening']['price']['door']['price'] += $price['price'];
+                        if($price['offset'] > 1 && $price['offset'] != 0){
+                            $days = $this->sl->tools->decl($offset, "день|дня|дней", true);
+                        }else{
+                            $days = "сегодня";
+                        }
+                        $services['evening']['price']['door']['time'] = $days;
+                    }
+                    $services['evening']['price']['terminal']['price'] = 0;
+                    $services['evening']['price']['terminal']['time'] = 0;
                 }
 			}else {
                 // $this->modx->log(1, "Не наша система");

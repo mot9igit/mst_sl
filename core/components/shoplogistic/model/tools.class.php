@@ -88,6 +88,23 @@ class slTools
     }
 
     /**
+     * General method to update settings
+     *
+     * @param $key
+     * @param $value
+     */
+    protected function updateSetting($key, $value)
+    {
+        $setting = $this->modx->getObject('modSystemSetting', ['key' => $key]);
+        if (!$setting) {
+            $setting = $this->modx->newObject('modSystemSetting');
+            $setting->set('key', $key);
+        }
+        $setting->set('value', $value);
+        $setting->save();
+    }
+
+    /**
      * Логгирование
      *
      * @param $data

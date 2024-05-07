@@ -148,6 +148,10 @@ class shopLogistic
             require_once dirname(__FILE__) . '/delivery/yandex.class.php';
             $this->yandex = new Yandex($this, $this->modx);
         }
+        if (!class_exists('evening')) {
+            require_once dirname(__FILE__) . '/delivery/evening.class.php';
+            $this->evening = new evening($this, $this->modx);
+        }
 		if (!class_exists('slXSLX')) {
 			require_once dirname(__FILE__) . '/xslx.class.php';
 			$this->xslx = new slXSLX($this, $this->modx);
@@ -218,6 +222,10 @@ class shopLogistic
         if (!class_exists('trainingHandler')) {
             require_once dirname(__FILE__) . '/training/training.class.php';
             $this->training = new trainingHandler($this, $this->modx);
+        }
+        if (!class_exists('returnProductsHandler')) {
+            require_once dirname(__FILE__) . '/return_products/return_products.class.php';
+            $this->return_products = new returnProductsHandler($this, $this->modx);
         }
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
@@ -445,6 +453,9 @@ class shopLogistic
                 break;
             case 'cart/update':
                 $response = $this->cart->update();
+                break;
+            case 'product/return':
+                $response = $this->return_products->postReturnProducts($data);
                 break;
 		}
 		return $response;

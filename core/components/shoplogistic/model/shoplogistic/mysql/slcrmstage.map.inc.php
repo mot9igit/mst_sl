@@ -14,6 +14,7 @@ $xpdo_meta_map['slCRMStage']= array (
     'name' => '',
     'color' => '000000',
     'transition_to' => 0,
+    'transition_fail' => 0,
     'transition_anchor' => '',
     'user_description' => '',
     'category_id' => 0,
@@ -24,6 +25,7 @@ $xpdo_meta_map['slCRMStage']= array (
     'check_code' => 0,
     'pay' => 0,
     'to_tk' => 0,
+    'check_deal' => 0,
     'description' => '',
     'properties' => NULL,
   ),
@@ -54,6 +56,14 @@ $xpdo_meta_map['slCRMStage']= array (
       'default' => '000000',
     ),
     'transition_to' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '11',
+      'phptype' => 'integer',
+      'null' => false,
+      'default' => 0,
+    ),
+    'transition_fail' => 
     array (
       'dbtype' => 'int',
       'precision' => '11',
@@ -137,6 +147,15 @@ $xpdo_meta_map['slCRMStage']= array (
       'default' => 0,
     ),
     'to_tk' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'check_deal' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',
@@ -258,6 +277,22 @@ $xpdo_meta_map['slCRMStage']= array (
         ),
       ),
     ),
+    'check_deal' => 
+    array (
+      'alias' => 'check_deal',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'check_deal' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'sort' => 
     array (
       'alias' => 'sort',
@@ -306,6 +341,22 @@ $xpdo_meta_map['slCRMStage']= array (
         ),
       ),
     ),
+    'transition_fail' => 
+    array (
+      'alias' => 'transition_fail',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'transition_fail' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
   ),
   'aggregates' => 
   array (
@@ -321,6 +372,14 @@ $xpdo_meta_map['slCRMStage']= array (
     array (
       'class' => 'slCRMStage',
       'local' => 'transition_to',
+      'foreign' => 'id',
+      'owner' => 'foreign',
+      'cardinality' => 'one',
+    ),
+    'TransitionFail' => 
+    array (
+      'class' => 'slCRMStage',
+      'local' => 'transition_fail',
       'foreign' => 'id',
       'owner' => 'foreign',
       'cardinality' => 'one',

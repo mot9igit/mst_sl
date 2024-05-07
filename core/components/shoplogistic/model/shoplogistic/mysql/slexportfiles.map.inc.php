@@ -12,7 +12,9 @@ $xpdo_meta_map['slExportFiles']= array (
   array (
     'name' => '',
     'description' => '',
+    'vendors' => '',
     'store_id' => 0,
+    'vendor_check' => 0,
     'vendor' => 0,
     'status' => 0,
     'categories' => 0,
@@ -46,12 +48,28 @@ $xpdo_meta_map['slExportFiles']= array (
       'null' => true,
       'default' => '',
     ),
+    'vendors' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
     'store_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
       'attributes' => 'unsigned',
       'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'vendor_check' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
       'null' => true,
       'default' => 0,
     ),
@@ -179,6 +197,22 @@ $xpdo_meta_map['slExportFiles']= array (
       'columns' => 
       array (
         'store_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'vendor_check' => 
+    array (
+      'alias' => 'vendor_check',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'vendor_check' => 
         array (
           'length' => '',
           'collation' => 'A',

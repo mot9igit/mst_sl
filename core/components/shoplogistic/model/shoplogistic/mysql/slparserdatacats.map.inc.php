@@ -1,8 +1,8 @@
 <?php
-$xpdo_meta_map['slParserTasks']= array (
+$xpdo_meta_map['slParserDataCats']= array (
   'package' => 'shoplogistic',
   'version' => '1.1',
-  'table' => 'sl_parser_tasks',
+  'table' => 'sl_parserdata_cats',
   'extends' => 'xPDOSimpleObject',
   'tableMeta' => 
   array (
@@ -12,16 +12,14 @@ $xpdo_meta_map['slParserTasks']= array (
   array (
     'name' => '',
     'description' => '',
-    'exclude' => '',
-    'url' => '',
-    'config_id' => 0,
-    'status' => 1,
-    'article_last_word' => 0,
+    'export_name' => '',
+    'export_parents' => '',
+    'cat_id' => 0,
+    'service_id' => 0,
+    'check' => 0,
     'createdon' => NULL,
-    'createdby' => 0,
     'updatedon' => NULL,
     'updatedby' => 0,
-    'file' => '',
     'properties' => NULL,
   ),
   'fieldMeta' => 
@@ -42,7 +40,7 @@ $xpdo_meta_map['slParserTasks']= array (
       'null' => true,
       'default' => '',
     ),
-    'exclude' => 
+    'export_name' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -50,7 +48,7 @@ $xpdo_meta_map['slParserTasks']= array (
       'null' => true,
       'default' => '',
     ),
-    'url' => 
+    'export_parents' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -58,7 +56,7 @@ $xpdo_meta_map['slParserTasks']= array (
       'null' => true,
       'default' => '',
     ),
-    'config_id' => 
+    'cat_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -67,16 +65,16 @@ $xpdo_meta_map['slParserTasks']= array (
       'null' => true,
       'default' => 0,
     ),
-    'status' => 
+    'service_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
       'attributes' => 'unsigned',
       'phptype' => 'integer',
       'null' => true,
-      'default' => 1,
+      'default' => 0,
     ),
-    'article_last_word' => 
+    'check' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',
@@ -89,15 +87,6 @@ $xpdo_meta_map['slParserTasks']= array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
-    ),
-    'createdby' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
-      'null' => true,
-      'default' => 0,
     ),
     'updatedon' => 
     array (
@@ -114,14 +103,6 @@ $xpdo_meta_map['slParserTasks']= array (
       'null' => true,
       'default' => 0,
     ),
-    'file' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => true,
-      'default' => '',
-    ),
     'properties' => 
     array (
       'dbtype' => 'text',
@@ -131,6 +112,70 @@ $xpdo_meta_map['slParserTasks']= array (
   ),
   'indexes' => 
   array (
+    'service_id' => 
+    array (
+      'alias' => 'service_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'service_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'export_name' => 
+    array (
+      'alias' => 'export_name',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'export_name' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'cat_id' => 
+    array (
+      'alias' => 'cat_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'cat_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'check' => 
+    array (
+      'alias' => 'check',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'check' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'name' => 
     array (
       'alias' => 'name',
@@ -147,45 +192,24 @@ $xpdo_meta_map['slParserTasks']= array (
         ),
       ),
     ),
-    'config_id' => 
+  ),
+  'composites' => 
+  array (
+    'Options' => 
     array (
-      'alias' => 'config_id',
-      'primary' => false,
-      'unique' => false,
-      'type' => 'BTREE',
-      'columns' => 
-      array (
-        'config_id' => 
-        array (
-          'length' => '',
-          'collation' => 'A',
-          'null' => false,
-        ),
-      ),
+      'class' => 'slParserDataCatsOptions',
+      'local' => 'id',
+      'foreign' => 'cat_id',
+      'cardinality' => 'many',
+      'owner' => 'local',
     ),
   ),
   'aggregates' => 
   array (
-    'CreatedUser' => 
-    array (
-      'class' => 'modUser',
-      'local' => 'created_by',
-      'foreign' => 'id',
-      'cardinality' => 'many',
-      'owner' => 'foreign',
-    ),
-    'CreatedUserProfile' => 
-    array (
-      'class' => 'modUserProfile',
-      'local' => 'created_by',
-      'foreign' => 'id',
-      'cardinality' => 'many',
-      'owner' => 'foreign',
-    ),
     'UpdatedUser' => 
     array (
       'class' => 'modUser',
-      'local' => 'updated_by',
+      'local' => 'updatedby',
       'foreign' => 'id',
       'cardinality' => 'many',
       'owner' => 'foreign',
@@ -193,23 +217,23 @@ $xpdo_meta_map['slParserTasks']= array (
     'UpdatedUserProfile' => 
     array (
       'class' => 'modUserProfile',
-      'local' => 'updated_by',
+      'local' => 'updatedby',
       'foreign' => 'id',
       'cardinality' => 'many',
       'owner' => 'foreign',
     ),
-    'Config' => 
+    'Service' => 
     array (
-      'class' => 'slParserConfig',
-      'local' => 'config_id',
+      'class' => 'slParserDataService',
+      'local' => 'service_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',
     ),
-    'Status' => 
+    'Resource' => 
     array (
-      'class' => 'slParserTasksStatus',
-      'local' => 'status',
+      'class' => 'modResource',
+      'local' => 'cat_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

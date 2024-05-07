@@ -1,8 +1,8 @@
 <?php
-$xpdo_meta_map['slOrder']= array (
+$xpdo_meta_map['slActions']= array (
   'package' => 'shoplogistic',
   'version' => '1.1',
-  'table' => 'sl_orders',
+  'table' => 'sl_actions',
   'extends' => 'xPDOSimpleObject',
   'tableMeta' => 
   array (
@@ -10,39 +10,50 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'fields' => 
   array (
-    'warehouse_id' => 0,
+    'name' => '',
+    'image' => '',
+    'image_inner' => '',
     'store_id' => 0,
-    'order_id' => 0,
-    'crm_id' => 0,
-    'ship_id' => 0,
-    'status' => 0,
-    'num' => '',
-    'cost' => 0.0,
-    'cart_cost' => 0.0,
-    'delivery_cost' => 0.0,
-    'delivery_date' => NULL,
-    'date' => NULL,
-    'createdon' => NULL,
-    'updatedon' => NULL,
-    'active' => 1,
     'description' => '',
-    'code' => '',
-    'code_until' => NULL,
-    'comment' => NULL,
-    'tk' => '',
-    'tk_id' => '',
+    'resource' => 0,
+    'regions' => '',
+    'cities' => '',
+    'content' => NULL,
+    'date_from' => NULL,
+    'date_to' => NULL,
+    'global' => 1,
+    'active' => 1,
+    'createdon' => NULL,
+    'createdby' => 0,
+    'updatedon' => NULL,
+    'updatedby' => 0,
     'properties' => NULL,
   ),
   'fieldMeta' => 
   array (
-    'warehouse_id' => 
+    'name' => 
     array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
       'null' => true,
-      'default' => 0,
+      'default' => '',
+    ),
+    'image' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'image_inner' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
     ),
     'store_id' => 
     array (
@@ -53,97 +64,64 @@ $xpdo_meta_map['slOrder']= array (
       'null' => true,
       'default' => 0,
     ),
-    'order_id' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
-      'null' => true,
-      'default' => 0,
-    ),
-    'crm_id' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
-      'null' => true,
-      'default' => 0,
-    ),
-    'ship_id' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
-      'null' => true,
-      'default' => 0,
-    ),
-    'status' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
-      'null' => true,
-      'default' => 0,
-    ),
-    'num' => 
+    'description' => 
     array (
       'dbtype' => 'varchar',
-      'precision' => '20',
+      'precision' => '255',
       'phptype' => 'string',
       'null' => true,
       'default' => '',
     ),
-    'cost' => 
+    'resource' => 
     array (
-      'dbtype' => 'decimal',
-      'precision' => '12,2',
-      'phptype' => 'float',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
       'null' => true,
-      'default' => 0.0,
+      'default' => 0,
     ),
-    'cart_cost' => 
+    'regions' => 
     array (
-      'dbtype' => 'decimal',
-      'precision' => '12,2',
-      'phptype' => 'float',
+      'dbtype' => 'text',
+      'precision' => '1024',
+      'phptype' => 'json',
       'null' => true,
-      'default' => 0.0,
+      'default' => '',
     ),
-    'delivery_cost' => 
+    'cities' => 
     array (
-      'dbtype' => 'decimal',
-      'precision' => '12,2',
-      'phptype' => 'float',
+      'dbtype' => 'text',
+      'precision' => '1024',
+      'phptype' => 'json',
       'null' => true,
-      'default' => 0.0,
+      'default' => '',
     ),
-    'delivery_date' => 
+    'content' => 
+    array (
+      'dbtype' => 'text',
+      'phptype' => 'text',
+      'null' => true,
+    ),
+    'date_from' => 
     array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
     ),
-    'date' => 
+    'date_to' => 
     array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
     ),
-    'createdon' => 
+    'global' => 
     array (
-      'dbtype' => 'datetime',
-      'phptype' => 'datetime',
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
       'null' => true,
-    ),
-    'updatedon' => 
-    array (
-      'dbtype' => 'datetime',
-      'phptype' => 'datetime',
-      'null' => true,
+      'default' => 1,
     ),
     'active' => 
     array (
@@ -153,49 +131,35 @@ $xpdo_meta_map['slOrder']= array (
       'null' => true,
       'default' => 1,
     ),
-    'description' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => true,
-      'default' => '',
-    ),
-    'code' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => true,
-      'default' => '',
-    ),
-    'code_until' => 
+    'createdon' => 
     array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
     ),
-    'comment' => 
+    'createdby' => 
     array (
-      'dbtype' => 'text',
-      'phptype' => 'string',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'updatedon' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
       'null' => true,
     ),
-    'tk' => 
+    'updatedby' => 
     array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
       'null' => true,
-      'default' => '',
-    ),
-    'tk_id' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => true,
-      'default' => '',
+      'default' => 0,
     ),
     'properties' => 
     array (
@@ -206,22 +170,6 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'indexes' => 
   array (
-    'warehouse_id' => 
-    array (
-      'alias' => 'warehouse_id',
-      'primary' => false,
-      'unique' => false,
-      'type' => 'BTREE',
-      'columns' => 
-      array (
-        'warehouse_id' => 
-        array (
-          'length' => '',
-          'collation' => 'A',
-          'null' => false,
-        ),
-      ),
-    ),
     'store_id' => 
     array (
       'alias' => 'store_id',
@@ -238,15 +186,15 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
-    'status' => 
+    'resource' => 
     array (
-      'alias' => 'status',
+      'alias' => 'resource',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'status' => 
+        'resource' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -254,15 +202,47 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
-    'order_id' => 
+    'regions' => 
     array (
-      'alias' => 'order_id',
+      'alias' => 'regions',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'order_id' => 
+        'regions' => 
+        array (
+          'length' => '512',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'cities' => 
+    array (
+      'alias' => 'cities',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'cities' => 
+        array (
+          'length' => '512',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'active' => 
+    array (
+      'alias' => 'active',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'active' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -270,15 +250,15 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
-    'crm_id' => 
+    'global' => 
     array (
-      'alias' => 'crm_id',
+      'alias' => 'global',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'crm_id' => 
+        'global' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -286,15 +266,15 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
-    'ship_id' => 
+    'date_from' => 
     array (
-      'alias' => 'ship_id',
+      'alias' => 'date_from',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'ship_id' => 
+        'date_from' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -302,15 +282,15 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
-    'tk_id' => 
+    'date_to' => 
     array (
-      'alias' => 'tk_id',
+      'alias' => 'date_to',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'tk_id' => 
+        'date_to' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -321,53 +301,69 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'composites' => 
   array (
+    'Stores' => 
+    array (
+      'class' => 'slActionsStores',
+      'local' => 'id',
+      'foreign' => 'action_id',
+      'cardinality' => 'many',
+      'owner' => 'local',
+    ),
     'Products' => 
     array (
-      'class' => 'slOrderProduct',
+      'class' => 'slActionsProducts',
       'local' => 'id',
-      'foreign' => 'order_id',
+      'foreign' => 'action_id',
       'cardinality' => 'many',
       'owner' => 'local',
     ),
   ),
   'aggregates' => 
   array (
-    'Warehouse' => 
+    'CreatedUser' => 
     array (
-      'class' => 'slWarehouse',
-      'local' => 'warehouse_id',
+      'class' => 'modUser',
+      'local' => 'createdby',
+      'foreign' => 'id',
+      'cardinality' => 'many',
+      'owner' => 'foreign',
+    ),
+    'CreatedUserProfile' => 
+    array (
+      'class' => 'modUserProfile',
+      'local' => 'createdby',
+      'foreign' => 'id',
+      'cardinality' => 'many',
+      'owner' => 'foreign',
+    ),
+    'UpdatedUser' => 
+    array (
+      'class' => 'modUser',
+      'local' => 'updatedby',
+      'foreign' => 'id',
+      'cardinality' => 'many',
+      'owner' => 'foreign',
+    ),
+    'UpdatedUserProfile' => 
+    array (
+      'class' => 'modUserProfile',
+      'local' => 'updatedby',
+      'foreign' => 'id',
+      'cardinality' => 'many',
+      'owner' => 'foreign',
+    ),
+    'modResource' => 
+    array (
+      'class' => 'modResource',
+      'local' => 'resource',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',
     ),
-    'Store' => 
+    'slStores' => 
     array (
       'class' => 'slStores',
       'local' => 'store_id',
-      'foreign' => 'id',
-      'cardinality' => 'one',
-      'owner' => 'foreign',
-    ),
-    'msOrder' => 
-    array (
-      'class' => 'msOrder',
-      'local' => 'order_id',
-      'foreign' => 'id',
-      'cardinality' => 'one',
-      'owner' => 'foreign',
-    ),
-    'Status' => 
-    array (
-      'class' => 'slCRMStage',
-      'local' => 'status',
-      'foreign' => 'id',
-      'cardinality' => 'one',
-      'owner' => 'foreign',
-    ),
-    'slWarehouseShipment' => 
-    array (
-      'class' => 'slWarehouseShipment',
-      'local' => 'ship_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

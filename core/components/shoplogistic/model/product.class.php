@@ -29,12 +29,14 @@ class productHandler
         $remain = $this->getStoreRemain($store_id, $product_id);
         if(!$remain){
             $remain = $this->getMinStoreRemain($product_id);
-            $remain['remains'] = 0;
-        }else{
-            $remain = array(
-                "price" => 0,
-                "remains" => 0
-            );
+            if($remain){
+                $remain['remains'] = 0;
+            }else{
+                $remain = array(
+                    "price" => 99999999,
+                    "remains" => 0
+                );
+            }
         }
         return $remain;
     }
