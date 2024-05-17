@@ -29,6 +29,7 @@ $xpdo_meta_map['slOrder']= array (
     'code' => '',
     'code_until' => NULL,
     'comment' => NULL,
+    'tk' => '',
     'tk_id' => '',
     'properties' => NULL,
   ),
@@ -179,6 +180,14 @@ $xpdo_meta_map['slOrder']= array (
       'dbtype' => 'text',
       'phptype' => 'string',
       'null' => true,
+    ),
+    'tk' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
     ),
     'tk_id' => 
     array (

@@ -268,10 +268,13 @@ class postrf{
             "entries-type" => "SALE_OF_GOODS",
             "mail-category" => "WITH_DECLARED_VALUE",
             "mail-type" => "BUSINESS_COURIER",
-            "transport-type" => "SURFACE"
+            "transport-type" => "SURFACE",
+            "notice-payment-method" => "CASHLESS",
+            "payment-method" => "CASHLESS",
         );
         if($products){
             $products = $this->prepareProducts($products);
+            $this->modx->log(1, 'PFR: '.print_r($products, 1));
             foreach($products as $product){
                 // TODO: GET_TARIFFS
                 if($product['weight'] > 10){
@@ -280,24 +283,28 @@ class postrf{
                         // EMS PT (курьер)
                         $tariffs = array(
                             'terminal' => 'POSTAL_PARCEL',
-                            'door' => 'EMS_RT'
+                            'door' => 'EMS'
                         );
                     }else{
                         $tariffs = array(
                             'terminal' => 'POSTAL_PARCEL',
-                            'door' => 'EMS_RT'
+                            'door' => 'EMS'
                         );
                     }
                 }else{
                     $tariffs = array(
                         'terminal' => 'POSTAL_PARCEL',
-                        'door' => 'EMS_RT'
+                        'door' => 'EMS'
                     );
                 }
                 foreach($tariffs as $key => $tariff) {
                     $data["declared-value"] = $product['price'];
                     $data["mass"] = $product['weight'] * 1000;
+                    if($data["mass"] > 10000){
+                        $data["mass"] = 2000;
+                    }
                     $data["mail-type"] = $tariff;
+                    $this->modx->log(1, 'PFR: '.print_r($data, 1));
                     $prf_data = $this->request($url, $data);
                     $this->sl->tools->log(print_r($prf_data, 1), $this->config["log_file_name"]);
                     if (!empty($prf_data['total-rate'])) {

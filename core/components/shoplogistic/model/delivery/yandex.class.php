@@ -182,6 +182,8 @@ class Yandex
                     );
                 }
             }
+            // УДАЛЯЕМ ITEMS некорректно считает размеры
+            unset($price_data['items']);
             $this->modx->log(1, print_r($price_data, 1));
             $ya_delivery_data = $this->yaDeliveryRequest($url, $price_data);
             if(isset($ya_delivery_data['code'])){

@@ -207,7 +207,19 @@ var dart_filters = {
             })
             filterForm.addEventListener( 'submit', (e) => {
                 e.preventDefault()
-                const obj = Object.fromEntries(new FormData(e.target))
+                const myFormData = new FormData(e.target)
+                const obj = Object.fromEntries(myFormData)
+                const inputs = filterForm.querySelectorAll('input[type=checkbox]');
+                inputs.forEach((input) => {
+                    var attr = input.getAttribute('name')
+                    var old_attr = attr
+                    delete obj[attr];
+                    attr = attr.replace("[]", '')
+                    const vars = myFormData.getAll(old_attr)
+                    if(vars.length){
+                        obj[attr] = myFormData.getAll(old_attr)
+                    }
+                })
                 obj.sl_action = "get/filterdata"
                 obj.filter_page = dart_filters.options.page
                 // const params = JSON.stringify(obj)
@@ -321,8 +333,8 @@ var dart_filters = {
             dataType: 'json',
             data: data,
             success:  function(data_r) {
-                let event = new Event("filter_update", data_r);
                 if(data_r.hasOwnProperty('products')){
+                    // $(document).trigger('mse2_load', response);
                     const container = document.querySelector(dart_filters.options.products)
                     container.innerHTML = data_r.products
                     container.classList.add('active')
@@ -357,9 +369,10 @@ var dart_filters = {
                             }
                         }
                     }
-                    const form = document.getElementById(dart_filters.options.form)
+                    const form = document
+                    let event = new CustomEvent("filter_update", data_r);
                     form.dispatchEvent(event)
-                    console.log(data_r.aggregate)
+                    // console.log(data_r.aggregate)
                 }
                 if(data_r.hasOwnProperty('pagination')){
                     const pagination = document.querySelector(dart_filters.options.pagination)
@@ -624,9 +637,9 @@ var sl_delivery = {
     },
     update_price: function(){
 		miniShop2.Order.getcost();
-        var fias = $(sl_delivery.options.hidden_address).find("input[name=fias]").val();
-        if(fias){
-            sl_delivery.getDeliveryPrices(fias);
+        var geo_data = $(sl_delivery.options.hidden_address).find("input[name=geo_data]").val();
+        if (geo_data){
+            sl_delivery.getDeliveryPrices(geo_data);
         }
     },
     viewAddress: function(){
@@ -714,7 +727,7 @@ var sl_delivery = {
         data.method = prop;
         if(data[data.main_key].price){
             if(data[data.main_key].price.hasOwnProperty(prop) && data[data.main_key].price[prop].hasOwnProperty('price')){
-                if(data[data.main_key].price[prop].price){
+                if(data[data.main_key].price[prop].price > 0){
                     var price = data[data.main_key].price[prop].price;
                     var srok = data[data.main_key].price[prop].time;
                     $('.'+data.main_key+'_price').text(price);
@@ -722,17 +735,22 @@ var sl_delivery = {
                     $('.'+data.main_key+'_price').closest('.service_info_'+data.main_key).show();
                     $('input#service_'+data.main_key).removeAttr("disabled");
                     $('.'+data.main_key+'_price').closest('.visual_block').removeClass('loading');
+                    $('input#service_'+data.main_key).closest(".visual_block").show();
+                }else{
+                    $('input#service_'+data.main_key).closest(".visual_block").hide();
                 }
             }else{
                 $('input#service_'+data.main_key).attr("disabled", "disabled");
                 $('input#service_'+data.main_key).removeAttr("checked");
                 $('input#service_'+data.main_key).prop('checked', false);
 				$('.'+data.main_key+'_price').closest('.visual_block').removeClass('loading');
+                $('input#service_'+data.main_key).closest(".visual_block").hide();
             }
         }else{
             $('input#service_'+data.main_key).attr("disabled", "disabled");
             $('input#service_'+data.main_key).removeAttr("checked");
             $('input#service_'+data.main_key).prop('checked', false);
+            $('input#service_'+data.main_key).closest(".visual_block").hide();
 			$('.'+data.main_key+'_price').closest('.visual_block').removeClass('loading');
         }
         $("input[name=sl_service][value="+data.main_key+"]").data("data", JSON.stringify(data));
@@ -1195,6 +1213,8 @@ $(document).ready(function(){
         e.preventDefault();
 		// check validation
 		$('.error-desc').remove();
+        $('.sl_services .dart-alert-error').remove();
+        $('.sl_pvz_map .dart-alert-error').remove();
 		$('.dart-input input').removeClass('error');
 		var errors = {};
 		var d = $('input[type=radio][name=delivery]:checked').val();
@@ -1252,7 +1272,7 @@ $(document).ready(function(){
 		}
 		if(Object.keys(errors).length){
 			for (const [key, value] of Object.entries(errors)) {
-				var error_string = "<div class='sl-alert sl-alert-error'>"+value+"</div>";
+				var error_string = "<div class='dart-alert dart-alert-error'>"+value+"</div>";
 				if(key == 'sl-services' || key == 'sl_pvz_map'){
 					$('.'+key).prepend(error_string);
 				}else{

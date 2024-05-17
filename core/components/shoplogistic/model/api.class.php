@@ -654,6 +654,7 @@ class minishop2_fast_api{
 		if($this->config['show_metrics']){
 			$this->checkprogress("Обновляю");
 		}
+
 		$table = $this->modx->getTableName($object);
 		if($table){
 			$coloumns = explode(",", str_replace(array("`", " "), array("", ""),$this->modx->getSelectColumns($object)));
@@ -678,9 +679,13 @@ class minishop2_fast_api{
 			$stmt = $this->modx->prepare($sql);
 			if(!$stmt){
 				$this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                $this->modx->log(1, print_r($id, true));
+                $this->modx->log(1, print_r($data, true));
 			}
 			if (!$stmt->execute($data)) {
 				$this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                $this->modx->log(1, print_r($id, true));
+                $this->modx->log(1, print_r($data, true));
 			}
 			return $id;
 		}else{

@@ -12,9 +12,11 @@ $xpdo_meta_map['slParserTasks']= array (
   array (
     'name' => '',
     'description' => '',
+    'exclude' => '',
     'url' => '',
     'config_id' => 0,
     'status' => 1,
+    'article_last_word' => 0,
     'createdon' => NULL,
     'createdby' => 0,
     'updatedon' => NULL,
@@ -33,6 +35,14 @@ $xpdo_meta_map['slParserTasks']= array (
       'default' => '',
     ),
     'description' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'exclude' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -65,6 +75,14 @@ $xpdo_meta_map['slParserTasks']= array (
       'phptype' => 'integer',
       'null' => true,
       'default' => 1,
+    ),
+    'article_last_word' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
     ),
     'createdon' => 
     array (

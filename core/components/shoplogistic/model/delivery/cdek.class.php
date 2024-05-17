@@ -113,15 +113,15 @@
             $this->log($response);
             foreach($response['tariff_codes'] as $code){
                 // Приоритет Дверь - Склад и Дверь - Дверь https://api-docs.cdek.ru/63345519.html -> Приложение 2
-                $available_codes = array(138, 139);
+                $available_codes = array(139, 137);
                 if(in_array($code['tariff_code'], $available_codes)){
-                    if($code['tariff_code'] == 138){
+                    if($code['tariff_code'] == 139){
                         $codes['terminal'] = array(
                             "price" => $code['delivery_sum'],
                             "time" => $code["calendar_max"]
                         );
                     }
-                    if($code['tariff_code'] == 139) {
+                    if($code['tariff_code'] == 137) {
                         $codes['door'] = array(
                             "price" => $code['delivery_sum'],
                             "time" => $code["calendar_max"]

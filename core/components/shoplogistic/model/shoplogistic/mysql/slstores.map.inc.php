@@ -31,6 +31,7 @@ $xpdo_meta_map['slStores']= array (
     'unique_id' => '',
     'btx24_id' => '',
     'address' => '',
+    'address_short' => '',
     'ur_address' => '',
     'contact' => '',
     'email' => '',
@@ -217,6 +218,14 @@ $xpdo_meta_map['slStores']= array (
       'default' => '',
     ),
     'address' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'address_short' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',

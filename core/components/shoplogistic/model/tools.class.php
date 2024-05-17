@@ -88,6 +88,35 @@ class slTools
     }
 
     /**
+     * General method to update settings
+     *
+     * @param $key
+     * @param $value
+     */
+    protected function updateSetting($key, $value)
+    {
+        $setting = $this->modx->getObject('modSystemSetting', ['key' => $key]);
+        if (!$setting) {
+            $setting = $this->modx->newObject('modSystemSetting');
+            $setting->set('key', $key);
+        }
+        $setting->set('value', $value);
+        $setting->save();
+    }
+
+    /**
+     * Берем таймзон
+     *
+     * @param $offset
+     * @return false|string
+     */
+    public function getTimezone($offset){
+        $string_offset = explode("+", $offset);
+        $timezoneName = timezone_name_from_abbr("", $string_offset[1]*3600, false);
+        return $timezoneName;
+    }
+
+    /**
      * Логгирование
      *
      * @param $data

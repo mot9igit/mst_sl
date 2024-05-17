@@ -29,12 +29,14 @@ class productHandler
         $remain = $this->getStoreRemain($store_id, $product_id);
         if(!$remain){
             $remain = $this->getMinStoreRemain($product_id);
-            $remain['remains'] = 0;
-        }else{
-            $remain = array(
-                "price" => 0,
-                "remains" => 0
-            );
+            if($remain){
+                $remain['remains'] = 0;
+            }else{
+                $remain = array(
+                    "price" => 99999999,
+                    "remains" => 0
+                );
+            }
         }
         return $remain;
     }
@@ -290,12 +292,18 @@ class productHandler
             // линкуем товар
             // if (!$o->get('product_id') && $o->get('autolink')) {
             if (!$o->get('product_id')) {
-                $product_id = $this->linkProduct($o->get('id'));
+                $prod = $this->linkProduct($o->get('id'));
+                if($prod["product_id"]){
+                    $product_id = $prod["product_id"];
+                }else{
+                    $product_id = 0;
+                }
+            }else{
+                $product_id = $o->get('product_id');
             }
-            $product_id = $o->get('product_id');
             if($product_id){
-                $store = $this->sl->getObject($store_id);
-                if($o->get("remains") && $store['active']){
+                $stores = $this->getProductOffers($product_id);
+                if(count($stores)){
                     $status = 1;
                 }else{
                     $status = 99;
@@ -305,6 +313,29 @@ class productHandler
             return $o->get("id");
         }
         return 0;
+    }
+
+    /**
+     * Чекаем товарные предложения
+     *
+     * @param $product_id
+     * @return array
+     */
+    public function getProductOffers($product_id){
+        $result = array();
+        $query = $this->modx->newQuery("slStoresRemains");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+        $query->where(array(
+            "slStoresRemains.remains:>" => 0,
+            "slStoresRemains.price:>" => 0,
+            "slStores.active:=" => 1,
+            "slStoresRemains.product_id:=" => $product_id
+        ));
+        $query->select(array("slStoresRemains.*"));
+        if($query->prepare() && $query->stmt->execute()){
+            $result = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return $result;
     }
 
     /**

@@ -507,6 +507,9 @@ class objectsHandler
         if($properties['type'] == 'report_copo_all'){
             return $this->getReportCopoAll($properties);
         }
+        if($properties['type'] == 'get/organizations'){
+            return $this->getAllOrganizations($properties);
+        }
         if($properties['type'] == 'report_copo_all_details'){
             return $this->getReportCopoDetailsAll($properties);
         }
@@ -2598,6 +2601,30 @@ class objectsHandler
                     }
                 }
             }else{
+                if($properties['banner']){
+                    $tmp_path = $this->modx->getOption('base_path').'assets/components/shoplogistic/tmp/banners/';
+                    $tmp_url = 'assets/components/shoplogistic/tmp/banners/';
+                    if(!file_exists($tmp_path)){
+                        mkdir($tmp_path, 0777, true);
+                    }
+
+                    foreach($_FILES as $key => $file){
+                        foreach($file['name'] as $k => $v){
+                            $typefile = substr(strrchr(basename($file['name'][$k]), '.'), 1);
+                            $namefile = uniqid() . "." . $typefile;
+
+                            $target = $tmp_path . $namefile;
+                            if (move_uploaded_file($file['tmp_name'][$k], $target)) {
+                                $output['files'][] = array(
+                                    "name" => $namefile,
+                                    "original" => $tmp_url . $namefile,
+                                    "original_href" => str_replace("//assets", "/assets", $this->modx->getOption('site_url') . $tmp_url . $namefile),
+                                    "type_banner" => $properties['banner'],
+                                );
+                            }
+                        }
+                    }
+                }
                 // уведомление, что не указана организация
             }
         }else{
@@ -2639,6 +2666,9 @@ class objectsHandler
         if($properties['type'] == 'balance_request' && $properties['action'] == 'set') {
             $response = $this->setBalanceRequest($properties);
         }
+        if($properties['type'] == 'opts') {
+            $response = $this->checkOpts($properties);
+        }
         if($properties['type'] == 'toggleOpts') {
             $response = $this->toggleOpts($properties);
         }
@@ -2651,12 +2681,49 @@ class objectsHandler
         return $response;
     }
 
+    /**
+     * Чекаем оптовиков
+     *
+     * @param $properties
+     * @return void
+     */
+    public function checkOpts($properties){
+        $outputs = array();
+        if($properties['action'] == 'set'){
+            if(count($properties['vendors'])){
+                foreach($properties['vendors'] as $key => $v){
+                    if($v){
+                        if(!$object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["id"], "warehouse_id" => $key))){
+                            $object = $this->modx->newObject("slWarehouseStores");
+                        }
+                        $object->set("store_id", $properties["id"]);
+                        $object->set("warehouse_id", $key);
+                        $object->set("description", "Установлено через ЛК магазина");
+                        $object->set("sync", 0);
+                        $object->set("date", time());
+                        $object->save();
+                        $outputs[] = $object->toArray();
+                    }
+                }
+            }
+        }
+        return $this->sl->success("Объекты создан", $outputs);
+    }
+
+    /**
+     * Чекаем оптовиков
+     *
+     * @param $properties
+     * @return mixed
+     */
     public function toggleOpts($properties)
     {
         // $this->modx->log(1, print_r($properties, 1));
         if($properties['action']){
             // установить
-            $object = $this->modx->newObject("slWarehouseStores");
+            if(!$object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["id"], "warehouse_id" => $properties["store"]))){
+                $object = $this->modx->newObject("slWarehouseStores");
+            }
             $object->set("store_id", $properties["store"]);
             $object->set("warehouse_id", $properties["id"]);
             $object->set("description", "Установлено через ЛК магазина");
@@ -3168,77 +3235,91 @@ class objectsHandler
 
     public function getAvailableProducts($store_id, $properties = array(), $include = 1){
         $results = array();
-        $criteria = array(
-            "store_id" => $store_id
-        );
-        $vs = array();
-        $vendors = $this->modx->getCollection("slStoresBrands", $criteria);
-        foreach($vendors as $v) {
-            $vs[] = $v->get("brand_id");
+
+        $q = $this->modx->newQuery("modResource");
+        $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
+        $q->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.product_id = modResource.id');
+        $q->where(array(
+            "modResource.class_key:=" => "msProduct",
+            "slStoresRemains.store_id:=" => $properties['id']
+        ));
+
+        $q->select(array(
+            'modResource.id',
+            'slStoresRemains.price as price',
+            'modResource.pagetitle as name',
+            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+            'msProduct.vendor_article as article'
+        ));
+
+        $idsProducts = array();
+        //Если нет выбранных, выдаём весь список
+        if($properties['selected']){
+
+			foreach ($properties['selected'] as $key => $value) {
+				array_push($idsProducts, $key);
+			}
+
+            //for($i = 0; $i < count($properties['selected']); $i++){
+                //$idsProducts[$i] = $properties['selected'][$i]['id'];
+            //}
+
+            $q->where(array(
+                "modResource.id:NOT IN" => $idsProducts
+            ));
         }
-        if($properties['sel_arr']){
-            if($include){
-                $q = $this->modx->newQuery("slStoresMatrixProducts");
-                $q->leftJoin("modResource", "modResource", "modResource.id = slStoresMatrixProducts.product_id");
-                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresMatrixProducts.product_id');
+
+        $idsProductsCategory = array();
+
+        if($properties['filter']){
+            if($properties['filter']['name']) {
                 $q->where(array(
-                    "slStoresMatrixProducts.matrix_id:=" => $properties['matrix_id'],
-                    "modResource.class_key:=" => "msProduct",
-                    "msProduct.vendor:IN" => $vs
+                    "modResource.pagetitle:LIKE" => "%{$properties['filter']['name']}%",
+                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']['name']}%"
                 ));
+            }
+
+
+            if($properties['filter']['category']){
+                foreach ($properties['filter']['category'] as $key => $value) {
+                    if($value['checked']){
+                        array_push($idsProductsCategory, $key);
+                    }
+                }
+
                 $q->where(array(
-                    "modResource.id:IN" => $properties['sel_arr']
-                ));
-                $q->select(array(
-                    'modResource.id',
-                    'modResource.pagetitle as name',
-                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
-                    'msProduct.vendor_article as article',
-                    'slStoresMatrixProducts.count',
-                    'slStoresMatrixProducts.days'
-                ));
-            }else{
-                $q = $this->modx->newQuery("modResource");
-                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = modResource.id');
-                $q->where(array(
-                    "modResource.class_key:=" => "msProduct",
-                    "msProduct.vendor:IN" => $vs
-                ));
-                $q->where(array(
-                    "modResource.id:NOT IN" => $properties['sel_arr']
-                ));
-                $q->select(array(
-                    'modResource.id',
-                    'modResource.pagetitle as name',
-                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
-                    'msProduct.vendor_article as article'
+                    "modResource.parent:IN" => $idsProductsCategory
                 ));
             }
         }
 
-        if($properties['filter']){
-            $q->where(array(
-                "modResource.pagetitle:LIKE" => "%{$properties['filter']}%",
-                "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']}%"
-            ));
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $q->limit($limit, $offset);
+        }else{
+            $limit = 50;
+            $offset = 0;
+            $q->limit($limit, $offset);
         }
+
         // Подсчитываем общее число записей
-        // $result['total'] = $this->modx->getCount('slStoresRemains', $q);
+        $results['total'] = $this->modx->getCount('slStoresRemains', $q);
+
         $q->prepare();
         if($q->prepare() && $q->stmt->execute()){
             $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
-            if($properties['sel_arr']){
-                $results = $out;
+
+            if(!$properties['selected']){
+                $results['products'] = $out;
+
             }else{
-                $results['products'][] = $out;
-                if($properties['selected']){
-                    $results['products'][] = $properties['selected'];
-                }else{
-                    $results['products'][] = array();
-                }
+                $results['products'] = $out;
+                $results['selected'] = $properties['selected'];
             }
             return $results;
         }
+
         return array();
     }
 
@@ -3612,5 +3693,65 @@ class objectsHandler
             $this->modx->log(1, "Проверьте удаление отчета Недельных продаж ". $id);
         }
         return $result;
+    }
+
+
+    /**
+     * Получаем список всех Магазинов/Оптовых компаний/Производителей
+     *
+     * @param $properties
+     * @return
+     */
+    public function getAllOrganizations($properties = array()){
+        $query = $this->modx->newQuery("slStores");
+        $query->select(array(
+            "`slStores`.*"
+        ));
+        $query->where(array(
+            "`slStores`.`active`:=" => true
+        ));
+
+        $idsProducts = array();
+
+        if($properties['selected']){
+            foreach ($properties['selected'] as $key => $value) {
+                array_push($idsProducts, $key);
+            }
+
+            //for($i = 0; $i < count($properties['selected']); $i++){
+            //$idsProducts[$i] = $properties['selected'][$i]['id'];
+            //}
+
+
+            $query->where(array(
+                "slStores.id:NOT IN" => $idsProducts
+            ));
+        }
+
+        if($properties){
+            if($properties['filter']['name']){
+                $query->where(array(
+                    "slStores.name:LIKE" => "%{$properties['filter']['name']}%",
+                ));
+            }
+
+            //Тип магазина
+            if($properties['filter']['type']){
+                $query->where(array(
+                    "slStores.type:IN" => $properties['filter']['type']
+                ));
+            }
+        }
+
+        if ($query->prepare() && $query->stmt->execute()) {
+            $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            $urlMain = $this->modx->getOption("site_url");
+
+            foreach ($vendors as $key => $value) {
+                $vendors[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+            }
+
+            return $vendors;
+        }
     }
 }

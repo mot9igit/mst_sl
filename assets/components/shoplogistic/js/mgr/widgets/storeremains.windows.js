@@ -34,7 +34,7 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             name: 'base_guid',
             anchor: '99%',
             id: config.id + '-base_guid',
-            allowBlank: false
+            allowBlank: true
         },{
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_storeremains_catalog'),
@@ -55,7 +55,7 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             name: 'barcode',
             anchor: '99%',
             id: config.id + '-barcode',
-            allowBlank: false
+            allowBlank: true
         }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_storeremains_product_name'),

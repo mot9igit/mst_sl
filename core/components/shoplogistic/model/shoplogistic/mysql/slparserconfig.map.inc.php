@@ -18,6 +18,7 @@ $xpdo_meta_map['slParserConfig']= array (
     'products_base' => '',
     'products_base_inner' => '',
     'unique' => 0,
+    'once_cats' => 0,
     'key_product_field' => '',
     'pagination' => 0,
     'pagination_selector' => '',
@@ -87,6 +88,15 @@ $xpdo_meta_map['slParserConfig']= array (
       'default' => '',
     ),
     'unique' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'once_cats' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',

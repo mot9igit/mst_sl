@@ -148,6 +148,10 @@ class shopLogistic
             require_once dirname(__FILE__) . '/delivery/yandex.class.php';
             $this->yandex = new Yandex($this, $this->modx);
         }
+        if (!class_exists('evening')) {
+            require_once dirname(__FILE__) . '/delivery/evening.class.php';
+            $this->evening = new evening($this, $this->modx);
+        }
 		if (!class_exists('slXSLX')) {
 			require_once dirname(__FILE__) . '/xslx.class.php';
 			$this->xslx = new slXSLX($this, $this->modx);
@@ -215,9 +219,17 @@ class shopLogistic
             require_once dirname(__FILE__) . '/analytics/opt.class.php';
             $this->analyticsOpt = new optAnalyticsHandler($this, $this->modx);
         }
+        if (!class_exists('salesAnalyticsHandler')) {
+            require_once dirname(__FILE__) . '/analytics/sales.class.php';
+            $this->analyticsSales = new salesAnalyticsHandler($this, $this->modx);
+        }
         if (!class_exists('trainingHandler')) {
             require_once dirname(__FILE__) . '/training/training.class.php';
             $this->training = new trainingHandler($this, $this->modx);
+        }
+        if (!class_exists('returnProductsHandler')) {
+            require_once dirname(__FILE__) . '/return_products/return_products.class.php';
+            $this->return_products = new returnProductsHandler($this, $this->modx);
         }
 		// link ms2
 		if(is_dir($this->modx->getOption('core_path').'components/minishop2/model/minishop2/')) {
@@ -445,6 +457,9 @@ class shopLogistic
                 break;
             case 'cart/update':
                 $response = $this->cart->update();
+                break;
+            case 'product/return':
+                $response = $this->return_products->postReturnProducts($data);
                 break;
 		}
 		return $response;
@@ -681,6 +696,43 @@ class shopLogistic
 			foreach($stores as $key => $store) {
                 // TODO: ID убрать в переменную
                 $store['redirect'] = $this->modx->makeURL(1);
+                $times = $this->store->getWorkWithTimezones($store['id']);
+                if($times) {
+                    if ($times['work']['time_to']) {
+                        $from = array(
+                            "hour" => $times['work']['time_from']->format("H"),
+                            "minute" => $times['work']['time_from']->format("i")
+                        );
+                        $to = array(
+                            "hour" => $times['work']['time_to']->format("H"),
+                            "minute" => $times['work']['time_to']->format("i")
+                        );
+                        $today = array(
+                            "hour" => $times['work']['today']->format("H"),
+                            "minute" => $times['work']['today']->format("i")
+                        );
+                        if($today["hour"] < $to['hour'] || ($today["hour"] == $to['hour'] && $to['minute'] > $today['minute'])){
+                            $store['work']['status'] = 1;
+                            $diff = $times['work']['time_to']->diff($times['work']['today']);
+                            $store['work']['diff']['hour'] = $diff->h;
+                            $store['work']['diff']['minute'] = $diff->i;
+                        }else{
+                            $store['work']['status'] = 0;
+                            if($today["hour"] >= $to['hour']){
+                                $interval = new DateInterval('P1D');
+                                $newDate1 = $times['work']['time_from']->add($interval);
+                                $diff = $newDate1->diff($times['work']['today']);
+                            }else{
+                                $diff = $times['work']['time_from']->diff($times['work']['today']);
+                            }
+                            $store['work']['diff']['hour'] = $diff->h;
+                            $store['work']['diff']['minute'] = $diff->i;
+                        }
+                        $store['work']['to'] = $to;
+                        $store['work']['from'] = $from;
+                    }
+                    // $store['work'] = $times;
+                }
                 $store['data'] = json_encode($store);
                 $stores[$key]['data'] = json_encode($store);
                 $stores[$key]['text'] = $this->pdoTools->getChunk("@FILE chunks/sl_store_baloon.tpl", $store);

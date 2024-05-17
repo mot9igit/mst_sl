@@ -509,6 +509,98 @@ class storeHandler
         }
     }
 
+    public function getWorkWithTimezones($store_id, $date = "now"){
+        $work = array();
+        $timezone = '';
+        $store = $this->sl->getObject($store_id);
+        if($store){
+            $city = $this->modx->getObject("dartLocationCity", $store["city"]);
+            if($city){
+                $carr = $city->toArray();
+                $timezone = $this->sl->tools->getTimezone($carr['properties']['timezone']);
+            }
+        }
+        $data['store'] = $store;
+        $data['timezone'] = $timezone;
+        // смотрим не забита ли какая дата
+        $query = $this->modx->newQuery("slStoresWeekWork");
+        $query->select(array(
+            "`slStoresWeekWork`.*"
+        ));
+        //TODO Нужно выставлять часовой пояс пользователя
+        $start = new DateTime($date);
+        $start->setTime(00,00);
+        if($timezone){
+            $start->setTimezone(new DateTimeZone($timezone));
+        }
+        $timeStart = $start->getTimestamp();
+        $end = new DateTime("now");
+        if($timezone){
+            $end->setTimezone(new DateTimeZone($timezone));
+        }
+        $start->setTime(23,59);
+        $timeEnd = $end->getTimestamp();
+
+        $query->where(array(
+            "`slStoresWeekWork`.`store_id`:=" => $store_id,
+            "`slStoresWeekWork`.`date`:>=" => date('Y-m-d H:i', $timeStart),
+            "`slStoresWeekWork`.`date`:<=" => date('Y-m-d H:i', $timeEnd),
+        ));
+        if ($query->prepare() && $query->stmt->execute()) {
+            $work = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            if(!$work){
+                $q = $this->modx->newQuery("slStoresWeekWork");
+                $q->select(array(
+                    "`slStoresWeekWork`.*"
+                ));
+                $dateinfo = getdate();
+                $wday = $dateinfo['wday'];
+                $q->where(array(
+                    "`slStoresWeekWork`.`store_id`:=" => $store_id,
+                    "`slStoresWeekWork`.`week_day`:=" => $wday,
+                ));
+                if ($q->prepare() && $q->stmt->execute()) {
+                    $work = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                }
+            }
+        }
+        if ($work) {
+            $usertimezone = $this->sl->getLocationData('web')['usertimezone'];
+
+            $date_from = new DateTime($work['date_from']);
+            $date_to = new DateTime($work['date_to']);
+
+            $date_from->setTimezone(new DateTimeZone($work['timezone']));
+            $date_to->setTimezone(new DateTimeZone($work['timezone']));
+            $work["from"] = array(
+                "hour" => $date_from->format("H"),
+                "minute" => $date_from->format("i"),
+            );
+            $work["to"] = array(
+                "hour" => $date_to->format("H"),
+                "minute" => $date_to->format("i"),
+            );
+
+            $date = new DateTime();
+            $date->setTimezone(new DateTimeZone($data['timezone']));
+            $work["today"] = $date;
+
+            $work_date_from = new DateTime();
+            $work_date_from->setTimezone(new DateTimeZone($data['timezone']));
+            $work_date_from->setTime($work["from"]['hour'],$work["from"]['minute']);
+            $work["time_from"] = $work_date_from;
+
+            $work_date_to = new DateTime();
+            $work_date_to->setTimezone(new DateTimeZone($data['timezone']));
+            $work_date_to->setTime($work["to"]['hour'],$work["from"]['to']);
+            $work["time_to"] = $work_date_to;
+
+            $data['work'] = $work;
+            return $data;
+        }
+        return false;
+    }
+
     /**
      * Получаем информацию о работе магазина
      *

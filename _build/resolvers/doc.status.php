@@ -115,6 +115,44 @@ if ($transport->xpdo) {
                 $status_id = $level->get('id');
                 $status_name = $properties['name'];
             }
+			
+			// Статусы файлов выгрузки
+            $statuses = [
+                [
+                    'name' => 'Ожидание решения поставщика',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'Подтверждён',
+                    'color' => '003366',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Отклонён',
+                    'color' => '008000',
+                    'active' => 1,
+                    'id' => 3
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slReturnStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slReturnStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
 
             // Статусы заданий парсера
             $statuses = [
