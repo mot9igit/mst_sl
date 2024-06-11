@@ -20,6 +20,7 @@ $xpdo_meta_map['slActionsStores']= array (
     'updatedon' => NULL,
     'updatedby' => 0,
     'properties' => NULL,
+    'type_price' => 0,
   ),
   'fieldMeta' => 
   array (
@@ -100,6 +101,15 @@ $xpdo_meta_map['slActionsStores']= array (
       'dbtype' => 'text',
       'phptype' => 'json',
       'null' => true,
+    ),
+    'type_price' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
     ),
   ),
   'indexes' => 

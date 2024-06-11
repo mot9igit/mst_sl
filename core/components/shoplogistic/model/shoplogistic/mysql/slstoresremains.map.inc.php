@@ -593,6 +593,17 @@ $xpdo_meta_map['slStoresRemains']= array (
       ),
     ),
   ),
+  'composites' => 
+  array (
+    'Prices' => 
+    array (
+      'class' => 'slStoresRemainsPrices',
+      'local' => 'id',
+      'foreign' => 'remain_id',
+      'cardinality' => 'many',
+      'owner' => 'local',
+    ),
+  ),
   'aggregates' => 
   array (
     'Store' => 

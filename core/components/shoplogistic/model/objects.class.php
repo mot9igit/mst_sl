@@ -2678,7 +2678,91 @@ class objectsHandler
         if($properties['type'] == 'work_week_date' && $properties['action'] == 'set'){
             $response = $this->sl->store->setWorkDate($properties);
         }
+        if($properties['action'] == 'order/opt/submit'){
+            // TODO: перенести в opt.class.php
+            $response = $this->orderSubmit($properties);
+        }
         return $response;
+    }
+
+    // TODO: перенести в opt.class.php
+    public function orderSubmit($properties){
+        $this->modx->log(1, print_r($properties, 1));
+        $this->modx->log(1, print_r($_SESSION['basket'], 1));
+        if($properties["id"]){
+            if($properties["store_id"] != 'all'){
+                $order_data['products'] = $_SESSION['basket'][$properties["id"]][$properties["store_id"]];
+                $order_data["warehouse_id"] = $properties["store_id"];
+                $order_data["store_id"] = $properties["id"];
+                // TODO: перенести в opt.class.php
+                $response[] = $this->orderSave($order_data);
+            }else{
+                foreach($_SESSION['basket'][$properties["id"]] as $key => $val){
+                    $order_data['products'] = $_SESSION['basket'][$properties["id"]][$properties["store_id"]];
+                    $order_data["warehouse_id"] = $properties["store_id"];
+                    $order_data["store_id"] = $properties["id"];
+                    // TODO: перенести в opt.class.php
+                    $response[] = $this->orderSave($order_data);
+                }
+            }
+        }
+        // TODO: скорректировать в opt.class.php
+        $this->sl->analyticsOpt->clearBasket($properties);
+        return $this->sl->tools->success("", $response);
+    }
+
+    // TODO: перенести в opt.class.php
+    public function orderSave($data){
+        $order_data = $this->orderGetCost($data);
+        $order = $this->modx->newObject("slOrderOpt");
+        $order->set("warehouse_id", $data["warehouse_id"]);
+        $order->set("store_id", $data["store_id"]);
+        $order->set("weight", $order_data["weight"]);
+        $order->set("volume", $order_data["volume"]);
+        $order->set("cost", $order_data["cost"]);
+        $order->set("cart_cost", $order_data["cost"]);
+        $order->set("createdon", time());
+        $order->set("date", time());
+        $order->save();
+        foreach($data['products'] as $k => $item){
+            $params = $this->sl->product->getProductParams($k);
+            $product = $this->modx->newObject("slOrderOptProduct");
+            $product->set("product_id", $k);
+            $product->set("order_id", $order->get("id"));
+            $product->set("name", $params[0]['name']);
+            $product->set("count", $item['count']);
+            $product->set("price", $item['price']);
+            $product->set("weight", $params[0]['product']["weight_brutto"]);
+            $product->set("cost", ($item['count'] * $item['price']));
+            $product->save();
+        }
+
+        return $order->toArray();
+    }
+
+    // TODO: перенести в opt.class.php
+    /**
+     * Формируем данные по заказу
+     *
+     * @param $data
+     * @return int[]
+     */
+    public function orderGetCost($data){
+        $output = array(
+            "cost" => 0,
+            "count" => 0,
+            "weight" => 0,
+            "volume" => 0
+        );
+        foreach($data['products'] as $k => $item){
+            $output['cost'] += $item["price"] * $item['count'];
+            $output['count'] += $item['count'];
+            $params = $this->sl->product->getProductParams($k);
+            $output['weight'] += $params[0]['product']["weight_brutto"] * $item['count'];
+            $output['volume'] += $params[0]['product']["length"] * $params[0]['product']["width"] * $params[0]['product']["height"] * $item['count'];
+        }
+        $output['volume'] = $output['volume'] / 1000000;
+        return $output;
     }
 
     /**
@@ -3230,6 +3314,100 @@ class objectsHandler
             }
             return $results;
         }
+        return array();
+    }
+
+    public function getAllProducts($store_id, $properties = array(), $include = 1){
+        $results = array();
+
+        $q = $this->modx->newQuery("slStoresRemains");
+        $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+        $q->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+        $q->where(array(
+            "slStoresRemains.store_id:=" => $properties['id'],
+            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.remains:>" => 0
+        ));
+
+        $q->select(array(
+            'slStoresRemains.price as price',
+            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+            "`slStoresRemains`.`id` as id"
+        ));
+
+        $idsProducts = array();
+        //Если нет выбранных, выдаём весь список
+        if($properties['selected']){
+
+            foreach ($properties['selected'] as $key => $value) {
+                array_push($idsProducts, $value['id']);
+            }
+
+            //for($i = 0; $i < count($properties['selected']); $i++){
+            //$idsProducts[$i] = $properties['selected'][$i]['id'];
+            //}
+
+            $q->where(array(
+                "slStoresRemains.id:NOT IN" => $idsProducts
+            ));
+        }
+
+        $idsProductsCategory = array();
+
+        if($properties['filter']){
+            if($properties['filter']['name']) {
+                $q->where(array(
+                    "modResource.pagetitle:LIKE" => "%{$properties['filter']['name']}%",
+                    "OR:slStoresRemains.name:LIKE" => "%{$properties['filter']['name']}%",
+                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']['name']}%",
+                    "OR:slStoresRemains.article:LIKE" => "%{$properties['filter']['name']}%"
+                ));
+            }
+
+
+            if($properties['filter']['category']){
+                foreach ($properties['filter']['category'] as $key => $value) {
+                    if($value['checked']){
+                        array_push($idsProductsCategory, $key);
+                    }
+                }
+
+                $q->where(array(
+                    "modResource.parent:IN" => $idsProductsCategory
+                ));
+            }
+        }
+
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $q->limit($limit, $offset);
+        }else{
+            $limit = 50;
+            $offset = 0;
+            $q->limit($limit, $offset);
+        }
+
+        // Подсчитываем общее число записей
+        $results['total'] = $this->modx->getCount('slStoresRemains', $q);
+
+        $q->prepare();
+        $this->modx->log(1, $q->toSQL());
+        if($q->prepare() && $q->stmt->execute()){
+            $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if(!$properties['selected']){
+                $results['products'] = $out;
+
+            }else{
+                $results['products'] = $out;
+                $results['selected'] = $properties['selected'];
+            }
+            return $results;
+        }
+
         return array();
     }
 

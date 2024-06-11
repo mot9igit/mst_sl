@@ -235,5 +235,22 @@ class slSearch
         return $result;
     }
 
+    public function getOptBigResults($string, $filters = array(),$limit = 12, $offset = 0){
+        if (!class_exists('SphinxClient')) {
+            require_once dirname(__FILE__) . '/sphinx.class.php';
+        }
+        $sphinx = new SphinxClient();
+        $sphinx->SetServer('localhost', 9312);
+        $sphinx->SetMatchMode(SPH_MATCH_ALL);
+        $sphinx->SetSortMode(SPH_SORT_EXTENDED, "@relevance DESC");
+        $sphinx->SetFieldWeights(array('article' => 20, 'name' => 10));
+        $sphinx->SetLimits($offset, $limit, 1000);
+        $result = $sphinx->Query($string, 'mst_opt');
+        if ($result && isset($result['matches'])){
+            return $result;
+        }else{
+            return false;
+        }
+    }
 
 }

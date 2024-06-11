@@ -174,6 +174,15 @@ class productHandler
                     }
                     // $this->sl->api->update("slStoresRemains", );
                 }
+				// массив цен
+				$prices = array();
+				if($data['promo_prices_list']){
+					foreach($data['promo_prices_list'] as $price){
+						$prices[$price['price_id']] = array(
+							"name" => $price['price_Name']
+						);
+					}
+				}
                 foreach ($data['products'] as $key => $product) {
                     $error = false;
                     $message = '';
@@ -229,7 +238,21 @@ class productHandler
                         );
                     } else {
                         $resp = $this->importRemainSingle($store['id'], $product);
-                        if($response){
+                        if($resp){
+							// если есть цены
+							if($product['promo_prices']){
+								foreach($product['promo_prices'] as $pr){
+									if(!$product_price = $this->modx->getObject("slStoresRemainsPrices", array("remain_id" => $resp, "key" => $pr["price_id"]))){
+										$product_price = $this->modx->newObject("slStoresRemainsPrices");
+									}									
+									$product_price->set("remain_id", $resp);
+									$product_price->set("name", $prices[$pr["price_id"]]['name']);
+									$product_price->set("key", $pr["price_id"]);
+									$product_price->set("price", $pr["value"]);
+									$product_price->set("active", 1);
+									$product_price->save();
+								}
+							}
                             $response['success_info'][] = $resp;
                         }else{
                             $response['failed_info'][] = $resp;

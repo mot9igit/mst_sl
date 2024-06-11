@@ -70,8 +70,10 @@ class shopLogisticHomeManagerController extends modExtraManagerController
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeusers.windows.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeremains.grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeremains.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/windows.js?v='.$this->shopLogistic->config['version']);
+		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores_remains/prices.grid.js?v='.$this->shopLogistic->config['version']);
+		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores_remains/prices.windows.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/product.grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/wdocs/grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/wdocs/windows.js?v='.$this->shopLogistic->config['version']);

@@ -143,6 +143,12 @@ Ext.extend(shopLogistic.window.UpdateStoreRemains, shopLogistic.window.CreateSto
                 title: _('shoplogistic_storeremains'),
                 layout: 'form',
                 items: shopLogistic.window.CreateStoreRemains.prototype.getFields.call(this, config),
+            },{
+                title: _('shoplogistic_store_remains_prices'),
+                items: [{
+                    xtype: 'shoplogistic-grid-store-remains-prices',
+                    record: config.record,
+                }]
             }]
         }];
     }

@@ -1237,3 +1237,72 @@ $_lang["shoplogistic_parserdata_cats_options_option_id"] = "Опция";
 $_lang["shoplogistic_parserdata_cats_options_cat_id"] = "Категория";
 $_lang["shoplogistic_parserdata_cats_options_ignore"] = "Игнорировать";
 $_lang["shoplogistic_parserdata_cats_options_description"] = "Описание";
+
+
+$_lang["shoplogistic_page_err_name"] = "Вы должны указать имя страницы";
+$_lang["shoplogistic_page_err_ae"] = "Страница с таким именем уже существует";
+$_lang["shoplogistic_page_err_ns"] = "Страница не найдена";
+$_lang["shoplogistic_page_name"] = "Наименование";
+$_lang["shoplogistic_page_description"] = "Описание";
+$_lang["shoplogistic_page_logo"] = "Лого";
+$_lang["shoplogistic_page_active"] = "Активность";
+$_lang["shoplogistic_page_class"] = "Класс обработчик";
+$_lang["shoplogistic_page_url"] = "URL";
+$_lang["shoplogistic_page_create"] = "Создать страницу";
+$_lang["shoplogistic_page"] = "Страницы";
+$_lang["shoplogistic_page_update"] = "Редактировать страницу";
+$_lang['shoplogistic_page_enable'] = 'Включить страницу';
+$_lang['shoplogistic_pages_enable'] = 'Включить страницы';
+$_lang['shoplogistic_page_disable'] = 'Отключить страницу';
+$_lang['shoplogistic_pages_disable'] = 'Отключить страницы';
+$_lang['shoplogistic_page_remove'] = 'Удалить страницу';
+$_lang['shoplogistic_pages_remove'] = 'Удалить страницы';
+$_lang['shoplogistic_page_remove_confirm'] = 'Вы уверены, что хотите удалить эту страницу?';
+$_lang['shoplogistic_pages_remove_confirm'] = 'Вы уверены, что хотите удалить эти страницы?';
+
+$_lang["shoplogistic_place_err_name"] = "Вы должны указать имя места";
+$_lang["shoplogistic_place_err_ae"] = "Место с таким именем уже существует";
+$_lang["shoplogistic_place_err_ns"] = "Место не найдена";
+$_lang["shoplogistic_place_name"] = "Наименование";
+$_lang["shoplogistic_place_description"] = "Описание";
+$_lang["shoplogistic_place_logo"] = "Лого";
+$_lang["shoplogistic_place_active"] = "Активность";
+$_lang["shoplogistic_place_class"] = "Класс обработчик";
+$_lang["shoplogistic_place_url"] = "URL";
+$_lang["shoplogistic_place_create"] = "Создать место";
+$_lang["shoplogistic_place"] = "Места";
+$_lang["shoplogistic_place_update"] = "Редактировать место";
+$_lang['shoplogistic_place_enable'] = 'Включить место';
+$_lang['shoplogistic_places_enable'] = 'Включить места';
+$_lang['shoplogistic_place_disable'] = 'Отключить место';
+$_lang['shoplogistic_places_disable'] = 'Отключить места';
+$_lang['shoplogistic_place_remove'] = 'Удалить место';
+$_lang['shoplogistic_places_remove'] = 'Удалить места';
+$_lang['shoplogistic_place_remove_confirm'] = 'Вы уверены, что хотите удалить это место?';
+$_lang['shoplogistic_places_remove_confirm'] = 'Вы уверены, что хотите удалить эти места?';
+
+
+
+$_lang['shoplogistic_adv'] = 'Реклама';
+$_lang['shoplogistic_adv_page'] = 'Страницы';
+$_lang['shoplogistic_adv_place'] = 'Места';
+$_lang['shoplogistic_adv_desc'] = 'Создавайте и управляйте рекламой';
+
+$_lang['shoplogistic_page_create'] = 'Создать страницу';
+
+$_lang['shoplogistic_page_id'] = 'ID';
+$_lang['shoplogistic_page_resource_id'] = 'ID ресурса';
+$_lang['shoplogistic_page_name'] = 'Наименование';
+$_lang['shoplogistic_page_active'] = 'Активен';
+$_lang['shoplogistic_page_description'] = 'Описание';
+
+$_lang['shoplogistic_place_id'] = 'ID';
+$_lang['shoplogistic_place_pattern_id'] = 'ID шаблона';
+$_lang['shoplogistic_place_name'] = 'Наименование';
+$_lang['shoplogistic_place_active'] = 'Активен';
+$_lang['shoplogistic_place_key'] = 'Ключ места';
+$_lang['shoplogistic_place_description'] = 'Описание';
+$_lang['shoplogistic_place_actions'] = 'Действия';
+
+
+

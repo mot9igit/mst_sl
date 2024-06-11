@@ -163,6 +163,63 @@ class storeHandler
     }
 
     /**
+     * Берем оптовые заказы
+     *
+     * @param $data
+     * @return void
+     */
+    public function getOrdersOpt($data){
+        if($data["date"]){
+            $customers = array();
+            $orders = array();
+            $output["customers"] = array();
+            $date = strtotime($data["date"]);
+            $start = new DateTime();
+            $start->setTimestamp($date);
+            $query = $this->modx->newQuery("slOrderOpt");
+            $query->where(array(
+                "warehouse_id:=" => $data["warehouse"]["id"],
+                "date:>=" => $start->format('Y-m-d H:i:s')
+            ));
+            $query->select(array("slOrderOpt.*"));
+            if($query->prepare() && $query->stmt->execute()){
+                $orders = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($orders as $key => $order){
+                    if(!in_array($order["store_id"], $customers)){
+                        $customers[] = $order["store_id"];
+                    }
+                    $query = $this->modx->newQuery("slOrderOptProduct");
+                    $query->leftJoin("slStoresRemains", "slStoresRemains", "slStoresRemains.id = slOrderOptProduct.remain_id");
+                    $query->where(array(
+                        "order_id:=" => $order["id"]
+                    ));
+                    $query->select(array("slStoresRemains.guid as guid, slOrderOptProduct.name as name, slOrderOptProduct.price as price, slOrderOptProduct.count as count, slOrderOptProduct.cost as cost"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $orders[$key]["products"] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                }
+            }
+            foreach($customers as $customer){
+                $store = $this->getStore($customer);
+                unset($store["apikey"]);
+                unset($store["balance"]);
+                $output["customers"][$store['inn']] = $store;
+            }
+            foreach($orders as $key => $order){
+                foreach($output["customers"] as $customer){
+                    if($order["store_id"] == $customer["id"]){
+                        $order["customer"] = $customer["inn"];
+                    }
+                }
+                $orders[$key] = $order;
+                ksort($orders[$key]);
+            }
+            $output["documents"] = $orders;
+            return $output;
+        }
+    }
+
+    /**
      * Берем доступны бонусы для организации
      *
      * @param $properties

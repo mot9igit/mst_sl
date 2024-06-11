@@ -1,6 +1,7 @@
 <?php
 
 return [
+
 	'shoplogistic' => array(
 		'description' => 'shoplogistic_menu_desc',
 		'icon' => '<i class="icon-shopping-cart icon icon-large"></i>',
@@ -11,6 +12,12 @@ return [
         'parent' => 'shoplogistic',
         'menuindex' => 1,
         'action' => 'mgr/actions',
+    ),
+    'shoplogistic_adv' => array(
+        'description' => 'shoplogistic_adv_desc',
+        'parent' => 'shoplogistic',
+        'menuindex' => 1,
+        'action' => 'mgr/adv',
     ),
     'shoplogistic_filedocs' => array(
         'description' => 'shoplogistic_filedocs_desc',

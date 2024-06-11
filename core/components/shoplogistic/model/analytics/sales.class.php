@@ -49,82 +49,310 @@ class salesAnalyticsHandler
      * @return array
      */
     public function setAction($properties){
+        if($properties['type'] == "b2b"){
+            $store_id = $properties['id'];
 
-        $store_id = $properties['id'];
-        $start = new DateTime($properties['dates'][0]);
-        $start->setTime(00,00);
-        $end = new DateTime($properties['dates'][1]);
-        $end->setTime(23,59);
+            $properties['dates'][0] = date('Y-m-d H:i:s', strtotime($properties['dates'][0]));
+            $properties['dates'][1] = date('Y-m-d H:i:s', strtotime($properties['dates'][1]));
+            $this->modx->log(1, print_r($properties['dates'], 1));
+            $start = new DateTime($properties['dates'][0]);
+            $start->setTime(00,00);
+            $end = new DateTime($properties['dates'][1]);
+            $end->setTime(23,59);
 
-        if($properties['action_id']){
-            $action = $this->modx->getObject('slActions', $properties['action_id']);
-        }else{
-            $action = $this->modx->newObject('slActions');
+            if($properties['action_id']){
+                $action = $this->modx->getObject('slActions', $properties['action_id']);
+            }else{
+                $action = $this->modx->newObject('slActions');
+            }
+
+            if($action){
+                $action->set("store_id", $store_id);
+                $action->set("name", $properties['name']);
+                $action->set("description", $properties['description']);
+                $action->set("award", $properties['award']);
+
+                if(!file_exists($this->modx->getOption('base_path') . "assets/content/banners/")){
+                    mkdir($this->modx->getOption('base_path') . "assets/content/banners/", 0777, true);
+                }
+
+                if($properties['files']['max']['name']) {
+                    $image = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['max']['name'];
+
+                    if(rename($this->modx->getOption('base_path') . $properties['files']['max']['original'], $image)){
+                        $action->set("image", "banners/" . $properties['files']['max']['name']);
+                    }
+                }
+
+                if($properties['files']['min']['name']){
+                    $image_inner = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['min']['name'];
+
+                    if(rename($this->modx->getOption('base_path') . $properties['files']['min']['original'], $image_inner)){
+                        $action->set("image_inner", "banners/" . $properties['files']['min']['name']);
+                    }
+                }
+
+                if ($properties['files']['icon']['name']) {
+                    $icon = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['icon']['name'];
+
+                    if (rename($this->modx->getOption('base_path') . $properties['files']['icon']['original'], $icon)) {
+                        $action->set("icon", "banners/" . $properties['files']['icon']['name']);
+                    }
+                }
+
+                $action->set("compatibility_discount", $properties['compatibilityDiscount']);
+                $action->set("compatibility_postponement", $properties['compatibilityPost']);
+                $action->set("date_from", $start->format('Y-m-d H:i:s'));
+                $action->set("date_to", $end->format('Y-m-d H:i:s'));
+                $action->set("createdon", time());
+                $action->set("active", 0); //TODO поменять на 1, после тестов!
+                $action->set("type", 1); //b2b
+
+                $action->set("shipment_type", $properties['shipment_type']);
+                $action->set("shipment_date", $properties['shipment_date']);
+                $action->set("payer", $properties['payer']);
+                $action->set("delivery_payment_terms", $properties['delivery_payment_terms']);
+                $action->set("delivery_payment_value", $properties['delivery_payment_value']);
+                $action->set("global", false);
+
+                if($properties['delay']){
+                    $action->set("delay", $properties['delay']);
+                    $action->set("delay_condition", $properties['delay_condition']);
+                    $action->set("delay_condition_value", $properties['delay_condition_value']);
+                }
+
+                $action->set("condition_type", $properties['condition_type']);
+
+                if($properties['condition_type'] == 3 || $properties['condition_type'] == 4) {
+                    $action->set("condition_min_sum", $properties['condition_min_sum']);
+                }
+
+                if($properties['condition_type'] == 3) {
+                    $action->set("condition_SKU", $properties['condition_SKU']);
+                }
+
+                $action->set("participants_type", $properties['participants_type']);
+                $action->set("method_adding_products", $properties['method_adding_products']);
+                $action->set("available_stores", $properties['available_stores']);
+                $action->set("available_opt", $properties['available_opt']);
+                $action->set("available_vendors", $properties['available_vendors']);
+
+                if($properties['participants_type'] == "1"){
+
+                    $regions = array();
+
+                    foreach ($properties['regions_select'] as $key => $value) {
+                        $elem = explode("_", $value['code']);
+
+                        $regions[] = $elem[1];
+                    }
+
+                    $action->set("regions", $regions);
+
+                }
+
+
+                $action->save();
+
+                if($action->get('id')){
+                    if($properties['action_id']){
+                        $crit = array(
+                            "action_id" => $properties['action_id']
+                        );
+                        $this->modx->removeCollection("slActionsProducts", $crit);
+                        $this->modx->removeCollection("slActionsStores", $crit);
+                        $this->modx->removeCollection("slActionsDelay", $crit);
+                    }
+
+                    //График отсрочки
+                    if($properties['delay_graph']){
+                        foreach($properties['delay_graph'] as $delay){
+                            $action_d = $this->modx->newObject("slActionsDelay");
+                            $action_d->set("action_id", $action->get('id'));
+                            $action_d->set("percent", $delay['percent']);
+                            $action_d->set("day", $delay['day']);
+                            $action_d->save();
+                        }
+                    }
+
+                    foreach($properties['products'] as $product){
+                        $action_p = $this->modx->newObject("slActionsProducts");
+                        $action_p->set("action_id", $action->get('id'));
+                        $action_p->set("remain_id", $product['id']);
+                        $price = (float)$product['price'];
+                        $action_p->set("old_price", $price);
+                        $action_p->set("new_price", $product['finalPrice']);
+                        $action_p->set("multiplicity", $product['multiplicity']);
+
+                        //Тип цен
+                        $action_p->set("type_price", $product['typePrice']['key']);
+
+                        $action_p->save();
+                    }
+
+                    foreach($properties['complects'] as $complects){
+                        $action_c = $this->modx->newObject("slActionsComplects");
+                        $action_c->set("action_id", $action->get('id'));
+
+                        $action_c->save();
+
+                        foreach($complects as $complects_product){
+                            $action_complect_product = $this->modx->newObject("slActionsComplectsProducts");
+                            $action_complect_product->set("complect_id", $action_c->get('id'));
+                            $action_complect_product->set("remain_id", $complects_product['id']);
+                            $price = (float)$complects_product['price'];
+                            $action_complect_product->set("old_price", $price);
+                            $action_complect_product->set("new_price", $complects_product['finalPrice']);
+                            $action_complect_product->set("multiplicity", $complects_product['multiplicity']);
+
+                            //Тип цен
+                            //$action_complect_product->set("type_price", $complects_product['typePrice']['key']);
+
+                            $action_complect_product->save();
+                        }
+
+                    }
+
+                    if ($properties['participants_type'] == '2') {
+                        foreach ($properties['organizations'] as $organization) {
+                            $action_o = $this->modx->newObject("slActionsStores");
+                            $action_o->set("action_id", $action->get('id'));
+                            $action_o->set("store_id", $organization['id']);
+
+                            $action_o->save();
+                        }
+                    }
+
+                    return $action->toArray();
+                }
+            }
+        } elseif ($properties['type'] == "b2c") {
+            $store_id = $properties['id'];
+
+            $properties['dates'][0] = date('Y-m-d H:i:s', strtotime($properties['dates'][0]));
+            $properties['dates'][1] = date('Y-m-d H:i:s', strtotime($properties['dates'][1]));
+            $this->modx->log(1, print_r($properties['dates'], 1));
+            $start = new DateTime($properties['dates'][0]);
+            $start->setTime(00,00);
+            $end = new DateTime($properties['dates'][1]);
+            $end->setTime(23,59);
+
+            if ($properties['action_id']) {
+                $action = $this->modx->getObject('slActions', $properties['action_id']);
+            } else {
+                $action = $this->modx->newObject('slActions');
+            }
+
+            if ($action) {
+                $action->set("store_id", $store_id);
+                $action->set("name", $properties['name']);
+                $action->set("conditions", $properties['conditions']);
+
+                if (!file_exists($this->modx->getOption('base_path') . "assets/content/banners/")) {
+                    mkdir($this->modx->getOption('base_path') . "assets/content/banners/", 0777, true);
+                }
+
+                if (!file_exists($this->modx->getOption('base_path') . "assets/content/rules/")) {
+                    mkdir($this->modx->getOption('base_path') . "assets/content/rules/", 0777, true);
+                }
+
+                if ($properties['files']['max']['name']) {
+                    $image = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['max']['name'];
+
+                    if (rename($this->modx->getOption('base_path') . $properties['files']['max']['original'], $image)) {
+                        $action->set("image", "banners/" . $properties['files']['max']['name']);
+                    }
+                }
+
+                if ($properties['files']['min']['name']) {
+                    $image_inner = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['min']['name'];
+
+                    if (rename($this->modx->getOption('base_path') . $properties['files']['min']['original'], $image_inner)) {
+                        $action->set("image_inner", "banners/" . $properties['files']['min']['name']);
+                    }
+                }
+
+                if ($properties['files']['icon']['name']) {
+                    $icon = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['icon']['name'];
+
+                    if (rename($this->modx->getOption('base_path') . $properties['files']['icon']['original'], $icon)) {
+                        $action->set("icon", "banners/" . $properties['files']['icon']['name']);
+                    }
+                }
+
+                if ($properties['files']['file']['name']) {
+                    $icon = $this->modx->getOption('base_path') . "assets/content/rules/" . $properties['files']['file']['name'];
+
+                    if (rename($this->modx->getOption('base_path') . $properties['files']['file']['original'], $icon)) {
+                        $action->set("rules_file", "rules/" . $properties['files']['file']['name']);
+                    }
+                }
+
+                $action->set("date_from", $start->format('Y-m-d H:i:s'));
+                $action->set("date_to", $end->format('Y-m-d H:i:s'));
+                $action->set("createdon", time());
+                $action->set("active", 0); //TODO Поставить 1!
+                $action->set("status", 2); //Статус на модерации
+                $action->set("type", 2); //b2c
+
+                if($properties['region_all']){
+                    $action->set("global", true);
+                }else{
+                    $action->set("global", false);
+
+                    $regions = array();
+                    $citys = array();
+
+                    foreach ($properties['regins'] as $key => $value) {
+                        $elem = explode("_", $key);
+
+                        if($elem[0] == "region"){
+                            if($value['checked']){
+                                $regions[] = $elem[1];
+                            }
+                        } else if($elem[0] == "city"){
+                            if($value['checked']){
+                                $citys[] = $elem[1];
+                            }
+                        }
+                    }
+
+                    if($regions){
+                        $action->set("regions", $regions);
+                    }
+
+                    if($citys){
+                        $action->set("cities", $citys);
+                    }
+                }
+
+                $action->save();
+                if($action->get('id')){
+                    if($properties['action_id']){
+                        $crit = array(
+                            "action_id" => $properties['action_id']
+                        );
+                        $this->modx->removeCollection("slActionsProducts", $crit);
+                        $this->modx->removeCollection("slActionsStores", $crit);
+                    }
+
+                    foreach($properties['products'] as $product){
+                        $action_p = $this->modx->newObject("slActionsProducts");
+                        $action_p->set("action_id", $action->get('id'));
+                        $action_p->set("product_id", $product['id']);
+                        $price = (float) $product['price'];
+                        $action_p->set("old_price", $price);
+                        $action_p->set("new_price", $product['finalPrice']);
+
+
+                        $action_p->save();
+                    }
+
+                    return $action->toArray();
+                }
+            }
         }
 
-        if($action){
-            $action->set("store_id", $store_id);
-            $action->set("name", $properties['name']);
-            $action->set("description", $properties['description']);
-
-            if(!file_exists($this->modx->getOption('base_path') . "assets/content/banners/")){
-                mkdir($this->modx->getOption('base_path') . "assets/content/banners/", 0777, true);
-            }
-
-            if($properties['files']['max']['name']) {
-                $image = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['max']['name'];
-
-                if(rename($this->modx->getOption('base_path') . $properties['files']['max']['original'], $image)){
-                    $action->set("image", "banners/" . $properties['files']['max']['name']);
-                }
-            }
-
-            if($properties['files']['min']['name']){
-                $image_inner = $this->modx->getOption('base_path') . "assets/content/banners/" . $properties['files']['min']['name'];
-
-                if(rename($this->modx->getOption('base_path') . $properties['files']['min']['original'], $image_inner)){
-                    $action->set("image_inner", "banners/" . $properties['files']['min']['name']);
-                }
-            }
-
-            $action->set("compatibility_discount", $properties['compatibilityDiscount']);
-            $action->set("compatibility_postponement", $properties['compatibilityPost']);
-            $action->set("date_from", $start->format('Y-m-d H:i:s'));
-            $action->set("date_to", $end->format('Y-m-d H:i:s'));
-            $action->set("createdon", time());
-            $action->set("active", 1);
-            $action->save();
-            if($action->get('id')){
-                if($properties['action_id']){
-                    $crit = array(
-                        "action_id" => $properties['action_id']
-                    );
-                    $this->modx->removeCollection("slActionsProducts", $crit);
-                    $this->modx->removeCollection("slActionsStores", $crit);
-                }
-
-                foreach($properties['products'] as $product){
-                    $action_p = $this->modx->newObject("slActionsProducts");
-                    $action_p->set("action_id", $action->get('id'));
-                    $action_p->set("product_id", $product['id']);
-                    $price = (float)$product['price'];
-                    $action_p->set("old_price", $price);
-                    $action_p->set("new_price", $product['finalPrice']);
-
-                    $action_p->save();
-                }
-
-                foreach($properties['organizations'] as $organization){
-                    $action_o = $this->modx->newObject("slActionsStores");
-                    $action_o->set("action_id", $action->get('id'));
-                    $action_o->set("store_id", $organization['id']);
-
-                    $action_o->save();
-                }
-
-                return $action->toArray();
-            }
-        }
     }
 
     /**
@@ -139,15 +367,59 @@ class salesAnalyticsHandler
                 $data['date_from'] = date('Y/m/d H:i:s', strtotime($data['date_from']));
                 $data['date_to'] = date('Y/m/d H:i:s', strtotime($data['date_to']));
 
+                $q_s = $this->modx->newQuery("slActionsStatus");
+                $q_s->select(array(
+                    'slActionsStatus.*'
+                ));
+
+                $q_s->where(array("`slActionsStatus`.`id`:=" => $data['status']));
+
+                if ($q_s->prepare() && $q_s->stmt->execute()) {
+                    $status = $q_s->stmt->fetch(PDO::FETCH_ASSOC);
+                    $data['status'] = $status['name'];
+                }
+
+                $q_c = $this->modx->newQuery("slActionsComplects");
+                $q_c->leftJoin('slActions', 'slActions', 'slActions.id = slActionsComplects.action_id');
+
+                $q_c->select(array(
+                    'slActionsComplects.id',
+                ));
+
+                $q_c->where(array("`slActionsComplects`.`action_id`:=" => $data['id']));
+
+                if ($q_c->prepare() && $q_c->stmt->execute()) {
+                    $complects = $q_c->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach($complects as $complect){
+                        $q_complect_products = $this->modx->newQuery("slActionsComplects");
+                        $q_complect_products->leftJoin('slActions', 'slActions', 'slActions.id = slActionsComplects.action_id');
+
+                        $q_complect_products->select(array(
+                            'slActionsComplects.id',
+                        ));
+                    }
+
+                    $data['complects'] = $complects;
+                }
+
+
                 $q = $this->modx->newQuery("slActionsProducts");
-                $q->leftJoin("modResource", "modResource", "modResource.id = slActionsProducts.product_id");
-                $q->leftJoin("msProductData", "msProductData", "msProductData.id = slActionsProducts.product_id");
+                $q->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slActionsProducts.remain_id');
+                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+                $q->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+
+                $q->where(array("`slActionsProducts`.`action_id`:=" => $data['id']));
+
                 $q->select(array(
                     'slActionsProducts.*',
-                    'modResource.pagetitle as name',
-                    'msProductData.image as image', 
+                    'slStoresRemains.price as price',
+                    'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                    'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+                    "`slStoresRemains`.`id` as remain_id"
                 ));
-                $q->where(array("`slActionsProducts`.`action_id`:=" => $data['id']));
+
 
                 if ($q->prepare() && $q->stmt->execute()) {
                     $products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -155,19 +427,71 @@ class salesAnalyticsHandler
 
                     $count_products = 0;
 
+                    $helpArray = array(
+                        "checked" => true,
+                        "partialChecked" => false
+                    );
+
                     foreach($products as $product){
-                        $id = $product['product_id'];
-                        $product['id'] = $id;
+                        $id = $product['remain_id'];
+                        $product['id'] = $product['remain_id'];
                         $product['price'] = (float)$product['old_price'];
                         $product['discountInRubles'] = (float)$product['old_price'] - $product['new_price'];
                         $product['discountInterest'] = $product['discountInRubles'] / ($product['old_price'] / 100);
                         $product['finalPrice'] = (float)$product['new_price'];
+
+                        $regions_and_sities = array();
+
+                        $regions = explode(",", $product['regions']);
+                        $citys = explode(",", $product['cities']);
+
+                        foreach($regions as $region){
+                            $regions_and_sities['region_'.$region] = $helpArray;
+                        }
+
+                        foreach($citys as $city){
+                            $regions_and_sities['city_'.$city] = $helpArray;
+                        }
+
+                        $product['regions_and_sities'] = $regions_and_sities;
+
                         $selected->$id = $product;
                         $count_products++;
                     }
 
                     $data['products'] = $selected;
                     $data['total_products'] = $count_products;
+                }
+
+                $q_d = $this->modx->newQuery("slActionsDelay");
+                $q_d->select(array(
+                    'slActionsDelay.*',
+                ));
+                $q_d->where(array("`slActionsDelay`.`action_id`:=" => $data['id']));
+
+                if ($q_d->prepare() && $q_d->stmt->execute()) {
+                    $data['delay_graph'] = $q_d->stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+
+                $q_r = $this->modx->newQuery("dartLocationRegion");
+                $q_r->select(array(
+                    'dartLocationRegion.*',
+                ));
+                $q_r->where(array("`dartLocationRegion`.`id`:IN" => $data['regions']));
+
+                if ($q_r->prepare() && $q_r->stmt->execute()) {
+                    $regions_all = $q_r->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    $regions_temp = array();
+
+                    foreach($regions_all as $region){
+                        $regions_temp[] = array(
+                            "name" => $region['name'],
+                            "code" => "region_" . $region['id']
+                        );
+                    }
+
+                    $data['regions'] = $regions_temp;
                 }
 
                 $query = $this->modx->newQuery("slActionsStores");
@@ -177,6 +501,7 @@ class salesAnalyticsHandler
                     'slStores.name',
                     'slStores.image'
                 ));
+
                 $query->where(array("`slActionsStores`.`action_id`:=" => $data['id']));
 
                 if ($query->prepare() && $query->stmt->execute()) {
@@ -203,6 +528,35 @@ class salesAnalyticsHandler
                     $data['image_inner'] = "assets/content/" . $data['image_inner'];
                 }
 
+                if($data['icon']){
+                    $data['icon'] = "assets/content/" . $data['icon'];
+                }
+
+                if($data['rules_file']){
+                    $data['rules_file'] = "assets/content/" . $data['rules_file'];
+                }
+
+                $regions_and_sities = array();
+                $helpArray = array(
+                    "checked" => true,
+                    "partialChecked" => false
+                );
+
+                $regions = explode(",", $data['regions']);
+                $citys = explode(",", $data['cities']);
+
+                foreach($regions as $region){
+                    $regions_and_sities['region_'.$region] = $helpArray;
+                }
+
+                foreach($citys as $city){
+                    $regions_and_sities['city_'.$city] = $helpArray;
+                }
+
+                $data['regions_and_sities'] = $regions_and_sities;
+
+
+
                 //$products = $this->modx->getCollection("slActionsProducts", array("action_id" => $data['id']));
                 //$data['products'] = $products;
                 //$properties["sel_arr"] = array();
@@ -219,6 +573,13 @@ class salesAnalyticsHandler
                 'slActions.*'
             ));
             $q->where(array("`slActions`.`store_id`:=" => $properties['id']));
+
+            if($properties['type'] == 'b2b'){
+                $q->where(array("`slActions`.`type`:=" => 1));
+            }else if($properties['type'] == 'b2c'){
+                $q->where(array("`slActions`.`type`:=" => 2));
+            }
+
             if($properties['filtersdata']){
                 if(isset($properties['filtersdata']['range'])){
                     if($properties['filtersdata']['range'][0] && $properties['filtersdata']['range'][1]){
@@ -261,8 +622,7 @@ class salesAnalyticsHandler
             }else{
                 $q->sortby('id', "DESC");
             }
-            $q->prepare();
-            $this->modx->log(1, $q->toSQL());
+
             if ($q->prepare() && $q->stmt->execute()) {
                 $output = array();
                 $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -271,12 +631,33 @@ class salesAnalyticsHandler
                     $result['items'][$key]['date_from'] = date("d.m.Y H:i", $date_from);
                     $date_to = strtotime($val['date_to']);
                     $result['items'][$key]['date_to'] = date("d.m.Y H:i", $date_to);
+
+                    $q_s = $this->modx->newQuery("slActionsStatus");
+                    $q_s->select(array(
+                        'slActionsStatus.*'
+                    ));
+
+                    $q_s->where(array("`slActionsStatus`.`id`:=" => $val['status']));
+
+                    if ($q_s->prepare() && $q_s->stmt->execute()) {
+                        $status = $q_s->stmt->fetch(PDO::FETCH_ASSOC);
+                        $result['items'][$key]['status'] = $status['name'];
+                    }
+
                     if($result['items'][$key]['image']){
                         $result['items'][$key]['image'] = "assets/content/" . $result['items'][$key]['image'];
                     }
 
                     if($result['items'][$key]['image_inner']){
                         $result['items'][$key]['image_inner'] = "assets/content/" . $result['items'][$key]['image_inner'];
+                    }
+
+                    if($result['items'][$key]['icon']){
+                        $result['items'][$key]['icon'] = "assets/content/" . $result['items'][$key]['icon'];
+                    }
+
+                    if($result['items'][$key]['rules_file']){
+                        $result['items'][$key]['rules_file'] = "assets/content/" . $result['items'][$key]['rules_file'];
                     }
                 }
                 $this->modx->log(1, print_r($output, 1));

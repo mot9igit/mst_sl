@@ -130,6 +130,7 @@
                 }
                 $trmnls = array();
                 $terminals = $this->getOffices($to);
+                $codes['terminals_source'] = $terminals;
                 foreach($terminals as $terminal){
                     $phs = array();
                     if(count($terminal["phones"])){
@@ -143,9 +144,11 @@
                         "lon" => $terminal["location"]["longitude"],
                         "address" => $terminal["location"]["address_full"],
                         "image" => "/assets/files/img/cdek.svg",
-                        "phones" => implode(", ", $phs),
-                        "workTime" => $terminal["location"]["work_time"]
+                        "phones" => implode(", ", $phs)
                     );
+                    if(isset($terminal["work_time"])){
+                        $tmp["workTime"] = $terminal["work_time"];
+                    }
                     $trmnls[] = $tmp;
                 }
                 $codes['terminals'] = $trmnls;
@@ -215,6 +218,7 @@
                 curl_close($curl);
             }
             $response_data = json_decode($out, 1);
+            $this->log(print_r($response_data, 1));
             return $response_data;
         }
 
@@ -230,6 +234,10 @@
                 if(intval($expired) < time()){
                     return false;
                 }else{
+                    // чекаем не истек ли без ведома
+                    $products = array(24830);
+                    $res = $this->getCalcPrice('630003', '617760', $products);
+
                     return true;
                 }
             }else{

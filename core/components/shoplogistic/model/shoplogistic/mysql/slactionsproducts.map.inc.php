@@ -11,6 +11,7 @@ $xpdo_meta_map['slActionsProducts']= array (
   'fields' => 
   array (
     'product_id' => 0,
+    'remain_id' => 0,
     'action_id' => 0,
     'old_price' => 0.0,
     'new_price' => 0.0,
@@ -22,10 +23,21 @@ $xpdo_meta_map['slActionsProducts']= array (
     'updatedon' => NULL,
     'updatedby' => 0,
     'properties' => NULL,
+    'type_price' => 0,
+    'multiplicity' => 0,
   ),
   'fieldMeta' => 
   array (
     'product_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'remain_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -119,6 +131,24 @@ $xpdo_meta_map['slActionsProducts']= array (
       'phptype' => 'json',
       'null' => true,
     ),
+    'type_price' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'multiplicity' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
   ),
   'indexes' => 
   array (
@@ -131,6 +161,22 @@ $xpdo_meta_map['slActionsProducts']= array (
       'columns' => 
       array (
         'product_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'remain_id' => 
+    array (
+      'alias' => 'remain_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'remain_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -225,6 +271,14 @@ $xpdo_meta_map['slActionsProducts']= array (
     array (
       'class' => 'msProduct',
       'local' => 'product_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'ProductRemain' => 
+    array (
+      'class' => 'slStoresRemains',
+      'local' => 'remain_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

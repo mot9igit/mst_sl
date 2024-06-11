@@ -243,6 +243,50 @@ if ($transport->xpdo) {
                 $status_name = $properties['name'];
             }
 
+            // Статусы акций
+            $statuses = [
+                [
+                    'name' => 'Активна',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],[
+                    'name' => 'На модерации',
+                    'color' => '003366',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Отказ',
+                    'color' => '008000',
+                    'active' => 1,
+                    'id' => 3
+                ],
+                [
+                    'name' => 'Не активна',
+                    'color' => '008000',
+                    'active' => 1,
+                    'id' => 4
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slActionsStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slActionsStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
             // Статусы подключений к программам
             $statuses = [
                 [
@@ -570,6 +614,7 @@ if ($transport->xpdo) {
             $modx->removeCollection('slParserTasksStatus', []);
             $modx->removeCollection('slParserDataTasksStatus', []);
             $modx->removeCollection('slParserDataService', []);
+            $modx->removeCollection('slActionsStatus', []);
             break;
     }
 }

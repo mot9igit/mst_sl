@@ -780,7 +780,7 @@ class cartDifficultHandler
 			return $offset;
 		}else{
 			$this->modx->log(xPDO::LOG_LEVEL_ERROR, '[shopLogistic] Store link with warehouse not found.');
-			return false;
+			return 10;
 		}
 	}
 
@@ -867,7 +867,7 @@ class cartDifficultHandler
         $ship = array();
         $criteria = array(
             "store_id" => $whs_id,
-            "product_id" => $product_id
+            "id" => $product_id
         );
         $remain = $this->modx->getObject('slStoresRemains', $criteria);
         if ($remain) {

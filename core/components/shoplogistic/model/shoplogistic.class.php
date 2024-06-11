@@ -227,6 +227,10 @@ class shopLogistic
             require_once dirname(__FILE__) . '/training/training.class.php';
             $this->training = new trainingHandler($this, $this->modx);
         }
+        if (!class_exists('profile')) {
+            require_once dirname(__FILE__) . '/profile.class.php';
+            $this->profile = new profileHandler($this, $this->modx);
+        }
         if (!class_exists('returnProductsHandler')) {
             require_once dirname(__FILE__) . '/return_products/return_products.class.php';
             $this->return_products = new returnProductsHandler($this, $this->modx);
@@ -460,6 +464,18 @@ class shopLogistic
                 break;
             case 'product/return':
                 $response = $this->return_products->postReturnProducts($data);
+                break;
+            case 'profile/address/getlocation':
+                $response = $this->profile->getLocation($data);
+                break;
+            case 'profile/address/set':
+                $response = $this->profile->setAddress($data);
+                break;
+            case 'profile/address/update':
+                $response = $this->profile->updateAddresses($data);
+                break;
+            case 'profile/address/remove':
+                $response = $this->profile->removeAddress($data);
                 break;
 		}
 		return $response;
