@@ -72,13 +72,14 @@
         <field key="image" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="image_inner" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="icon" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="file_upload_products" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="rules_file" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="conditions" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
-        <field key="award" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="award" dbtype="varchar" precision="1024" phptype="string" null="true" default=""/>
         <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
-        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="1024" phptype="string" null="true" default=""/>
         <field key="resource" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
-        <field key="regions" dbtype="text" precision="1024" phptype="json" null="true" default=""/>
+        <field key="regions" dbtype="varchar" precision="1024" phptype="json" null="true" default=""/>
         <field key="cities" dbtype="text" precision="1024" phptype="json" null="true" default=""/>
         <field key="content" dbtype="text" phptype="text" null="true"/>
         <field key="date_from" dbtype="datetime" phptype="datetime" null="true" />
@@ -256,15 +257,32 @@
 
     <object class="slActionsComplects" table="sl_actions_complects" extends="xPDOSimpleObject">
         <field key="action_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="complect_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
 
+        <index alias="complect_id" name="complect_id" primary="false" unique="false" type="BTREE">
+            <column key="complect_id" length="" collation="A" null="false"/>
+        </index>
         <index alias="action_id" name="action_id" primary="false" unique="false" type="BTREE">
             <column key="action_id" length="" collation="A" null="false"/>
         </index>
 
         <aggregate alias="slActions" class="slActions" local="action_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="slActionsComplects" class="slActionsComplects" local="complect_id" foreign="id" cardinality="one" owner="foreign"/>
     </object>
 
-    <object class="slActionsComplectsProducts" table="sl_actions_complects_products" extends="xPDOSimpleObject">
+    <object class="slComplects" table="sl_complects" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+
+        <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
+            <column key="store_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="slStores" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
+    </object>
+
+    <object class="slComplectsProducts" table="sl_complects_products" extends="xPDOSimpleObject">
         <field key="complect_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="remain_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="old_price" dbtype="decimal" precision="12,2" phptype="float" null="true" default="0"/>
@@ -2044,6 +2062,7 @@
     <object class="slOrderOptProduct" table="sl_order_opt_products" extends="xPDOSimpleObject">
         <field key="remain_id" dbtype="int" precision="10" phptype="integer" attributes="unsigned" null="false"/>
         <field key="order_id" dbtype="int" precision="10" phptype="integer" attributes="unsigned" null="false"/>
+        <field key="complect_id" dbtype="int" precision="10" phptype="integer" attributes="unsigned" default="0"/>
         <field key="name" dbtype="varchar" precision="255" phptype="string" null="true"/>
         <field key="count" dbtype="int" precision="10" phptype="integer" attributes="unsigned" null="true" default="1"/>
         <field key="price" dbtype="decimal" precision="12,2" phptype="float" null="true" default="0"/>

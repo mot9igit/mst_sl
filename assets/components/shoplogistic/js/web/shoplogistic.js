@@ -79,7 +79,8 @@ var profile = {
         delivery: '.newAddresDelivery',
         address_field: '#profile_address',
         map: 'addressMap',
-        form: ".addressModalForm"
+        form: ".addressModalForm",
+        select_address: ".newAddresDelivery__select"
     },
     initialize: function () {
         const newAddresToggleModal = document.querySelectorAll(this.options.modal);
@@ -87,39 +88,49 @@ var profile = {
 
         if(newAddresToggleModal){
             for(let i = 0; i<newAddresToggleModal.length; i++){
-                newAddresToggleModal[i].addEventListener('click', () => {
-                    if(newAddresDelivery.classList.contains('show')){
-                        newAddresDelivery.classList.remove('show')
-                        newAddresDelivery.classList.remove('new')
-                        newAddresDelivery.classList.remove('edit')
-                        newAddresDelivery.classList.remove('select')
-                        body.style.overflow = "auto"
-                    }else{
-                        newAddresDelivery.classList.add('show')
-                        body.style.overflow = "hidden"
-                        if(Object.prototype.hasOwnProperty.call(newAddresToggleModal[i].dataset, "data")){
-                            var data = JSON.parse(newAddresToggleModal[i].dataset.data)
-                        }else{
-                            var data = {};
+                const attrib = newAddresToggleModal[i].dataset.listener
+                console.log(attrib)
+                if (attrib !== 'true') {
+                    newAddresToggleModal[i].dataset.listener = 'true';
+                    newAddresToggleModal[i].addEventListener('click', (e) => {
+                        if (newAddresDelivery.classList.contains('show')) {
+                            newAddresDelivery.classList.remove('show')
+                            newAddresDelivery.classList.remove('new')
+                            newAddresDelivery.classList.remove('edit')
+                            newAddresDelivery.classList.remove('select')
+                            body.style.overflow = "auto"
+                        } else {
+                            newAddresDelivery.classList.add('show')
+                            body.style.overflow = "hidden"
+                            if (Object.prototype.hasOwnProperty.call(newAddresToggleModal[i].dataset, "data")) {
+                                var data = JSON.parse(newAddresToggleModal[i].dataset.data)
+                            } else {
+                                var data = {};
+                            }
+                            if (newAddresToggleModal[i].classList.contains('new')) {
+                                newAddresDelivery.classList.add('new')
+                                $('.addressModalForm')[0].reset();
+                                $(profile.options.form).find("input[name=id]").val("0")
+                            }
+                            if (newAddresToggleModal[i].classList.contains('edit')) {
+                                newAddresDelivery.classList.add('edit')
+                                const data = JSON.parse(newAddresToggleModal[i].dataset.data)
+                                profile.set(data)
+                            }
+                            if (newAddresToggleModal[i].classList.contains('select')) {
+                                newAddresDelivery.classList.add('select')
+                                const sting_dt = newAddresToggleModal[i].dataset.data
+                                if (sting_dt) {
+                                    const data = JSON.parse(sting_dt)
+                                    profile.set(data)
+                                }
+                            }
+                            data.sl_action = "profile/address/getlocation"
+                            const location = this.send(data)
+                            // this.initMap(location)
                         }
-                        if(newAddresToggleModal[i].classList.contains('new')){
-                            newAddresDelivery.classList.add('new')
-                            $('.addressModalForm')[0].reset();
-                            $(profile.options.form).find("input[name=id]").val("0")
-                        }
-                        if(newAddresToggleModal[i].classList.contains('edit')){
-                            newAddresDelivery.classList.add('edit')
-                            const data = JSON.parse(newAddresToggleModal[i].dataset.data)
-                            profile.set(data)
-                        }
-                        if(newAddresToggleModal[i].classList.contains('select')){
-                            newAddresDelivery.classList.add('select')
-                        }
-                        data.sl_action = "profile/address/getlocation"
-                        const location = this.send(data)
-                        // this.initMap(location)
-                    }
-                })
+                    })
+                }
             }
             const address_field = $(profile.options.form).find("#profile_address");
             $(document).on("keyup", profile.options.form + " " + "#profile_address", function(e){
@@ -150,6 +161,29 @@ var profile = {
                 const data = $(profile.options.form).serialize();
                 profile.send(data)
             })
+
+            const selectAddress = document.querySelector(this.options.select_address);
+            selectAddress.addEventListener('click', (e) => {
+                e.preventDefault();
+                const data = e.target.closest('.addressModalForm');
+                const elem = data.querySelector("input[name=location_data]")
+                const selectAddress = JSON.parse(elem.value);
+                selectAddress.text_address = data.querySelector("input[name=text_address]").value
+                selectAddress.room = data.querySelector("input[name=room]").value
+                selectAddress.floor = data.querySelector("input[name=floor]").value
+                selectAddress.entrance = data.querySelector("input[name=entrance]").value
+                selectAddress.doorphone = data.querySelector("input[name=doorphone]").value
+                const dt = {
+                    data: selectAddress
+                }
+                sl_delivery.setDeliveryFields(dt);
+                newAddresDelivery.classList.remove('show')
+                newAddresDelivery.classList.remove('new')
+                newAddresDelivery.classList.remove('edit')
+                newAddresDelivery.classList.remove('select')
+                // body.style.overflow = "auto"
+                document.querySelector('#dm-my-addres').classList.remove('show');
+            })
         }
     },
     reinitButtons: function(){
@@ -158,45 +192,64 @@ var profile = {
 
         if(newAddresToggleModal) {
             for (let i = 0; i < newAddresToggleModal.length; i++) {
-                newAddresToggleModal[i].addEventListener('click', () => {
-                    if (newAddresDelivery.classList.contains('show')) {
-                        newAddresDelivery.classList.remove('show')
-                        newAddresDelivery.classList.remove('new')
-                        newAddresDelivery.classList.remove('edit')
-                        newAddresDelivery.classList.remove('select')
-                        body.style.overflow = "auto"
-                    } else {
-                        newAddresDelivery.classList.add('show')
-                        body.style.overflow = "hidden"
-                        if (Object.prototype.hasOwnProperty.call(newAddresToggleModal[i].dataset, "data")) {
-                            var data = JSON.parse(newAddresToggleModal[i].dataset.data)
+                const attrib = newAddresToggleModal[i].dataset.listener
+                console.log(attrib)
+                if (attrib !== 'true') {
+                    newAddresToggleModal[i].dataset.listener = 'true';
+                    newAddresToggleModal[i].addEventListener('click', (e) => {
+                        if (newAddresDelivery.classList.contains('show')) {
+                            newAddresDelivery.classList.remove('show')
+                            newAddresDelivery.classList.remove('new')
+                            newAddresDelivery.classList.remove('edit')
+                            newAddresDelivery.classList.remove('select')
+                            body.style.overflow = "auto"
                         } else {
-                            var data = {};
+                            newAddresDelivery.classList.add('show')
+                            body.style.overflow = "hidden"
+                            if (Object.prototype.hasOwnProperty.call(newAddresToggleModal[i].dataset, "data")) {
+                                var data = JSON.parse(newAddresToggleModal[i].dataset.data)
+                            } else {
+                                var data = {};
+                            }
+                            if (newAddresToggleModal[i].classList.contains('new')) {
+                                newAddresDelivery.classList.add('new')
+                                $('.addressModalForm')[0].reset();
+                                $(profile.options.form).find("input[name=id]").val("0")
+                            }
+                            if (newAddresToggleModal[i].classList.contains('edit')) {
+                                newAddresDelivery.classList.add('edit')
+                                const data = JSON.parse(newAddresToggleModal[i].dataset.data)
+                                profile.set(data)
+                            }
+                            if (newAddresToggleModal[i].classList.contains('select')) {
+                                newAddresDelivery.classList.add('select')
+                            }
+                            data.sl_action = "profile/address/getlocation"
+                            const location = this.send(data)
+                            // this.initMap(location)
                         }
-                        if (newAddresToggleModal[i].classList.contains('new')) {
-                            newAddresDelivery.classList.add('new')
-                            $('.addressModalForm')[0].reset();
-                            $(profile.options.form).find("input[name=id]").val("0")
-                        }
-                        if (newAddresToggleModal[i].classList.contains('edit')) {
-                            newAddresDelivery.classList.add('edit')
-                            const data = JSON.parse(newAddresToggleModal[i].dataset.data)
-                            profile.set(data)
-                        }
-                        if (newAddresToggleModal[i].classList.contains('select')) {
-                            newAddresDelivery.classList.add('select')
-                        }
-                        data.sl_action = "profile/address/getlocation"
-                        const location = this.send(data)
-                        // this.initMap(location)
-                    }
-                })
+                    })
+                }
             }
         }
+
+        const selectAddress = document.querySelector(this.options.select_address);
+        selectAddress.addEventListener('click', (e) => {
+            e.preventDefault();
+            const data = e.target.closest('.addressModalForm');
+            const elem = data.querySelector("input[name=location_data]")
+            const selectAddress = elem.value;
+            const dt = {
+                data: JSON.parse(selectAddress)
+            }
+            sl_delivery.setDeliveryFields(dt);
+        })
+
     },
     setAddressFields: function(suggestion){
         const coords = [suggestion.data.geo_lat, suggestion.data.geo_lon]
         profile.myPlacemark.geometry.setCoordinates(coords);
+        profile.map.setCenter(coords)
         const location = {
             location_data: JSON.stringify(suggestion.data),
             postal_code: suggestion.data.postal_code,
@@ -298,6 +351,7 @@ var profile = {
                 const container = document.getElementById(profile.options.map)
                 container.classList.remove('loading')
                 $("._js_addresses_list").removeClass("loading")
+                $("._js_addresses_list_modal").removeClass("loading")
                 $(".newAddresDelivery").removeClass("loading")
                 if(Object.prototype.hasOwnProperty.call(data_r, "map_location")){
                     profile.initMap(data_r.map_location)
@@ -305,6 +359,9 @@ var profile = {
                 if(Object.prototype.hasOwnProperty.call(data_r, "update_data")){
                     $("._js_addresses_list").html(data_r.update_data)
                     profile.reinitButtons()
+                }
+                if(Object.prototype.hasOwnProperty.call(data_r, "update_data_modal")){
+                    $("._js_addresses_list").html(data_r.update_data_modal)
                 }
                 if (data_r.success) {
                     const newAddresToggleModal = document.querySelectorAll(profile.options.modal);
@@ -320,6 +377,7 @@ var profile = {
                         sl_action: "profile/address/update"
                     }
                     $("._js_addresses_list").addClass("loading")
+                    $("._js_addresses_list_modal").addClass("loading")
                     profile.send(data)
                     profile.reinitButtons()
                 }
@@ -540,6 +598,14 @@ var dart_filters = {
             }
             dart_filters.setMeta(dart_filters.options.page)
             filterForm.dispatchEvent(new CustomEvent('submit', {cancelable: true}));
+            const scrollTarget = document.querySelector('.dart_main')
+            const topOffset = 0;
+            const elementPosition = scrollTarget.getBoundingClientRect().top;
+            const offsetPosition = elementPosition - topOffset;
+            window.scrollBy({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
         }else{
             const params = new URLSearchParams(window.location.search)
             params.delete('page');
@@ -794,8 +860,10 @@ var sl_delivery = {
         pvz: '.sl_pvz',
         choosed_pvz: '.choosed_data',
         yandex: '.yandex_delivery',
-        placemarks: {},
-        terminals: {}
+        pvz_address_field: '.pvz_address_field',
+        placemarks: [],
+        terminals: [],
+        base_terminals: []
     },
     initialize: function(){
         // handlers event
@@ -838,17 +906,32 @@ var sl_delivery = {
         })
 
         // map
-        /*$("body").on("keyup", this.options.address_field, function (e) {
-            var val = $(this).val();
-            if(val.length > 2){
-                var data = {
-                    sl_action: "get/suggestion",
-                    value: val,
-                    ctx: shoplogisticConfig['ctx']
+        $("body").on("keyup", this.options.pvz_address_field, function (e) {
+            clearTimeout(e.target.timer);
+            e.target.timer = setTimeout(() => {
+                var val = $(this).val();
+                var terminals = sl_delivery.options.base_terminals
+                if (val.length > 2) {
+                    terminals = []
+                    // поиск терминалов
+                    for (var i = 0; i < sl_delivery.options.base_terminals.length; i++) {
+                        const code = sl_delivery.options.base_terminals[i].code.toLowerCase()
+                        const address = sl_delivery.options.base_terminals[i].address.toLowerCase()
+                        const v = val.toLowerCase()
+                        // по адресу
+                        if (address.includes(v)) {
+                            terminals.push(sl_delivery.options.base_terminals[i]);
+                        }
+                        // по коду
+                        if (code.includes(v)) {
+                            terminals.push(sl_delivery.options.base_terminals[i]);
+                        }
+                    }
                 }
-                sl_delivery.send(data);
-            }
-        });*/
+                console.log(terminals)
+                sl_delivery.setMap(terminals);
+            }, 500);
+        });
     },
     setDeliveryFields: function(suggestion){
         var address = suggestion.data;
@@ -885,7 +968,13 @@ var sl_delivery = {
         ]));
         $(sl_delivery.options.hidden_address).find("input[name=room]").val(sl_delivery.join([address.flat_type, address.flat], " "));
         var fias = $(sl_delivery.options.hidden_address).find("input[name=fias]").val();
+        $(sl_delivery.options.hidden_address).closest(".dart-order__express").find(".text_address").text(address.text_address);
+        $(sl_delivery.options.hidden_address).find("input[name=text_address]").val(address.text_address);
         $(sl_delivery.options.hidden_address).find("input[name=geo_data]").val(JSON.stringify(address));
+        $(sl_delivery.options.hidden_address).find("input[name=room]").val(address.room);
+        $(sl_delivery.options.hidden_address).find("input[name=floor]").val(address.floor);
+        $(sl_delivery.options.hidden_address).find("input[name=entrance]").val(address.entrance);
+        $(sl_delivery.options.hidden_address).find("input[name=doorphone]").val(address.doorphone);
         if(address){
             sl_delivery.getDeliveryPrices(JSON.stringify(address));
         }
@@ -1029,6 +1118,7 @@ var sl_delivery = {
             }, 100);
 			
             if(prop == 'terminal' && save_data.service[save_data.service.main_key].price.hasOwnProperty(prop) && save_data.service.main_key != "postrf"){
+                sl_delivery.options.base_terminals = save_data.service[save_data.service.main_key].price.terminals;
                 $(sl_delivery.options.map).addClass("active");
                 sl_delivery.setMap(save_data.service[save_data.service.main_key].price.terminals);
             }else{
@@ -1078,10 +1168,12 @@ var sl_delivery = {
         $(".changeAddresPoint").removeClass("show");
     },
     initMap: function(center, terminals){
-        if(this.map){
-            this.map.destroy();
+        if(sl_delivery.map){
+            sl_delivery.map.destroy();
         }
-        this.map = new ymaps.Map('service-pvz-map', {
+        sl_delivery.options.placemarks = []
+        sl_delivery.options.terminals = []
+        sl_delivery.map = new ymaps.Map('service-pvz-map', {
             center: center,
             zoom: 9
         }, {
@@ -1091,7 +1183,7 @@ var sl_delivery = {
         terminals.forEach((element, index, array) => {
             var coords = [element['lat'], element['lon']];
             var data = JSON.stringify(element);
-            sl_delivery.options.terminals[element['code']] = element
+            sl_delivery.options.terminals.push(element);
             element_text += '<div class="changeshop__el" onclick="sl_delivery.pvzclick(\''+ element['code'] +'\')" data-code="'+ element['code'] +'" data-info=\''+data+'\'>\n' +
                 '                    <div class="changeshop__info">\n' +
                 '                        <h4>Пункт выдачи заказов</h4>\n' +
@@ -1117,16 +1209,22 @@ var sl_delivery = {
                 text = text+'<div class="sl_baloon_works sl_baloon_block"><b>Время работы:</b><br/>'+element['workTime']+'</div>';
             }
             text = text+'<div class="sl_baloon_submit sl_baloon_block"><button type="button" class="sl_check" onclick="sl_delivery.pvzcheck(this)" data-code="'+ element['code'] +'">Забрать отсюда</button></div>';
-            sl_delivery.options.placemarks[element['code']] = new ymaps.Placemark(coords, {
+            sl_delivery.options.placemarks.push(new ymaps.Placemark(coords, {
                 hintContent: element['address'],
                 balloonContent: text
             }, {
                 iconLayout: 'default#image',
-                iconImageHref: element['image'],
-                iconImageSize: [20, 20],
-                iconImageOffset: [-10, -10]
-            });
-            this.map.geoObjects.add(sl_delivery.options.placemarks[element['code']]);
+                iconImageHref: element['map_image'],
+                iconImageSize: [60, 60],
+                iconImageOffset: [-30, -60]
+            }));
+            // this.map.geoObjects.add(sl_delivery.options.placemarks[element['code']]);
+        });
+        var clusterer = new ymaps.Clusterer({ });
+        clusterer.add(sl_delivery.options.placemarks);
+        sl_delivery.map.geoObjects.add(clusterer);
+        sl_delivery.map.setBounds(clusterer.getBounds(), {
+            checkZoomRange: true
         });
     },
     setMap: function(terminals){

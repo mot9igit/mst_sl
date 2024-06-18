@@ -11,6 +11,7 @@ $xpdo_meta_map['slActionsComplects']= array (
   'fields' => 
   array (
     'action_id' => 0,
+    'complect_id' => 0,
   ),
   'fieldMeta' => 
   array (
@@ -23,9 +24,34 @@ $xpdo_meta_map['slActionsComplects']= array (
       'null' => true,
       'default' => 0,
     ),
+    'complect_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
   ),
   'indexes' => 
   array (
+    'complect_id' => 
+    array (
+      'alias' => 'complect_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'complect_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'action_id' => 
     array (
       'alias' => 'action_id',
@@ -49,6 +75,14 @@ $xpdo_meta_map['slActionsComplects']= array (
     array (
       'class' => 'slActions',
       'local' => 'action_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'slActionsComplects' => 
+    array (
+      'class' => 'slActionsComplects',
+      'local' => 'complect_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

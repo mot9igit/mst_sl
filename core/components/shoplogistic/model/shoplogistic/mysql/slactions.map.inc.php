@@ -14,6 +14,7 @@ $xpdo_meta_map['slActions']= array (
     'image' => '',
     'image_inner' => '',
     'icon' => '',
+    'file_upload_products' => '',
     'rules_file' => '',
     'conditions' => '',
     'award' => '',
@@ -88,6 +89,14 @@ $xpdo_meta_map['slActions']= array (
       'null' => true,
       'default' => '',
     ),
+    'file_upload_products' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
     'rules_file' => 
     array (
       'dbtype' => 'varchar',
@@ -107,7 +116,7 @@ $xpdo_meta_map['slActions']= array (
     'award' => 
     array (
       'dbtype' => 'varchar',
-      'precision' => '255',
+      'precision' => '1024',
       'phptype' => 'string',
       'null' => true,
       'default' => '',
@@ -124,7 +133,7 @@ $xpdo_meta_map['slActions']= array (
     'description' => 
     array (
       'dbtype' => 'varchar',
-      'precision' => '255',
+      'precision' => '1024',
       'phptype' => 'string',
       'null' => true,
       'default' => '',
@@ -140,7 +149,7 @@ $xpdo_meta_map['slActions']= array (
     ),
     'regions' => 
     array (
-      'dbtype' => 'text',
+      'dbtype' => 'varchar',
       'precision' => '1024',
       'phptype' => 'json',
       'null' => true,

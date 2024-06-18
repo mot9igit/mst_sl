@@ -203,7 +203,7 @@ class storeHandler
                 $store = $this->getStore($customer);
                 unset($store["apikey"]);
                 unset($store["balance"]);
-                $output["customers"][$store['inn']] = $store;
+                $output["customers"][] = $store;
             }
             foreach($orders as $key => $order){
                 foreach($output["customers"] as $customer){

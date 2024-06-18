@@ -104,6 +104,9 @@ class profileHandler
         $out['update_data'] = $pdo->runSnippet("@FILE snippets/get_profile_addresses.php", array(
             "tpl" => "@FILE chunks/profile_address.tpl"
         ));
+        $out['update_data_modal'] = $pdo->runSnippet("@FILE snippets/get_profile_addresses.php", array(
+            "tpl" => "@FILE chunks/profile_address_modal.tpl"
+        ));
         return $out;
     }
 }

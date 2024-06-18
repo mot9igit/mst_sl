@@ -147,6 +147,7 @@ class salesAnalyticsHandler
                         $regions[] = $elem[1];
                     }
 
+
                     $action->set("regions", $regions);
 
                 }
@@ -155,6 +156,7 @@ class salesAnalyticsHandler
                 $action->save();
 
                 if($action->get('id')){
+                    $action_id = $action->get('id');
                     if($properties['action_id']){
                         $crit = array(
                             "action_id" => $properties['action_id']
@@ -162,13 +164,14 @@ class salesAnalyticsHandler
                         $this->modx->removeCollection("slActionsProducts", $crit);
                         $this->modx->removeCollection("slActionsStores", $crit);
                         $this->modx->removeCollection("slActionsDelay", $crit);
+                        $this->modx->removeCollection("slActionsComplects", $crit);
                     }
 
                     //График отсрочки
                     if($properties['delay_graph']){
                         foreach($properties['delay_graph'] as $delay){
                             $action_d = $this->modx->newObject("slActionsDelay");
-                            $action_d->set("action_id", $action->get('id'));
+                            $action_d->set("action_id", $action_id);
                             $action_d->set("percent", $delay['percent']);
                             $action_d->set("day", $delay['day']);
                             $action_d->save();
@@ -190,27 +193,13 @@ class salesAnalyticsHandler
                         $action_p->save();
                     }
 
-                    foreach($properties['complects'] as $complects){
+                    foreach($properties['complects'] as $complect){
                         $action_c = $this->modx->newObject("slActionsComplects");
                         $action_c->set("action_id", $action->get('id'));
+                        $action_c->set("complect_id", $complect['id']);
+
 
                         $action_c->save();
-
-                        foreach($complects as $complects_product){
-                            $action_complect_product = $this->modx->newObject("slActionsComplectsProducts");
-                            $action_complect_product->set("complect_id", $action_c->get('id'));
-                            $action_complect_product->set("remain_id", $complects_product['id']);
-                            $price = (float)$complects_product['price'];
-                            $action_complect_product->set("old_price", $price);
-                            $action_complect_product->set("new_price", $complects_product['finalPrice']);
-                            $action_complect_product->set("multiplicity", $complects_product['multiplicity']);
-
-                            //Тип цен
-                            //$action_complect_product->set("type_price", $complects_product['typePrice']['key']);
-
-                            $action_complect_product->save();
-                        }
-
                     }
 
                     if ($properties['participants_type'] == '2') {
@@ -285,6 +274,14 @@ class salesAnalyticsHandler
 
                     if (rename($this->modx->getOption('base_path') . $properties['files']['file']['original'], $icon)) {
                         $action->set("rules_file", "rules/" . $properties['files']['file']['name']);
+                    }
+                }
+
+                if ($properties['files']['file']['xlsx']) {
+                    $icon = $this->modx->getOption('base_path') . "assets/content/upload_products/" . $properties['files']['xlsx']['name'];
+
+                    if (rename($this->modx->getOption('base_path') . $properties['files']['xlsx']['original'], $icon)) {
+                        $action->set("file_upload_products", "upload_products/" . $properties['files']['xlsx']['name']);
                     }
                 }
 
@@ -380,24 +377,57 @@ class salesAnalyticsHandler
                 }
 
                 $q_c = $this->modx->newQuery("slActionsComplects");
-                $q_c->leftJoin('slActions', 'slActions', 'slActions.id = slActionsComplects.action_id');
-
+                $q_c->leftJoin('slComplects', 'slComplects', 'slComplects.id = slActionsComplects.complect_id');
                 $q_c->select(array(
-                    'slActionsComplects.id',
+                    'slActionsComplects.*',
+                    'slComplects.name',
                 ));
-
                 $q_c->where(array("`slActionsComplects`.`action_id`:=" => $data['id']));
 
                 if ($q_c->prepare() && $q_c->stmt->execute()) {
-                    $complects = $q_c->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $out = $q_c->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $complects = array();
 
-                    foreach($complects as $complect){
-                        $q_complect_products = $this->modx->newQuery("slActionsComplects");
-                        $q_complect_products->leftJoin('slActions', 'slActions', 'slActions.id = slActionsComplects.action_id');
+                    foreach($out as $key => $val){
+                        $q_p = $this->modx->newQuery("slComplectsProducts");
+                        $q_p->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slComplectsProducts.remain_id');
+                        $q_p->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+                        $q_p->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
 
-                        $q_complect_products->select(array(
-                            'slActionsComplects.id',
+                        $q_p->select(array(
+                            'slComplectsProducts.*',
+                            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+                            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
                         ));
+                        $q_p->where(array("`slComplectsProducts`.`complect_id`:=" => $val['complect_id']));
+
+                        if ($q_p->prepare() && $q_p->stmt->execute()) {
+                            $out[$key]['products'] = $q_p->stmt->fetchAll(PDO::FETCH_ASSOC);
+                            $urlMain = $this->modx->getOption("site_url");
+                            $sum = 0;
+                            $articles = "";
+                            $max = 0;
+                            $image = "";
+
+                            foreach ($out[$key]['products'] as $product){
+                                if($max < $product['new_price'] * $product['multiplicity']) {
+                                    $max = $product['new_price'] * $product['multiplicity'];
+                                    $image = $urlMain . $product['image'];
+                                }
+                                $sum += $product['new_price'] * $product['multiplicity'];
+                                $articles = $articles . $product['article'] . ", ";
+                            }
+
+                            $articles = substr($articles,0,-2);
+
+                            $out[$key]['cost'] = $sum;
+                            $out[$key]['articles'] = $articles;
+                            $out[$key]['image'] = $image;
+                            $out[$key]['id'] = $out[$key]['complect_id'];
+                        }
+
+                        $complects[$val['complect_id']] = $out[$key];
                     }
 
                     $data['complects'] = $complects;

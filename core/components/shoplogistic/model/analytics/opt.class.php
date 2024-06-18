@@ -61,7 +61,21 @@ class optAnalyticsHandler
             case 'get/orders/seller':
                 $response = $this->getOrdersSeller($properties);
                 break;
-
+            case 'complect/set':
+                $response = $this->setComplect($properties);
+                break;
+            case 'complects/get':
+                $response = $this->getComplects($properties);
+                break;
+            case 'action/user/off/on':
+                $response = $this->userAction($properties);
+                break;
+            case 'get/info/product':
+                $response = $this->getInfoProduct($properties);
+                break;
+            case 'upload/products/file':
+                $response = $this->uploadProductsFile($properties);
+                break;
         }
         return $response;
     }
@@ -228,9 +242,36 @@ class optAnalyticsHandler
      */
     public function getProducts($properties) {
         // $this->modx->log(1, print_r($properties, 1));
-        // TODO: выбранные поставщики
-        $data = array();
         $urlMain = $this->modx->getOption("site_url");
+        // TODO: выбранные поставщики
+        $data = array(
+            "categories" => array()
+        );
+        if($properties['category_id'] != 'all'){
+            $query = $this->modx->newQuery("modResource");
+            $query->leftJoin("modTemplateVarResource", "modTemplateVarResource", "modTemplateVarResource.contentid = modResource.id AND modTemplateVarResource.tmplvarid = 8");
+            $query->where(array(
+                "modResource.class_key:=" => "msCategory",
+                "modResource.published:=" => 1,
+                "modResource.deleted:=" => 0,
+                "modResource.parent" => $properties['category_id']
+            ));
+            $query->select(array("modResource.*, modTemplateVarResource.value as image"));
+            $query->prepare();
+            $this->modx->log(1, $query->toSQL());
+            if($query->prepare() && $query->stmt->execute()){
+                $data["categories"] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($data["categories"] as $key => $res){
+                    if($res['image']){
+                        $data["categories"][$key]['image'] = $urlMain . 'assets/content/' . $res['image'];
+                    }else{
+                        $data["categories"][$key]['image'] = $urlMain . 'assets/content/' . $this->modx->getPlaceholder("+conf_noimage");
+                    }
+                    $data["categories"][$key]['image'] = str_replace("//assets", "/assets", $data["categories"][$key]['image']);
+                }
+            }
+        }
+
         $warehouses = $this->sl->store->getWarehouses($properties['id']);
         $av = array();
         foreach($warehouses as $wh){
@@ -343,31 +384,69 @@ class optAnalyticsHandler
                         $q_a->select(array(
                             "`slActions`.*",
                             "`slActionsProducts`.*",
+                            "`slActions`.description as description",
                         ));
 
                         $q_a->where(array(
-                            "`slActionsProducts`.`product_id`:=" => $data['items'][$key]['id'],
+                            "`slActionsProducts`.`remain_id`:=" => $data['items'][$key]['remain_id'],
                             "`slActions`.`store_id`:=" => $data['items'][$key]['stores'][$key_store]['store_id'],
                             "`slActions`.`active`:=" => 1,
                             "`slActions`.`type`:=" => 1,
                         ));
 
+                        $q_a->prepare();
+                        $this->modx->log(1, $q_a->toSQL());
+
                         if ($q_a->prepare() && $q_a->stmt->execute()) {
                             $actions = $q_a->stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                            $min_price = $data['items'][$key]['stores'][$key_store]['price'];
                             $data['items'][$key]['stores'][$key_store]['old_price'] = $data['items'][$key]['stores'][$key_store]['price'];
                             $data['items'][$key]['stores'][$key_store]['remain_id'] = $data['items'][$key]['remain_id'];
-                            $mainAction = array();
                             foreach ($actions as $key_action => $value_action) {
-                                if($value_action['new_price'] < $min_price) {
-                                    $min_price = $value_action['new_price'];
-                                    $mainAction = $value_action;
+                                if($key_action != 0){
+                                    //Вот тут обработка совместимости
+                                    if($main_compatibility == '1' && $value_action['compatibility_discount'] == '1'){
+                                        $actions[$key_action]['enabled'] = true;
+                                    }else{
+                                        $actions[$key_action]['enabled'] = false;
+                                    }
+                                }else{
+                                    //Первая попавшая акция - АКТИВНАЯ
+                                    $actions[$key_action]['enabled'] = true;
+                                    $main_compatibility = $value_action['compatibility_discount'];
+                                }
+
+                                if($_SESSION['actions'][$value_action['store_id']][$value_action['remain_id']][$value_action['action_id']] == false || $_SESSION['actions'][$value_action['store_id']][$value_action['remain_id']][$value_action['action_id']] == true) {
+                                    $actions[$key_action]['enabled'] = $_SESSION['actions'][$value_action['store_id']][$value_action['remain_id']][$value_action['action_id']];
+                                }
+
+                                $data['items'][$key]['stores'][$key_store]['action'] = $this->getInfoProduct(array(
+                                    "remain_id" => $value_action['remain_id'],
+                                    "store_id" => $value_action['store_id']
+                                ))['action'];
+
+                                $actions[$key_action]['conflicts'] = $this->getConflicts(array("store_id" => $value_action['store_id'], "remain_id" => $value_action['remain_id']));
+
+                                $q_g = $this->modx->newQuery("slActionsDelay");
+                                $q_g->select(array(
+                                    "`slActionsDelay`.*",
+                                ));
+
+                                $q_g->where(array(
+                                    "`slActionsDelay`.`action_id`:=" => $value_action['action_id']
+                                ));
+
+                                if ($q_g->prepare() && $q_g->stmt->execute()) {
+                                    $actions[$key_action]['delay_graph'] = $q_g->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                }
+
+
+                                if($value_action['image']) {
+                                    $actions[$key_action]['image'] = $urlMain . "assets/content/" . $value_action['image'];
+                                } else{
+                                    $actions[$key_action]['image'] = $urlMain . "/assets/files/img/nopic.png";
                                 }
                             }
-
-                            $data['items'][$key]['stores'][$key_store]['price'] = $min_price;
-                            $data['items'][$key]['stores'][$key_store]['action'] = $mainAction;
+                            $data['items'][$key]['stores'][$key_store]['price'] = $this->getPrice($data['items'][$key]['store_id'], $data['items'][$key]['remain_id'], 1);
 
                             foreach ($actions as $key_a => $value_a) {
                                 if($value_a['icon']){
@@ -380,10 +459,11 @@ class optAnalyticsHandler
                             $data['items'][$key]['stores'][$key_store]['delivery_day'] = date("Y-m-d", time()+60*60*24*$data['items'][$key]['stores'][$key_store]['delivery']);
                         }
                     }
-//
-//
-//
-//
+
+                    //Комлпекты товара
+                    $data['items'][$key]['complects'] = $this->getProductComplects(array("remain_id" => $data['items'][$key]['remain_id'], "store_id" => $data['items'][$key]['store_id']));
+
+
                     // Подсчитываем общее число записей
                     $data['items'][$key]['total_stores'] = count($data['items'][$key]['stores']);
                 }
@@ -401,6 +481,89 @@ class optAnalyticsHandler
     }
 
     /**
+     * Получить информацию о товаре с учётом его активных акций
+     *
+     * @param $properties
+     * @return array
+     */
+
+    public function getInfoProduct($properties){
+        $q_a = $this->modx->newQuery("slActions");
+        $q_a->leftJoin("slActionsProducts", "slActionsProducts", "slActions.id = slActionsProducts.action_id");
+        $q_a->select(array(
+            "`slActions`.*",
+            "`slActionsProducts`.*",
+            "`slActions`.description as description",
+        ));
+
+        $q_a->where(array(
+            "`slActionsProducts`.`remain_id`:=" => $properties['remain_id'],
+            "`slActions`.`store_id`:=" => $properties['store_id'],
+            "`slActions`.`active`:=" => 1,
+            "`slActions`.`type`:=" => 1,
+        ));
+
+        if ($q_a->prepare() && $q_a->stmt->execute()) {
+            $actions = $q_a->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($actions as $key_action => $value_action) {
+                if ($key_action != 0) {
+                    //Вот тут обработка совместимости
+                    if ($main_compatibility == '1' && $value_action['compatibility_discount'] == '1') {
+                        $actions[$key_action]['enabled'] = true;
+                    } else {
+                        $actions[$key_action]['enabled'] = false;
+                    }
+                } else {
+                    //Первая попавшая акция - АКТИВНАЯ
+                    $actions[$key_action]['enabled'] = true;
+                    $main_compatibility = $value_action['compatibility_discount'];
+                }
+
+                if ($_SESSION['actions'][$value_action['store_id']][$value_action['remain_id']][$value_action['action_id']] == false || $_SESSION['actions'][$value_action['store_id']][$value_action['remain_id']][$value_action['action_id']] == true) {
+                    $actions[$key_action]['enabled'] = $_SESSION['actions'][$value_action['store_id']][$value_action['remain_id']][$value_action['action_id']];
+                }
+
+                if ($actions[$key_action]['enabled']) {
+                    $result['action'] = $value_action;
+                }
+            }
+        }
+
+        $result['conflicts'] = $this->getConflicts($properties);
+
+        return $result;
+
+    }
+
+    /**
+     * Чекаем остаток
+     *
+     * @param $id_remain
+     * @param $store_id
+     * @return array
+     */
+    public function getRemain($id_remain, $store_id){
+        $output = array();
+        //Проверяем, есть ли нужное количество товаров в магазине
+        $q = $this->modx->newQuery("slStoresRemains");
+        $q->select(array(
+            "`slStoresRemains`.*"
+        ));
+        $q->where(array(
+            "`slStoresRemains`.`id`:=" => $id_remain,
+            "`slStoresRemains`.`remains`:>" => 0,
+            "`slStoresRemains`.`guid`:!=" => "",
+            "`slStoresRemains`.`store_id`:=" => $store_id
+        ));
+
+        if ($q->prepare() && $q->stmt->execute()) {
+            $output = $q->stmt->fetch(PDO::FETCH_ASSOC);
+        }
+        return $output;
+    }
+
+    /**
      * Добавление товаров в корзину
      *
      * @param $properties
@@ -410,79 +573,160 @@ class optAnalyticsHandler
         //Проверяем, есть ли нужное количество товаров в магазине
         // unset($_SESSION['analytics_user']['basket']);
         if($properties['id_remain']){
-            //Проверяем, есть ли у пользователя в сесии такой товар в нужном магазине
-            if($_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']]){
-
-                //Проверяем, есть ли нужное количество товаров в магазине
-                $q = $this->modx->newQuery("slStoresRemains");
-                $q->select(array(
-                    "`slStoresRemains`.*"
-                ));
-                $q->where(array(
-                    "`slStoresRemains`.`id`:=" => $properties['id_remain'],
-                    "`slStoresRemains`.`remains`:>" => 0,
-                    "`slStoresRemains`.`guid`:!=" => "",
-                    "`slStoresRemains`.`store_id`:=" => $properties['store_id']
-                ));
-
-                if ($q->prepare() && $q->stmt->execute()) {
-                    $stores = $q->stmt->fetch(PDO::FETCH_ASSOC);
-
-
-                    $valueBasket = $_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']];
+            $remain = $this->getRemain($properties['id_remain'], $properties['store_id']);
+            if($remain){
+                $valueBasket = $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']];
+                //Проверяем, есть ли у пользователя в сесии такой товар в нужном магазине
+                if($_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']]) {
                     //Проверяем, хватает ли товаров на складе
                     //Если хватает, кладём в корзину. Если не хватает, кладём всё, что осталось на складе
-                    if($valueBasket['count'] + $properties['value'] <= $stores['remains']){
-                        $_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']] = array(
+                    if($valueBasket['count'] + $properties['value'] <= $remain['remains']){
+                        $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']] = array(
                             "count" => $valueBasket['count'] + $properties['value'],
                             "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], $valueBasket['count'] + $properties['value'])
                         );
                     }else{
-                        $_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']] = array(
-                            "count" => (int) $stores['remains'],
-                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], (int) $stores['remains'])
+                        $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']] = array(
+                            "count" => (int) $remain['remains'],
+                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], (int) $remain['remains'])
                         );
                     }
-                }
-            }else{
-                //Проверяем, есть ли нужное количество товаров в магазине
-                $q = $this->modx->newQuery("slStoresRemains");
-                $q->select(array(
-                    "`slStoresRemains`.*"
-                ));
-                $q->where(array(
-                    "`slStoresRemains`.`id`:=" => $properties['id_remain'],
-                    "`slStoresRemains`.`remains`:>" => 0,
-                    "`slStoresRemains`.`guid`:!=" => "",
-                    "`slStoresRemains`.`store_id`:=" => $properties['store_id']
-                ));
-
-
-                if ($q->prepare() && $q->stmt->execute()) {
-                    $stores = $q->stmt->fetch(PDO::FETCH_ASSOC);
-
-                    //Проверяем, хватает ли товаров на складе
-                    //Если хватает, кладём в корзину. Если не хватает, кладём всё, что осталось на складе
-                    if($properties['value'] <= $stores['remains']){
-                        $_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']] = array(
-                            "count" => $properties['value'],
-                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], $properties['value'])
+                }else{
+                    if($properties['value'] <= $remain['remains']){
+                        $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']] = array(
+                            "count" => (int) $properties['value'],
+                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], (int) $remain['value'])
                         );
                     }else{
-                        $_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']] = array(
-                            "count" => (int) $stores['remains'],
-                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], (int) $stores['remains'])
+                        $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']] = array(
+                            "count" => (int) $remain['remains'],
+                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], (int) $remain['remains'])
                         );
                     }
                 }
             }
+        }
+        if ($properties['id_complect']) {
+            $complect_data = $this->getRemainComplect($properties['store_id'], $properties['id_complect']);
+            // обрабатываем комплект
+            if($_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']]) {
+                $valueBasket = $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']];
+                //TODO пофиксить проблему с количеством, всегда true
+                $needle = $valueBasket['count'] + $properties['value'];
+                if($needle < $complect_data['min_count']) {
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']] = array(
+                        "count" => $valueBasket['count'] + $properties['value'],
+                        "price" => $this->getPriceComplect($properties['store_id'], $properties['id_complect']),
+                        "complect_data" => $complect_data,
+                        "id" => $properties['id_complect']
+                    );
+                }else{
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']] = array(
+                        "count" => $complect_data['min_count'],
+                        "price" => $this->getPriceComplect($properties['store_id'], $properties['id_complect']),
+                        "complect_data" => $complect_data,
+                        "id" => $properties['id_complect']
+                    );
+                }
+            }else{
+                if($properties['value'] <= $complect_data['min_count']) {
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']] = array(
+                        "count" => $properties['value'],
+                        "price" => $this->getPriceComplect($properties['store_id'], $properties['id_complect']),
+                        "complect_data" => $complect_data,
+                        "id" => $properties['id_complect']
+                    );
+                }else{
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']] = array(
+                        "count" => $complect_data['min_count'],
+                        "price" => $this->getPriceComplect($properties['store_id'], $properties['id_complect']),
+                        "complect_data" => $complect_data,
+                        "id" => $properties['id_complect']
+                    );
+                }
+            }
+        }
+        $this->modx->log(1, print_r($_SESSION['basket'][$properties['id']], 1));
+        // TODO: предусмотреть, если произошла ошибка
+        return $this->getBasket(array(
+            "id" => $properties['id'],
+        ));
+    }
 
-            return $this->getBasket(array(
-                "id" => $properties['id'],
-            ));
+    /**
+     * Получаем остатки на складе комплектов
+     *
+     * @param $properties
+     * @return array|float|int
+     */
+
+    public function getRemainComplect($store_id, $id_complect){
+        $output = array();
+        $complect = $this->modx->getObject("slComplects", $id_complect);
+        if ($complect) {
+            if($complect->get("store_id") == $store_id){
+                $q = $this->modx->newQuery("slComplectsProducts");
+                $q->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slComplectsProducts.remain_id');
+                $q->where(array("`slComplectsProducts`.`complect_id`:=" => $id_complect));
+                $q->select(array(
+                    'slComplectsProducts.*',
+                    'slStoresRemains.*',
+                    "`slStoresRemains`.`id` as remain_id"
+                ));
+                $minCount = 0;
+                if ($q->prepare() && $q->stmt->execute()) {
+                    $products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $output["products"] = $products;
+                    foreach ($products as $product){
+                        if($minCount == 0){
+                            $minCount = intdiv($product['remains'], $product['multiplicity']);
+                        } elseif($minCount > intdiv($product['remains'], $product['multiplicity'])) {
+                            $minCount = intdiv($product['remains'], $product['multiplicity']);
+                        }
+                    }
+                    $output["min_count"] = $minCount;
+                    return $output;
+                }
+            }
         }
     }
 
+
+    /**
+     * Получаем полную цену коплекта
+     *
+     * @param $properties
+     * @return array
+     */
+    public function getPriceComplect($store_id, $id_complect){
+        $complect = $this->modx->getObject("slComplects", $id_complect);
+        if ($complect) {
+            if($complect->get("store_id") == $store_id) {
+                $q = $this->modx->newQuery("slComplectsProducts");
+                $q->where(array("`slComplectsProducts`.`complect_id`:=" => $id_complect));
+                $q->select(array(
+                    'slComplectsProducts.*',
+                ));
+                $sum = 0;
+                if ($q->prepare() && $q->stmt->execute()) {
+                    $products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($products as $product) {
+                        $sum = $sum + $product['new_price'] * $product['multiplicity'];
+                    }
+                }
+            }
+            return $sum;
+        }
+    }
+
+    /**
+     * Цена товара с учетом акций
+     *
+     * @param $store_id
+     * @param $remain_id
+     * @param $count
+     * @return float|int|mixed|void
+     */
     public function getPrice($store_id, $remain_id, $count) {
         $q = $this->modx->newQuery("slStoresRemains");
         $q->select(array(
@@ -494,29 +738,22 @@ class optAnalyticsHandler
             "`slStoresRemains`.`guid`:!=" => "",
             "`slStoresRemains`.`store_id`:=" => $store_id
         ));
-
-
         if ($q->prepare() && $q->stmt->execute()) {
             $storeRemains = $q->stmt->fetch(PDO::FETCH_ASSOC);
-
-
             $q_a = $this->modx->newQuery("slActions");
             $q_a->leftJoin("slActionsProducts", "slActionsProducts", "slActions.id = slActionsProducts.action_id");
             $q_a->select(array(
                 "`slActions`.*",
                 "`slActionsProducts`.*",
             ));
-
             $q_a->where(array(
                 "`slActionsProducts`.`remain_id`:=" => $remain_id,
                 "`slActions`.`store_id`:=" => $store_id,
                 "`slActions`.`active`:=" => 1,
                 "`slActions`.`type`:=" => 1
             ));
-
             if ($q_a->prepare() && $q_a->stmt->execute()) {
                 $actions = $q_a->stmt->fetchAll(PDO::FETCH_ASSOC);
-
                 $min_price = $storeRemains['price'];
                 foreach ($actions as $key_action => $value_action) {
                     //Расчёт цены с кратность
@@ -527,17 +764,12 @@ class optAnalyticsHandler
 
                     $calc_price = ($remain_multiplicity * $value_action['old_price'] + $sale_multiplicity * $value_action['new_price']) / $count;
                     $this->modx->log(1, "calc_price" . $calc_price);
-
-
                     if($calc_price < $min_price) {
                         $min_price = $calc_price;
                     }
                 }
-
                 $storeRemains['price'] = $min_price;
-
             }
-
             return $storeRemains['price'];
         }
     }
@@ -553,10 +785,8 @@ class optAnalyticsHandler
         $total_cost = 0;
         $total_weight = 0;
         $total_volume = 0;
-
-//        return $_SESSION['basket'][$properties['id']];
-
         if($properties['id']){
+            $this->modx->log(1, print_r($_SESSION['basket'][$properties['id']], 1));
             if($_SESSION['basket'][$properties['id']]){
                 $urlMain = $this->modx->getOption("site_url");
                 foreach ($_SESSION['basket'][$properties['id']] as $key => $value){
@@ -567,17 +797,11 @@ class optAnalyticsHandler
                     $q->where(array(
                         "`slStores`.`id`:=" => $key
                     ));
-
-                    //$q->prepare();
-                    //$this->modx->log(1, $q->toSQL());
-
                     if ($q->prepare() && $q->stmt->execute()) {
                         $store = $q->stmt->fetch(PDO::FETCH_ASSOC);
-
                         $colors = $this->modx->getOption('shoplogistic_store_colors');
                         $colors = trim($colors);
                         $colorsArray = explode(",", $colors);
-
                         if(($store['id'] % 4) == 0){
                             if($colorsArray[0]){
                                 $store['color'] = $colorsArray[0];
@@ -599,13 +823,11 @@ class optAnalyticsHandler
                             }
                             $store['color'] = "#A63232";
                         }
-
                         $result['stores'][$key] = $store;
                         $cost = 0;
                         $weight = 0;
                         $volume = 0;
-
-                        foreach ($value as $k => $v){
+                        foreach ($value['products'] as $k => $v){
                             $query = $this->modx->newQuery("slStoresRemains");
                             $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
                             $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
@@ -624,6 +846,32 @@ class optAnalyticsHandler
 
                             if ($query->prepare() && $query->stmt->execute()) {
                                 $product = $query->stmt->fetch(PDO::FETCH_ASSOC);
+
+                                $q_a = $this->modx->newQuery("slActions");
+                                $q_a->leftJoin("slActionsProducts", "slActionsProducts", "slActions.id = slActionsProducts.action_id");
+                                $q_a->select(array(
+                                    "`slActions`.*",
+                                    "`slActionsProducts`.remain_id"
+                                ));
+
+                                $q_a->where(array(
+                                    "`slActionsProducts`.`remain_id`:=" => $product['id_remain'],
+                                    "`slActions`.`store_id`:=" => $product['store_id'],
+                                    "`slActions`.`active`:=" => 1,
+                                    "`slActions`.`type`:=" => 1,
+                                ));
+
+                                if ($q_a->prepare() && $q_a->stmt->execute()) {
+                                    $actions = $q_a->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    foreach ($actions as $k => $action) {
+                                        if($action['icon']){
+                                            $actions[$k]['icon'] = "assets/content/" . $actions[$k]['icon'];
+                                        }
+                                        $actions[$k]['conflicts'] = $this->getConflicts(array("store_id" => $action['store_id'], "remain_id" => $action['remain_id']));
+                                    }
+                                    $product['actions'] = $actions;
+                                }
 
                                 if($product['image']){
                                     $product['image'] = $urlMain . $product['image'];
@@ -646,16 +894,66 @@ class optAnalyticsHandler
                             }
                         }
 
+                        foreach ($value['complects'] as $k => $v){
+                            $q_c = $this->modx->newQuery("slComplectsProducts");
+                            $q_c->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slComplectsProducts.remain_id');
+                            $q_c->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+                            $q_c->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+
+                            $q_c->where(array("`slComplectsProducts`.`complect_id`:=" => $k));
+
+                            $q_c->select(array(
+                                'slComplectsProducts.*',
+                                'slStoresRemains.price as price',
+                                'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+                                'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                                'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+                                "`slStoresRemains`.`id` as remain_id"
+                            ));
+
+                            if ($q_c->prepare() && $q_c->stmt->execute()) {
+                                $products = $q_c->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                foreach ($products as $key_p => $product){
+                                    if($product['image']){
+                                        $product['image'] = $urlMain . $product['image'];
+                                    }else{
+                                        $product['image'] = $urlMain . $this->modx->getPlaceholder("+conf_noimage");
+                                    }
+                                    $product['image'] = str_replace("//assets", "/assets", $product['image']);
+                                    $total_cost = $total_cost + $v['count'] * $product['multiplicity'] * $product['new_price'];
+                                    $cost = $cost + $v['count'] * $product['multiplicity'] * $product['new_price'];
+
+                                    //$result['test'] = $v['count'];
+                                    //$result['test'][$key_p] = $product['new_price'];
+
+
+                                    $params = $this->sl->product->getProductParams($product['id']);
+                                    $weight += $params[0]['product']["weight_brutto"] * $v['count'];
+                                    $volume += $params[0]['product']["length"] * $params[0]['product']["width"] * $params[0]['product']["height"] * $v['count'];
+
+                                    $total_weight += $params[0]['product']["weight_brutto"] * $v['count'];
+                                    $total_volume += $params[0]['product']["length"] * $params[0]['product']["width"] * $params[0]['product']["height"] * $v['count'];
+
+                                    $product['info']['count'] = $v['count'] * $product['multiplicity'];
+                                    $product['info']['price'] = $product['multiplicity'] * $product['new_price'];
+
+                                    $result['stores'][$key]['complects'][$k]['info'] = $v;
+                                    $result['stores'][$key]['complects'][$k]['products'][$key_p] = $product;
+                                }
+                            }
+                        }
+
                         $result['stores'][$key]['cost'] = $cost;
                         $result['stores'][$key]['weight'] = $weight;
-                        $result['stores'][$key]['volume'] = $volume;
+                        $result['stores'][$key]['volume'] = round(($volume / 1000000), 3);
                     }
                 }
 
                 $result['cost'] = $total_cost;
                 $result['weight'] = $total_weight;
-                $result['volume'] = $total_volume;
-
+                $result['volume'] = round(($total_volume / 1000000), 3);
+                $this->modx->log(1, print_r($result, 1));
                 return $result;
             }else{
                 return null;
@@ -663,77 +961,111 @@ class optAnalyticsHandler
         }
     }
 
+    /**
+     * Обновление корзины
+     *
+     * @param $properties
+     * @return array|stdClass|null
+     */
     public function updateBasket($properties)
     {
         //Проверяем, есть ли нужное количество товаров в магазине
         // unset($_SESSION['basket']);
         if($properties['id_remain']){
             //Проверяем, есть ли у пользователя в сесии такой товар в нужном магазине
-            if($_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']]){
-                //Проверяем, есть ли нужное количество товаров в магазине
-                $q = $this->modx->newQuery("slStoresRemains");
-
-                $q->select(array(
-                    "`slStoresRemains`.*"
-                ));
-                $q->where(array(
-                    "`slStoresRemains`.`id`:=" => $properties['id_remain'],
-                    "`slStoresRemains`.`remains`:>" => 0,
-                    "`slStoresRemains`.`guid`:!=" => "",
-                    "`slStoresRemains`.`store_id`:=" => $properties['store_id']
-                ));
-
-
-                if ($q->prepare() && $q->stmt->execute()) {
-                    $stores = $q->stmt->fetch(PDO::FETCH_ASSOC);
-
-
-                    //Проверяем, хватает ли товаров на складе
-                    //Если хватает, кладём в корзину. Если не хватает, кладём всё, что осталось на складе
-                    if($properties['value'] <= $stores['remains']){
-                        $_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']] = array(
-                            "count" => $properties['value'],
-                            "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], $properties['value'])
-                        );
-                    }
+            if($_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']]){
+                $remain = $this->getRemain($properties['id_remain'], $properties['store_id']);
+                //Проверяем, хватает ли товаров на складе
+                //Если хватает, кладём в корзину. Если не хватает, кладём всё, что осталось на складе
+                if($properties['value'] <= $remain['remains']){
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']] = array(
+                        "count" => $properties['value'],
+                        "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], $properties['value'])
+                    );
+                }else{
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']] = array(
+                        "count" => $remain['remains'],
+                        "price" => $this->getPrice($properties['store_id'], $properties['id_remain'], $properties['value'])
+                    );
                 }
-
-                return $this->getBasket(array(
-                    "id" => $properties['id'],
-                ));
-            }
-
-        }
-    }
-
-    public function clearBasket($properties)
-    {
-        if($properties['id']){
-            if($properties['store_id'] && $properties['id_remain']){
-                unset($_SESSION['basket'][$properties['id']][$properties['store_id']][$properties['id_remain']]);
-            }else{
-                unset($_SESSION['basket'][$properties['id']]);
             }
         }
-
+        if($properties["id_complect"]){
+            if($_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']]){
+                $complect_data = $this->getRemainComplect($properties['store_id'], $properties["id_complect"]);
+                //Проверяем, хватает ли товаров на складе
+                //Если хватает, кладём в корзину. Если не хватает, кладём всё, что осталось на складе
+                if($properties['value'] <= $complect_data['min_count']){
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']] = array(
+                        "count" => $properties['value'],
+                        "price" => $this->getPriceComplect($properties['store_id'], $properties['id_complect']),
+                        "complect_data" => $complect_data,
+                        "id" => $properties['id_complect']
+                    );
+                }else{
+                    $_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']] = array(
+                        "count" => $properties['value'],
+                        "price" => $this->getPriceComplect($properties['store_id'], $properties['id_complect']),
+                        "complect_data" => $complect_data,
+                        "id" => $properties['id_complect']
+                    );
+                }
+            }
+        }
         return $this->getBasket(array(
             "id" => $properties['id'],
         ));
     }
 
+    /**
+     * Удаление товара из корзины
+     *
+     * @param $properties
+     * @return array|stdClass|null
+     */
+    public function clearBasket($properties)
+    {
+        if($properties['id']){
+            if($properties['store_id'] && $properties['id_remain'] || $properties['store_id'] && $properties['id_complect']){
+                if($properties['id_remain']){
+                    unset($_SESSION['basket'][$properties['id']][$properties['store_id']]['products'][$properties['id_remain']]);
+                }
+                if($properties['id_complect']){
+                    unset($_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'][$properties['id_complect']]);
+                }
+                if(!count($_SESSION['basket'][$properties['id']][$properties['store_id']]['products']) &&
+                    !count($_SESSION['basket'][$properties['id']][$properties['store_id']]['complects'])){
+                    unset($_SESSION['basket'][$properties['id']][$properties['store_id']]);
+                }
+            }else{
+                unset($_SESSION['basket'][$properties['id']]);
+            }
+        }
+        return $this->getBasket(array(
+            "id" => $properties['id'],
+        ));
+    }
+
+    /**
+     * Субмит заказа
+     *
+     * @param $properties
+     * @return mixed
+     */
     public function orderSubmit($properties){
-        $this->modx->log(1, print_r($properties, 1));
-        $this->modx->log(1, print_r($_SESSION['basket'], 1));
         if($properties["id"]){
+            $basket = $this->getBasket($properties);
             if($properties["store_id"] != 'all'){
-                $order_data['products'] = $_SESSION['basket'][$properties["id"]][$properties["store_id"]];
+                $order_data['products'] = $basket['stores'][$properties["store_id"]]["products"];
+                $order_data['complects'] = $basket['stores'][$properties["store_id"]]["complects"];
                 $order_data["warehouse_id"] = $properties["store_id"];
                 $order_data["store_id"] = $properties["id"];
                 $response[] = $this->orderSave($order_data);
             }else{
-                foreach($_SESSION['basket'][$properties["id"]] as $key => $val){
-                    $order_data['products'] = $_SESSION['basket'][$properties["id"]][$properties["store_id"]];
-                    $order_data["warehouse_id"] = $properties["store_id"];
+                foreach($basket['stores'] as $key => $val){
+                    $order_data['products'] = $basket['stores'][$properties["store_id"]]["products"];
+                    $order_data['complects'] = $basket['stores'][$properties["store_id"]]["complects"];
+                    $order_data["warehouse_id"] = $key;
                     $order_data["store_id"] = $properties["id"];
                     $response[] = $this->orderSave($order_data);
                 }
@@ -782,7 +1114,21 @@ class optAnalyticsHandler
                 $product->set("cost", ($item['count'] * $item['price']));
                 $product->save();
             }
-
+        }
+        // TODO: чекнуть правильно расчитает заказ
+        foreach($data['complects'] as $kk => $complect){
+            foreach($complect['products'] as $k => $prod){
+                $product = $this->modx->newObject("slOrderOptProduct");
+                $product->set("remain_id", $prod['remain_id']);
+                $product->set("complect_id", $prod['complect_id']);
+                $product->set("order_id", $order->get("id"));
+                $product->set("name",  $prod['name']);
+                $product->set("count", $prod['info']['count']);
+                $product->set("price", $prod['price']);
+                $product->set("weight", 0);
+                $product->set("cost", $prod['info']['price']);
+                $product->save();
+            }
         }
 
         return $order->toArray();
@@ -808,6 +1154,21 @@ class optAnalyticsHandler
             $output['weight'] += $params[0]['product']["weight_brutto"] * $item['count'];
             $output['volume'] += $params[0]['product']["length"] * $params[0]['product']["width"] * $params[0]['product']["height"] * $item['count'];
         }
+        foreach($data['complects'] as $kr => $complect){
+            foreach($complect['products'] as $k => $item){
+                $output['cost'] += $item['info']['count'] * $item['price'];
+                $output['count'] += $item['count'];
+                foreach($complect['products']['info']['complect_data']['products'] as $i => $t){
+                    if($t['id'] == $item['id']){
+                        if($t['product_id']){
+                            $params = $this->sl->product->getProductParams($k);
+                            $output['weight'] += $params[0]['product']["weight_brutto"] * $item['count'];
+                            $output['volume'] += $params[0]['product']["length"] * $params[0]['product']["width"] * $params[0]['product']["height"] * $item['count'];
+                        }
+                    }
+                }
+            }
+        }
         $output['volume'] = $output['volume'] / 1000000;
         return $output;
     }
@@ -831,7 +1192,6 @@ class optAnalyticsHandler
 
 //                $query->prepare();
 //                $this->modx->log(1, $query->toSQL());
-
                 if ($query->prepare() && $query->stmt->execute()) {
                     $result["order"] = $query->stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -874,6 +1234,7 @@ class optAnalyticsHandler
                     $query->where($criteria);
                 }
 
+                $query->sortby("slOrderOpt.id", "DESC");
                 // Подсчитываем общее число записей
                 $result['total'] = $this->modx->getCount('slOrderOpt', $query);
 
@@ -895,5 +1256,371 @@ class optAnalyticsHandler
         }
     }
 
+    /**
+     * Создание/Редактирование комлектов
+     *
+     * @param $data
+     * @return int[]
+     */
+    public function setComplect($properties)
+    {
+        $properties['dates'][0] = date('Y-m-d H:i:s', strtotime($properties['dates'][0]));
+        $properties['dates'][1] = date('Y-m-d H:i:s', strtotime($properties['dates'][1]));
+        $start = new DateTime($properties['dates'][0]);
+        $start->setTime(00,00);
+        $end = new DateTime($properties['dates'][1]);
+        $end->setTime(23,59);
 
+        if($properties['complect_id']){
+            $complect = $this->modx->getObject('slComplects', $properties['complect_id']);
+        }else{
+            $complect = $this->modx->newObject('slComplects');
+        }
+
+        if($complect){
+            $complect->set("store_id", $properties['store_id']);
+            $complect->set("name", $properties['name']);
+            $complect->set("date_from", $start->format('Y-m-d H:i:s'));
+            $complect->set("date_to", $end->format('Y-m-d H:i:s'));
+
+            $complect->save();
+
+            if($complect->get('id')) {
+                if ($properties['complect_id']) {
+                    $crit = array(
+                        "complect_id" => $properties['complect_id']
+                    );
+                    $this->modx->removeCollection("slComplectsProducts", $crit);
+                }
+
+                foreach($properties['products'] as $product){
+                    $complect_p = $this->modx->newObject("slComplectsProducts");
+                    $complect_p->set("complect_id", $complect->get('id'));
+                    $complect_p->set("remain_id", $product['id']);
+                    $price = (float)$product['price'];
+                    $complect_p->set("old_price", $price);
+                    $complect_p->set("new_price", $product['finalPrice']);
+                    $complect_p->set("multiplicity", $product['multiplicity']);
+
+                    //Тип цен
+                    //$complect_p->set("type_price", $product['typePrice']['key']);
+
+                    $complect_p->save();
+                }
+
+            }
+            return $complect->toArray();
+        }
+
+    }
+
+    /**
+     * Найти все/один комлпеты
+     *
+     * @param $properties
+     * @return
+     */
+    public function getComplects($properties)
+    {
+        if($properties['complect_id']) {
+            $complect = $this->modx->getObject("slComplects", $properties['complect_id']);
+            if ($complect) {
+                $data = $complect->toArray();
+                $data['date_from'] = date('Y/m/d H:i:s', strtotime($data['date_from']));
+                $data['date_to'] = date('Y/m/d H:i:s', strtotime($data['date_to']));
+
+                $q = $this->modx->newQuery("slComplectsProducts");
+                $q->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slComplectsProducts.remain_id');
+                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+                $q->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+
+                $q->where(array("`slComplectsProducts`.`complect_id`:=" => $properties['complect_id']));
+
+                $q->select(array(
+                    'slComplectsProducts.*',
+                    'slStoresRemains.price as price',
+                    'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+                    'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                    'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+                    "`slStoresRemains`.`id` as remain_id"
+                ));
+
+
+                if ($q->prepare() && $q->stmt->execute()) {
+                    $products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    $selected = new stdClass();
+
+                    foreach($products as $product){
+                        $id = $product['remain_id'];
+                        $product['id'] = $product['remain_id'];
+                        $product['price'] = (float)$product['old_price'];
+                        $product['discountInRubles'] = (float)$product['old_price'] - $product['new_price'];
+                        $product['discountInterest'] = $product['discountInRubles'] / ($product['old_price'] / 100);
+                        $product['finalPrice'] = (float)$product['new_price'];
+
+                        $selected->$id = $product;
+                    }
+
+                    $data['products'] = $selected;
+                }
+
+                return $data;
+            }
+        } else{
+            $q = $this->modx->newQuery("slComplects");
+            $q->select(array(
+                'slComplects.*'
+            ));
+            $q->where(array("`slComplects`.`store_id`:=" => $properties['store_id']));
+
+            $idsComplects = array();
+            //Если нет выбранных, выдаём весь список
+            if($properties['selected']){
+
+                foreach ($properties['selected'] as $key => $value) {
+                    array_push($idsComplects, $value['id']);
+                }
+
+                //for($i = 0; $i < count($properties['selected']); $i++){
+                //$idsProducts[$i] = $properties['selected'][$i]['id'];
+                //}
+
+                $q->where(array(
+                    "slComplects.id:NOT IN" => $idsComplects
+                ));
+            }
+
+            if($properties['filter']){
+                $words = explode(" ", $properties['filter']);
+                foreach($words as $word){
+                    $criteria = array();
+                    $criteria['slComplects.name:LIKE'] = '%'.trim($word).'%';
+                    $q->where($criteria);
+                }
+            }
+
+            $result = array();
+            // Подсчитываем общее число записей
+            $result['total'] = $this->modx->getCount("slComplects", $q);
+
+            // Устанавливаем лимит 1/10 от общего количества записей
+            // со сдвигом 1/20 (offset)
+            if($properties['page'] && $properties['perpage']){
+                $limit = $properties['perpage'];
+                $offset = ($properties['page'] - 1) * $properties['perpage'];
+                $q->limit($limit, $offset);
+            }
+
+            // И сортируем по ID в обратном порядке
+            if($properties['sort']){
+                // $this->modx->log(1, print_r($properties, 1));
+                $keys = array_keys($properties['sort']);
+                // нужно проверить какому объекту принадлежит поле
+                $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+            }else{
+                $q->sortby('id', "DESC");
+            }
+
+            if ($q->prepare() && $q->stmt->execute()) {
+                $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($out as $key => $val){
+                    $date_from = strtotime($val['date_from']);
+                    $out[$key]['date_from'] = date("d.m.Y H:i", $date_from);
+                    $date_to = strtotime($val['date_to']);
+                    $out[$key]['date_to'] = date("d.m.Y H:i", $date_to);
+
+                    $q_p = $this->modx->newQuery("slComplectsProducts");
+                    $q_p->leftJoin('slStoresRemains', 'slStoresRemains', 'slStoresRemains.id = slComplectsProducts.remain_id');
+                    $q_p->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+                    $q_p->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+
+                    $q_p->select(array(
+                        'slComplectsProducts.*',
+                        'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+                        'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+                        'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+                    ));
+                    $q_p->where(array("`slComplectsProducts`.`complect_id`:=" => $val['id']));
+
+                    if ($q_p->prepare() && $q_p->stmt->execute()) {
+                        $out[$key]['products'] = $q_p->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $urlMain = $this->modx->getOption("site_url");
+                        $sum = 0;
+                        $articles = "";
+                        $max = 0;
+                        $image = "";
+
+                        foreach ($out[$key]['products'] as $product){
+                            if($max < $product['new_price'] * $product['multiplicity']) {
+                                $max = $product['new_price'] * $product['multiplicity'];
+                                $image = $urlMain . $product['image'];
+                            }
+                            $sum += $product['new_price'] * $product['multiplicity'];
+                            $articles = $articles . $product['article'] . ", ";
+                        }
+
+                        $articles = substr($articles,0,-2);
+
+                        $out[$key]['cost'] = $sum;
+                        $out[$key]['articles'] = $articles;
+                        $out[$key]['image'] = $image;
+                    }
+
+                }
+                if(!$properties['selected']){
+                    $result['complects'] = $out;
+                }else{
+                    $result['complects'] = $out;
+                    $result['selected'] = $properties['selected'];
+                }
+                return $result;
+            }
+        }
+    }
+
+    /**
+     * Найти комплекты определённого товара в определённом магазине
+     *
+     * @param $properties
+     * @return
+     */
+    public function getProductComplects($properties){
+        if($properties['remain_id'] && $properties['store_id']) {
+            $q = $this->modx->newQuery("slActionsComplects");
+            $q->leftJoin("slComplects", "slComplects", "slComplects.id = slActionsComplects.complect_id");
+            $q->leftJoin("slComplectsProducts", "slComplectsProducts", "slComplects.id = slComplectsProducts.complect_id");
+
+            $q->select(array(
+                "`slComplects`.*",
+                "`slActionsComplects`.*",
+                "`slComplectsProducts`.*",
+                "`slComplects`.id as id",
+            ));
+
+            $q->where(array(
+                "`slComplectsProducts`.`remain_id`:=" => $properties['remain_id'],
+                "`slComplects`.`store_id`:=" => $properties['store_id'],
+                "`slComplects`.`active`:=" => 1,
+            ));
+
+
+            if ($q->prepare() && $q->stmt->execute()) {
+                $complects = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $result = [];
+                $urlMain = $this->modx->getOption("site_url");
+
+
+                foreach($complects as $key => $complect){
+                    $query = $this->modx->newQuery("slComplects");
+                    $query->leftJoin("slComplectsProducts", "slComplectsProducts", "slComplects.id = slComplectsProducts.complect_id");
+                    $query->leftJoin("slStoresRemains", "slStoresRemains", "slStoresRemains.id = slComplectsProducts.remain_id");
+                    $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
+                    $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+                    $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
+
+                    $query->select(array(
+                        "`slComplects`.*",
+                        "`slComplectsProducts`.*",
+                        "`msProductData`.*",
+                        "`modResource`.*",
+                        "COALESCE(msProductData.image, '/assets/files/img/nopic.png') as image",
+                        "`slComplects`.id as id",
+                        "`slStores`.name_short as store_name"
+                    ));
+
+                    $query->where(array(
+                        "`slComplectsProducts`.`complect_id`:=" => $complect['id'],
+                    ));
+
+                    if ($query->prepare() && $query->stmt->execute()) {
+                        $compl = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+                        foreach ($compl as $k => $compl_product){
+                            $compl[$k]['delivery'] = $this->sl->cart->getNearShipment($compl_product['remain_id'], $compl_product['store_id']);
+                            $compl[$k]['delivery_day'] = date("Y-m-d", time()+60*60*24 * $compl[$k]['delivery']);
+                            $complect_data = $this->getRemainComplect($compl_product['store_id'], $compl_product['complect_id']);
+                            $compl[$k]['remain_complect'] = $complect_data["min_count"];
+                            $compl[$k]['image'] = $urlMain . $compl[$k]['image'];
+                        }
+
+                        $result[] = $compl;
+                    }
+                }
+
+                return $result;
+            }
+
+        }
+    }
+
+    /**
+     * Включение/выключение акции для пользователя
+     *
+     * @param $properties
+     * @return
+     */
+    public function userAction($properties) {
+        if($properties['remain_id'] && $properties['store_id'] && $properties['action_id']){
+            //Проверяем, есть ли у пользователя в сесии такой товар в нужном магазине
+            $_SESSION['actions'][$properties['store_id']][$properties['remain_id']][$properties['action_id']] = $properties['status'];
+        }
+        return $_SESSION['actions'];
+    }
+
+    public function getConflicts($properties)
+    {
+        $q = $this->modx->newQuery("slActions");
+        $q->leftJoin("slActionsProducts", "slActionsProducts", "slActions.id = slActionsProducts.action_id");
+        $q->select(array(
+            "`slActions`.*",
+            "`slActionsProducts`.*"
+        ));
+
+        $q->where(array(
+            "`slActionsProducts`.`remain_id`:=" => $properties['remain_id'],
+            "`slActions`.`store_id`:=" => $properties['store_id'],
+            "`slActions`.`active`:=" => 1,
+            "`slActions`.`type`:=" => 1,
+        ));
+
+
+        if ($q->prepare() && $q->stmt->execute()) {
+            $actions = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+            $conflict_global = false;
+
+            foreach ($actions as $key => $value) {
+                $conflict_temp = [];
+                foreach ($actions as $k => $v) {
+                    if($value['compatibility_discount'] == '2' && $key != $k) {
+                        if($_SESSION['actions'][$v['store_id']][$v['remain_id']][$v['action_id']]) {
+                            $conflict_temp[] = array(
+                                "id" => $v['action_id'],
+                                "name" => $v['name']
+                            );
+                            $conflict_global = true;
+                        }
+                    } else{
+                        if($v['compatibility_discount'] == '2' && $key != $k) {
+                            if($_SESSION['actions'][$v['store_id']][$v['remain_id']][$v['action_id']]) {
+                                $conflict_temp[] = array(
+                                    "id" => $v['action_id'],
+                                    "name" => $v['name']
+                                );
+                                $conflict_global = true;
+                            }
+                        }
+                    }
+                }
+                $result['items'][$value['action_id']] = $conflict_temp;
+            }
+            $result['global'] = $conflict_global;
+            return $result;
+        }
+    }
+
+    public function uploadProductsFile($properties){
+        return $this->sl->xslx->processActionFile($properties['store_id'], $properties['file']);
+    }
 }

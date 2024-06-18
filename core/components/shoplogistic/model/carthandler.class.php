@@ -1428,22 +1428,24 @@ class cartDifficultHandler
         if(!$city){
             $city['id'] = 0;
         }
-        $this->modx->log(1, print_r($city, 1));
-		$this->modx->log(1, print_r($data, 1));
-        // чекаем индекс на всякий случай
-        $postrf_data = array_values($this->sl->postrf->getNearPVZ($data['location']['geo_lon'], $data['location']['geo_lat']));
-        // $this->modx->log(1, print_r($postrf_data, 1));
-        if($postrf_data){
-            $data['location']['postal_code'] = $postrf_data[0]['postal-code'];
+        // $this->modx->log(1, print_r($city, 1));
+		// $this->modx->log(1, print_r($data, 1));
+        if($data['service'] == "postrf"){
+            // чекаем индекс на всякий случай
+            $postrf_data = array_values($this->sl->postrf->getNearPVZ($data['location']['geo_lon'], $data['location']['geo_lat']));
+            // $this->modx->log(1, print_r($postrf_data, 1));
+            if($postrf_data){
+                $data['location']['postal_code'] = $postrf_data[0]['postal-code'];
+            }
         }
-        $this->modx->log(1, print_r($data, 1));
+        // $this->modx->log(1, print_r($data, 1));
 		if ($data) {
 			$offset = $this->getDeliveryDateOffset('cart');
 			$cart = $this->checkCart();
 			if (in_array($data['service'], $this->config['our_services'])) {
                 // $this->modx->log(1, "Наша система");
 				if($data['service'] == 'yandex'){
-                    $this->modx->log(1, print_r($cart, 1));
+                    // $this->modx->log(1, print_r($cart, 1));
 					if($offset){
 						$days = $this->sl->tools->decl($offset, "день|дня|дней", true);
 					}else{
@@ -1515,7 +1517,7 @@ class cartDifficultHandler
 								if($properties['postal_code']){
 									$out = $this->sl->postrf->getPrice($properties['postal_code'], $data['location']['postal_code'], $item['products']);
                                     // $out = $this->sl->postrf->getPrice($properties['postal_code'], $data['location']['postal_code'], $item['products'], 0);
-                                    $this->modx->log(1, print_r($out, 1));
+                                    // $this->modx->log(1, print_r($out, 1));
 									$s = array('door', 'terminal');
 									foreach($s as $key){
 										if(isset($services['postrf']['price'][$key]['price'])){
@@ -1536,7 +1538,7 @@ class cartDifficultHandler
 					}
 				}
                 if($data['service'] == 'cdek'){
-                    // $this->modx->log(1, print_r($cart, 1));
+                    $this->modx->log(1, print_r($cart, 1));
                     unset($cart['stores']);
                     foreach($cart as $item) {
                         if($item['object']){
@@ -1555,8 +1557,8 @@ class cartDifficultHandler
                                             );
                                             $products[] = $product['id'];
                                         }
-                                        $prods = $this->sl->cdek->prepareProducts($products);
-                                        $out = $this->sl->cdek->getCalcPrice($properties['postal_code'], $data['location']['postal_code'], $prods);
+                                        // $prods = $this->sl->cdek->prepareProducts($products);
+                                        $out = $this->sl->cdek->getCalcPrice($properties['postal_code'], $data['location']['postal_code'], $products);
                                         $s = array('door', 'terminal');
                                         foreach($s as $key){
                                             if(isset($services['cdek']['price'][$key]['price'])){

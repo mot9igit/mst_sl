@@ -26,6 +26,95 @@ class slXSLX{
         }
 	}
 
+    /**
+     * Читаем файл товаров для акций
+     *
+     * @param $file
+     * @return Worksheet
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
+     */
+    public function processActionFile ($store_id, $file) {
+        $output = array();
+        $inputFileType = 'Xlsx';
+        $file_in = $this->modx->getOption("base_path").$file;
+        if(file_exists($file_in)){
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
+            } catch (InvalidArgumentException $e) {
+                $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+            }
+            $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+            // Структура по столбцам
+            // А - артикул, B - бренд, C - Наименование, D - Цена, E - Старая цена, F - Кратность, G -  GUID
+            // Также по умолчанию игнорируем первую строку
+            foreach($sheetData as $key => $value){
+                if($key != 1){
+                    // сначала чекаем GIUD
+                    if(isset($value["G"])){
+                        $query = $this->modx->newQuery("slStoresRemains");
+                        $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+
+                        $query->where(array(
+                            "store_id:=" => $store_id,
+                            "giud:=" => $value["G"]
+                        ));
+                        $query->select(array(
+                            "slStoresRemains.*",
+                            'COALESCE(msProductData.image, "/assets/files/img/nopic.png") as image'
+                        ));
+                        if($query->prepare() && $query->stmt->execute()){
+                            $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+
+                            if($remain){
+//                                $urlMain = $this->modx->getOption("site_url");
+//                                $remain['image'] = $urlMain . $remain['image'];
+                                $sheetData[$key]["remain"] = $remain;
+                            }else{
+                                $sheetData[$key]["error"] = array(
+                                    "message" => "Остаток не найден"
+                                );
+                            }
+                        }
+                    }else{
+                        $query = $this->modx->newQuery("slStoresRemains");
+                        $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+                        $query->where(array(
+                            "store_id:=" => $store_id,
+                            "article:=" => $value["A"]
+                        ));
+                        $query->select(array(
+                            "slStoresRemains.*",
+                            'COALESCE(msProductData.image, "/assets/files/img/nopic.png") as image'
+                        ));
+                        if($query->prepare() && $query->stmt->execute()) {
+                            $remain = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                            if($remain){
+                                if(count($remain) > 1){
+                                    $sheetData[$key]["error"] = array(
+                                        "message" => "По указанному артикулу найдено больше 1 товара",
+                                        "data" => $remain
+                                    );
+                                }else{
+//                                    $urlMain = $this->modx->getOption("site_url");
+//                                    $remain[0]['image'] = $urlMain . $remain[0]['image'];
+                                    $sheetData[$key]["remain"] = $remain[0];
+                                }
+                            }else{
+                                $sheetData[$key]["error"] = array(
+                                    "message" => "Остаток не найден"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            $output = $this->sl->tools->success("Операция обработана.", $sheetData);
+        }else{
+            $output = $this->sl->tools->error("Файла не существует!");
+        }
+        return $output;
+    }
 
 
 	public function generateTest(){

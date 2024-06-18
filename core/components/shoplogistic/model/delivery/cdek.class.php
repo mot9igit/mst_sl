@@ -21,6 +21,11 @@
                 'assetsPath' => $assetsPath,
                 'cssUrl' => $assetsUrl . 'css/',
                 'jsUrl' => $assetsUrl . 'js/',
+
+                'tokenStorage' => "cache",                           // OR system_settings
+                'cacheOptions' => array(
+                    xPDO::OPT_CACHE_KEY => 'default/delivery/cdek'
+                )
             ], $config);
 
             if($this->modx->getOption("shoplogistic_cdek_test_mode")){
@@ -32,6 +37,8 @@
                 $this->config['password'] = $this->modx->getOption("shoplogistic_cdek_pass");
                 $this->config['url'] = $this->modx->getOption("shoplogistic_cdek_url");
             }
+
+            $this->cache = $this->modx->getCacheManager();
         }
 
         /**
@@ -67,7 +74,6 @@
          */
         public function prepareProducts($products){
             $packages = array();
-            $this->modx->log(1, print_r($products, 1));
             foreach($products as $product){
                 $product_data = $this->sl->cart->getProductParams($product)[0];
                 if($product_data){
@@ -113,46 +119,47 @@
             $this->log($response);
             foreach($response['tariff_codes'] as $code){
                 // Приоритет Дверь - Склад и Дверь - Дверь https://api-docs.cdek.ru/63345519.html -> Приложение 2
-                $available_codes = array(139, 137);
+                $available_codes = array(139, 138);
                 if(in_array($code['tariff_code'], $available_codes)){
-                    if($code['tariff_code'] == 139){
+                    if($code['tariff_code'] == 138){
                         $codes['terminal'] = array(
                             "price" => $code['delivery_sum'],
                             "time" => $code["calendar_max"]
                         );
                     }
-                    if($code['tariff_code'] == 137) {
+                    if($code['tariff_code'] == 139) {
                         $codes['door'] = array(
                             "price" => $code['delivery_sum'],
                             "time" => $code["calendar_max"]
                         );
                     }
                 }
-                $trmnls = array();
-                $terminals = $this->getOffices($to);
-                $codes['terminals_source'] = $terminals;
-                foreach($terminals as $terminal){
-                    $phs = array();
-                    if(count($terminal["phones"])){
-                        foreach($terminal["phones"] as $phone){
-                            $phs[] = $phone["number"];
-                        }
-                    }
-                    $tmp = array(
-                        "code" => $terminal["code"],
-                        "lat" => $terminal["location"]["latitude"],
-                        "lon" => $terminal["location"]["longitude"],
-                        "address" => $terminal["location"]["address_full"],
-                        "image" => "/assets/files/img/cdek.svg",
-                        "phones" => implode(", ", $phs)
-                    );
-                    if(isset($terminal["work_time"])){
-                        $tmp["workTime"] = $terminal["work_time"];
-                    }
-                    $trmnls[] = $tmp;
-                }
-                $codes['terminals'] = $trmnls;
             }
+            $trmnls = array();
+            $terminals = $this->getOffices($to);
+            $codes['terminals_source'] = $terminals;
+            foreach($terminals as $terminal){
+                $phs = array();
+                if(count($terminal["phones"])){
+                    foreach($terminal["phones"] as $phone){
+                        $phs[] = $phone["number"];
+                    }
+                }
+                $tmp = array(
+                    "code" => $terminal["code"],
+                    "lat" => $terminal["location"]["latitude"],
+                    "lon" => $terminal["location"]["longitude"],
+                    "address" => $terminal["location"]["address_full"],
+                    "image" => "/assets/files/img/cdek.svg",
+                    "map_image" => "/assets/templates/img/delivery/cdek_map.png",
+                    "phones" => implode(", ", $phs)
+                );
+                if(isset($terminal["work_time"])){
+                    $tmp["workTime"] = $terminal["work_time"];
+                }
+                $trmnls[] = $tmp;
+            }
+            $codes['terminals'] = $trmnls;
             return $codes;
         }
 
@@ -209,17 +216,31 @@
                     }
                 }
                 if($this->checkToken() || $action != 'oauth/token?parameters'){
-                    $headers[] = "Authorization: Bearer ".$this->modx->getOption("shoplogistic_cdek_token");
-                }else{
-                    // $this->auth();
+                    $headers[] = "Authorization: Bearer ".$this->getToken();
                 }
                 curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
                 $out = curl_exec($curl);
                 curl_close($curl);
             }
             $response_data = json_decode($out, 1);
-            $this->log(print_r($response_data, 1));
+            $this->log($url.': '.print_r($response_data, 1));
+            $backtrace = $this->sl->tools->backtrace();
+            $this->sl->tools->log(print_r($backtrace, 1), "cdek_backtrace");
             return $response_data;
+        }
+
+        /**
+         * Берем токен
+         *
+         * @return mixed
+         */
+        public function getToken() {
+            if($this->config['tokenStorage'] == "cache") {
+                $token = $this->cache->get('token', $this->config["cacheOptions"]);
+            }else{
+                $token = $this->modx->getOption("shoplogistic_cdek_token");
+            }
+            return $token;
         }
 
         /**
@@ -228,20 +249,32 @@
          * @return bool
          */
         public function checkToken(){
-            $expired = $this->modx->getOption("shoplogistic_cdek_token_expired_in");
-            $token = $this->modx->getOption("shoplogistic_cdek_token");
-            if($token){
-                if(intval($expired) < time()){
-                    return false;
-                }else{
-                    // чекаем не истек ли без ведома
-                    $products = array(24830);
-                    $res = $this->getCalcPrice('630003', '617760', $products);
-
+            if($this->config['tokenStorage'] == "cache"){
+                $token = $this->cache->get('token', $this->config["cacheOptions"]);
+                if($token){
                     return true;
+                }else{
+                    return false;
                 }
             }else{
-                return false;
+                $expired = $this->modx->getOption("shoplogistic_cdek_token_expired_in");
+                $token = $this->modx->getOption("shoplogistic_cdek_token");
+                if($token){
+                    if(intval($expired) < time()){
+                        return false;
+                    }else{
+                        // чекаем не истек ли без ведома
+                        $products = array(24830);
+                        // $res = $this->getCalcPrice('630003', '617760', $products);
+                        // $this->log('CHECK: '.print_r($res, 1));
+                        //if($res['requests'][0]['type'] == "AUTH" && $res['requests'][0]['state'] == "INVALID"){
+                        //    return false;
+                        //}
+                        return false;
+                    }
+                }else{
+                    return false;
+                }
             }
         }
 
@@ -253,11 +286,15 @@
          * @return void
          */
         protected function setToken($access_token, $expires_in){
-            $this->updateSetting("shoplogistic_cdek_token", $access_token);
-            $time = time() + intval($expires_in);
-            $this->updateSetting("shoplogistic_cdek_token_expired_in", $time);
-            //Чистим кеш
-            $this->modx->cacheManager->refresh(array('system_settings' => array()));
+            if($this->config['tokenStorage'] == "cache"){
+                $this->cache->set('token', $access_token, $expires_in, $this->config["cacheOptions"]);
+            }else{
+                $this->updateSetting("shoplogistic_cdek_token", $access_token);
+                $time = time() + intval($expires_in);
+                $this->updateSetting("shoplogistic_cdek_token_expired_in", $time);
+                //Чистим кеш
+                $this->modx->cacheManager->refresh(array('system_settings' => array()));
+            }
         }
 
         /**

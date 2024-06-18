@@ -2625,6 +2625,30 @@ class objectsHandler
                         }
                     }
                 }
+
+                if($properties['upload_products']){
+                    $tmp_path = $this->modx->getOption('base_path').'assets/components/shoplogistic/tmp/b2b_products/';
+                    $tmp_url = 'assets/components/shoplogistic/tmp/b2b_products/';
+                    if(!file_exists($tmp_path)){
+                        mkdir($tmp_path, 0777, true);
+                    }
+
+
+                    foreach($_FILES as $key => $file){
+                        $typefile = substr(strrchr(basename($file['name']), '.'), 1);
+                        $namefile = uniqid() . "." . $typefile;
+
+                        $target = $tmp_path . $namefile;
+                        if (move_uploaded_file($file['tmp_name'], $target)) {
+                            $output['files'][] = array(
+                                "name" => $namefile,
+                                "original" => $tmp_url . $namefile,
+                                "original_href" => str_replace("//assets", "/assets", $this->modx->getOption('site_url') . $tmp_url . $namefile),
+                                "type" => $properties['upload_products'],
+                            );
+                        }
+                    }
+                }
                 // уведомление, что не указана организация
             }
         }else{
@@ -3326,7 +3350,7 @@ class objectsHandler
         $q->where(array(
             "slStoresRemains.store_id:=" => $properties['id'],
             "slStoresRemains.price:>" => 0,
-            "slStoresRemains.remains:>" => 0
+//            "slStoresRemains.remains:>" => 0
         ));
 
         $q->select(array(

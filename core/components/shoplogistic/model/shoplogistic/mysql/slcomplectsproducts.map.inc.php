@@ -1,8 +1,8 @@
 <?php
-$xpdo_meta_map['slOrderOptProduct']= array (
+$xpdo_meta_map['slComplectsProducts']= array (
   'package' => 'shoplogistic',
   'version' => '1.1',
-  'table' => 'sl_order_opt_products',
+  'table' => 'sl_complects_products',
   'extends' => 'xPDOSimpleObject',
   'tableMeta' => 
   array (
@@ -10,98 +10,95 @@ $xpdo_meta_map['slOrderOptProduct']= array (
   ),
   'fields' => 
   array (
-    'remain_id' => NULL,
-    'order_id' => NULL,
     'complect_id' => 0,
-    'name' => NULL,
-    'count' => 1,
-    'price' => 0.0,
-    'weight' => 0.0,
-    'cost' => 0.0,
-    'options' => NULL,
-    'actions' => NULL,
+    'remain_id' => 0,
+    'old_price' => 0.0,
+    'new_price' => 0.0,
+    'active' => 1,
+    'multiplicity' => 0,
+    'type_price' => 0,
   ),
   'fieldMeta' => 
   array (
-    'remain_id' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'phptype' => 'integer',
-      'attributes' => 'unsigned',
-      'null' => false,
-    ),
-    'order_id' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'phptype' => 'integer',
-      'attributes' => 'unsigned',
-      'null' => false,
-    ),
     'complect_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
-      'phptype' => 'integer',
       'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
       'default' => 0,
     ),
-    'name' => 
-    array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => true,
-    ),
-    'count' => 
+    'remain_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
-      'phptype' => 'integer',
       'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'old_price' => 
+    array (
+      'dbtype' => 'decimal',
+      'precision' => '12,2',
+      'phptype' => 'float',
+      'null' => true,
+      'default' => 0.0,
+    ),
+    'new_price' => 
+    array (
+      'dbtype' => 'decimal',
+      'precision' => '12,2',
+      'phptype' => 'float',
+      'null' => true,
+      'default' => 0.0,
+    ),
+    'active' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
       'null' => true,
       'default' => 1,
     ),
-    'price' => 
+    'multiplicity' => 
     array (
-      'dbtype' => 'decimal',
-      'precision' => '12,2',
-      'phptype' => 'float',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
       'null' => true,
-      'default' => 0.0,
+      'default' => 0,
     ),
-    'weight' => 
+    'type_price' => 
     array (
-      'dbtype' => 'decimal',
-      'precision' => '13,3',
-      'phptype' => 'float',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
       'null' => true,
-      'default' => 0.0,
-    ),
-    'cost' => 
-    array (
-      'dbtype' => 'decimal',
-      'precision' => '12,2',
-      'phptype' => 'float',
-      'null' => true,
-      'default' => 0.0,
-    ),
-    'options' => 
-    array (
-      'dbtype' => 'text',
-      'phptype' => 'json',
-      'null' => true,
-    ),
-    'actions' => 
-    array (
-      'dbtype' => 'text',
-      'phptype' => 'json',
-      'null' => true,
+      'default' => 0,
     ),
   ),
   'indexes' => 
   array (
+    'complect_id' => 
+    array (
+      'alias' => 'complect_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'complect_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'remain_id' => 
     array (
       'alias' => 'remain_id',
@@ -118,15 +115,31 @@ $xpdo_meta_map['slOrderOptProduct']= array (
         ),
       ),
     ),
-    'order_id' => 
+    'old_price' => 
     array (
-      'alias' => 'order_id',
+      'alias' => 'old_price',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'order_id' => 
+        'old_price' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'new_price' => 
+    array (
+      'alias' => 'new_price',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'new_price' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -137,21 +150,21 @@ $xpdo_meta_map['slOrderOptProduct']= array (
   ),
   'aggregates' => 
   array (
-    'Remain' => 
+    'Product' => 
     array (
       'class' => 'slStoresRemains',
       'local' => 'remain_id',
       'foreign' => 'id',
-      'owner' => 'foreign',
       'cardinality' => 'one',
+      'owner' => 'foreign',
     ),
-    'Order' => 
+    'slActionsComplects' => 
     array (
-      'class' => 'slOrder',
-      'local' => 'order_id',
+      'class' => 'slActionsComplects',
+      'local' => 'complect_id',
       'foreign' => 'id',
-      'owner' => 'foreign',
       'cardinality' => 'one',
+      'owner' => 'foreign',
     ),
   ),
 );

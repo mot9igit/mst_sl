@@ -22,6 +22,7 @@ class shopLogistic
 			'modelPath' => $corePath . 'model/',
 			'processorsPath' => $corePath . 'processors/',
 			'version' => '0.0.10',
+            'json_response' => false,
 
 			'connectorUrl' => $assetsUrl . 'connector.php',
 			'actionUrl' => $assetsUrl . 'action.php',
