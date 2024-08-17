@@ -24,6 +24,7 @@ $xpdo_meta_map['slCRMStage']= array (
     'active' => 1,
     'check_code' => 0,
     'pay' => 0,
+    'payment_bonus' => 0,
     'to_tk' => 0,
     'check_deal' => 0,
     'description' => '',
@@ -139,6 +140,15 @@ $xpdo_meta_map['slCRMStage']= array (
       'default' => 0,
     ),
     'pay' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'payment_bonus' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',

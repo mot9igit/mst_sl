@@ -20,6 +20,8 @@ class slPlaceCreateProcessor extends modObjectCreateProcessor
             $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_place_err_ae'));
         }
 
+        $this->setProperty('type', 2);
+
         return parent::beforeSet();
     }
 

@@ -2,8 +2,9 @@
 
 class minishop2_fast_api{
 	public $modx;
+    public $sl;
 
-	function __construct(modX &$modx, array $config = array()){
+	function __construct(shopLogistic &$sl, modX &$modx, array $config = array()){
 		$this->defaultConfig = array(
 			'name' => "csv",
 			'base_url_img' => "images/",
@@ -38,6 +39,7 @@ class minishop2_fast_api{
 				//'tvs' => 1
 			),
 		);
+        $this->sl =& $sl;
 		$this->modx = &$modx;
 		$this->config = array_merge($this->defaultConfig, $config);
 		$this->data = array();
@@ -687,6 +689,9 @@ class minishop2_fast_api{
                 $this->modx->log(1, print_r($id, true));
                 $this->modx->log(1, print_r($data, true));
 			}
+            $backtrace = $this->sl->tools->backtrace();
+            $this->sl->tools->log($sql, "available_backtrace");
+            $this->sl->tools->log(print_r($backtrace, 1), "available_backtrace");
 			return $id;
 		}else{
 			$this->checkprogress("Не могу инициализировать таблицу: ".$table);

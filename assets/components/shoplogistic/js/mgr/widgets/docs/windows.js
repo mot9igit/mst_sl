@@ -42,6 +42,12 @@ Ext.extend(shopLogistic.window.UpdateStoreDoc, MODx.Window, {
                     anchor: '99%'
                 }, {
                     xtype: 'statictextfield',
+                    fieldLabel: _('shoplogistic_stores_docs_phone'),
+                    name: 'phone',
+                    id: config.id + '-phone',
+                    anchor: '99%'
+                }, {
+                    xtype: 'statictextfield',
                     fieldLabel: _('shoplogistic_stores_docs_base_guid'),
                     name: 'base_guid',
                     id: config.id + '-base_guid',

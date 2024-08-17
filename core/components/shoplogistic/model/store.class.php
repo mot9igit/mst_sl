@@ -19,6 +19,26 @@ class storeHandler
     }
 
     /**
+     * @return array
+     */
+    public function getMarketplaceAvailableCriteria($prefix = ''){
+        return array(
+            $prefix."active:=" => 1,
+            $prefix."marketplace:=" => 1
+        );
+    }
+
+    /**
+     * @return array
+     */
+    public function getOptMarketplaceAvailableCriteria($prefix = ''){
+        return array(
+            $prefix."active:=" => 1,
+            $prefix."opt_marketplace:=" => 1
+        );
+    }
+
+    /**
      * Берем активные магазины
      *
      * @return array
@@ -79,12 +99,308 @@ class storeHandler
     }
 
     /**
+     * Установка отгрузки
+     *
+     * @param $properties
+     * @return void
+     * @throws Exception
+     */
+    public function setShipping ($properties) {
+        $warehouse_id = $properties['data']['store_id'];
+        $org_id = $properties['id'];
+        $timing = $properties['data']['timeSelected'];
+        $stores = array();
+        $cities = array();
+
+        // dates
+        $date_start = new DateTime($properties['data']['dateStart']);
+        $date_order_end = new DateTime($properties['data']['dateEnd']);
+        $diff_for_repeat = $date_order_end->getTimestamp() - $date_start->getTimestamp();
+
+        // магазины пока не учитываем
+        foreach ($properties['data']['selectedStores'] as $store){
+            $stores[] = $store['value'];
+        }
+        foreach ($properties['data']['selectedCities'] as $key => $city){
+            $tmp = $city;
+            if($properties['data']['citiesDates'][$key]){
+                $tmp['date'] = new DateTime($properties['data']['citiesDates'][$key]);
+                $tmp['date_diff'] = $tmp['date']->getTimestamp() - $date_start->getTimestamp();
+            }else{
+                $tmp['date'] = $date_start;
+                $tmp['date_diff'] = 0;
+            }
+            $cities[] = $tmp;
+        }
+
+        // Range for repeat
+        $start = new DateTime($timing['range']['start']);
+        $start->setTime(00,00);
+        if($timing['repeater'] == '0'){
+            $end = new DateTime($timing['range']['start']);
+        }else{
+            $end = new DateTime($timing['range']['end']);
+        }
+        $interval = new DateInterval('P1D');
+        $end->setTime(23,59);
+
+        $period = new DatePeriod($start, $interval, $end);
+
+        // Создаем объект отгрузки
+        $ship = $this->modx->newObject('slWarehouseShip');
+        $ship->set("warehouse_id", $warehouse_id);
+        $ship->set("org_id", $org_id);
+        $ship->set("timing", json_encode($timing, JSON_UNESCAPED_UNICODE));
+        $ship->set("date_from", $date_start->format('Y-m-d H:i:s'));
+        $ship->set("date_order_end", $date_order_end->format('Y-m-d H:i:s'));
+        // если повторений нет используем первую дату
+        if($timing['repeater'] == '0'){
+            $ship->set("date_to", $date_start->format('Y-m-d H:i:s'));
+        }else{
+            $ship->set("date_to", $end->format('Y-m-d H:i:s'));
+        }
+        $ship->set("createdon", time());
+        $ship->set("active", 1);
+        $ship->save();
+
+        if($ship->get('id')) {
+            if ($timing['repeater'] === 0) {
+                // $this->modx->log(1, print_r($ship->toArray(), 1));
+                // если не повторяем, дата одна создаем отдельные отгрузки на каждый город
+                $start->modify('+1 day');
+                foreach ($cities as $city) {
+                    $shipping = $this->modx->newObject("slWarehouseShipment");
+                    $shipping->set("ship_id", $ship->get('id'));
+                    $shipping->set("city_id", $city['value']);
+                    $shipping->set("date", $city['date']->format('Y-m-d H:i:s'));
+                    $shipping->set("date_order_end", $date_order_end->format('Y-m-d H:i:s'));
+                    if ($shipping->save()) {
+                        // $this->modx->log(1, print_r($shipping->toArray(), 1));
+                    } else {
+                        // $this->modx->log(1, 'ошибка');
+                    }
+                }
+            }
+            if ($timing['repeater'] === 'day') {
+                // если повторяем ежедневно, то каждый день наш
+                foreach ($period as $date) {
+                    foreach ($cities as $city) {
+                        $timestamp = $date->getTimestamp() + $diff_for_repeat;
+                        $date_order_off = new DateTime();
+                        $date_order_off->setTimestamp($timestamp);
+
+                        $timestamp_to = $date->getTimestamp() + $city['date_diff'];
+                        $date_to = new DateTime();
+                        $date_to->setTimestamp($timestamp_to);
+
+                        $shipping = $this->modx->newObject("slWarehouseShipment");
+                        $shipping->set("ship_id", $ship->get('id'));
+                        $shipping->set("city_id", $city['value']);
+                        $shipping->set("date", $date_to->format('Y-m-d H:i:s'));
+                        $shipping->set("date_order_end", $date_order_off->format('Y-m-d H:i:s'));
+                        if ($shipping->save()) {
+                            $this->modx->log(1, print_r($shipping->toArray(), 1));
+                        } else {
+                            $this->modx->log(1, 'ошибка');
+                        }
+                    }
+                }
+            }
+            // $this->modx->log(1, print_r($timing, 1));
+            if ($timing['repeater'] === 'week') {
+                $weekInterval = $timing['weeks'];
+                if ($weekInterval) {
+                    $fakeWeek = 0;
+                    $currentWeek = $start->format('W');
+                    foreach ($period as $date) {
+                        if ($date->format('W') !== $currentWeek) {
+                            $currentWeek = $date->format('W');
+                            $fakeWeek++;
+                        }
+                        if ($fakeWeek % $weekInterval !== 0) {
+                            continue;
+                        }
+                        $dayOfWeek = $date->format('N');
+                        // $this->sl->tools->log($dayOfWeek. ' IN ' .print_r($timing['days'], 1), "test_shipping");
+                        if (in_array($dayOfWeek, $timing['days'])) {
+                            foreach ($cities as $city) {
+                                $timestamp = $date->getTimestamp() + $diff_for_repeat;
+                                $date_order_off = new DateTime();
+                                $date_order_off->setTimestamp($timestamp);
+
+                                $timestamp_to = $date->getTimestamp() + $city['date_diff'];
+                                $date_to = new DateTime();
+                                $date_to->setTimestamp($timestamp_to);
+
+                                $shipping = $this->modx->newObject("slWarehouseShipment");
+                                $shipping->set("ship_id", $ship->get('id'));
+                                $shipping->set("city_id", $city['value']);
+                                $shipping->set("date", $date_to->format('Y-m-d H:i:s'));
+                                $shipping->set("date_order_end", $date_order_off->format('Y-m-d H:i:s'));
+                                if ($shipping->save()) {
+                                    $this->modx->log(1, print_r($shipping->toArray(), 1));
+                                } else {
+                                    $this->modx->log(1, 'ошибка');
+                                }
+                                if ($shipping->save()) {
+                                    // $this->modx->log(1, print_r($shipping->toArray(), 1));
+                                } else {
+                                    // $this->modx->log(1, 'ошибка');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Установка настроек системы
+     *
+     * @param $properties
+     * @return array
+     */
+    public function setSettings($properties){
+        if($properties['settings']){
+            foreach($properties['settings'] as $key => $value){
+                $query = $this->modx->newQuery("slSettings");
+                $query->leftJoin("slSettingsGroup", "slSettingsGroup", "slSettingsGroup.id = slSettings.group");
+                $query->where(array(
+                    "slSettings.active:=" => 1,
+                    "slSettingsGroup.active:=" => 1,
+                    "slSettings.key:=" => $key,
+                    "slSettings.profile_hidden:=" => 0
+                ));
+                $query->select(array(
+                    "slSettings.*",
+                    "slSettingsGroup.name as group_name",
+                    "slSettingsGroup.label as group_label"
+                ));
+                $query->prepare();
+                $this->modx->log(1, $query->toSQL());
+                if($query->prepare() && $query->stmt->execute()){
+                    $setting = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                    if($setting){
+                        if(!$object = $this->modx->getObject("slStoresSettings", array("store_id" => $properties['id'], "setting_id" => $setting['id']))){
+                            $object = $this->modx->newObject("slStoresSettings");
+                            $object->set("store_id", $properties['id']);
+                            $object->set("setting_id", $setting['id']);
+                        }
+                        if($setting['type'] == 2){
+                            $object->set("value", $value['key']);
+                        }elseif ($setting['type'] == 3) {
+                            if($value === true){
+                                $value = 1;
+                            }else{
+                                $value = 0;
+                            }
+                            $object->set("value", $value);
+                        } else {
+                            $object->set("value", $value);
+                        }
+                        $object->save();
+                    }
+                }
+            }
+        }
+        return $this->getStoreSettings($properties['id']);
+    }
+
+    /**
+     * Берем настройку магазина по ключу
+     *
+     * @return array
+     */
+    public function getStoreSetting ($store_id, $key) {
+        if ($key) {
+            $query = $this->modx->newQuery("slSettings");
+            $query->leftJoin("slStoresSettings", "slStoresSettings", "slStoresSettings.setting_id = slSettings.id AND slStoresSettings.store_id = {$store_id}");
+            $query->where(array(
+                "slSettings.key:=" => $key
+            ));
+            $query->select(array(
+                "slSettings.*",
+                "COALESCE(slStoresSettings.value, slSettings.default) as value"
+            ));
+            if($query->prepare() && $query->stmt->execute()){
+                $setting = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                return $setting;
+            }
+        }
+        return array();
+    }
+
+    /**
+     * Берем настройки магазина
+     *
+     */
+    public function getStoreSettings($store_id){
+        $output = array();
+        $query = $this->modx->newQuery("slSettings");
+        $query->leftJoin("slSettingsGroup", "slSettingsGroup", "slSettingsGroup.id = slSettings.group");
+        $query->where(array(
+            "slSettings.active:=" => 1,
+            "slSettingsGroup.active:=" => 1,
+            "slSettings.profile_hidden:=" => 0
+        ));
+        $query->select(array(
+            "slSettings.*",
+            "slSettingsGroup.name as group_name",
+            "slSettingsGroup.label as group_label"
+        ));
+        if($query->prepare() && $query->stmt->execute()){
+            $settings = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($settings as $key => $setting){
+                $q = $this->modx->newQuery("slStoresSettings");
+                $q->where(array(
+                    "slStoresSettings.store_id" => $store_id,
+                    "slStoresSettings.setting_id" => $setting['id'],
+                ));
+                $q->select(array("slStoresSettings.*"));
+                if($q->prepare() && $q->stmt->execute()){
+                    $val = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                    if($val){
+                        $settings[$key]["value"] = $val["value"];
+                    }else{
+                        $settings[$key]["value"] = $setting["default"];
+                    }
+                    if($settings[$key]["type"] == 2){
+                        $prices = $this->sl->analyticsOpt->getPrices(array("store_id" => $store_id));
+                        $settings[$key]["values"] = $prices;
+                        foreach($prices as $k => $price){
+                            if($price['guid'] == $settings[$key]["value"]){
+                                $settings[$key]["value"] = array(
+                                    "key" => $price['guid'],
+                                    "name" => $price['name']
+                                );
+                            }
+                        }
+                    }
+                }
+                $group_data = array(
+                    "name" => $setting["group_name"],
+                    "label" => $setting["group_label"]
+                );
+                if(isset($output["groups"][$setting["group"]])){
+                    $output["groups"][$setting["group"]]["settings"][] = $settings[$key];
+                }else{
+                    $output["groups"][$setting["group"]] = $group_data;
+                    $output["groups"][$setting["group"]]["settings"][] = $settings[$key];
+                }
+            }
+        }
+        return $output;
+    }
+
+    /**
+     * WILL BE DEPRECATED!!!
      * Берем подключенные к магазину склады
      *
      * @param $id
      * @return array
      */
-    public function getWarehouses($id){
+    public function getWarehouses($id, $visible = 0){
         $query = $this->modx->newQuery("slWarehouseStores");
         $query->leftJoin("slStores", "slStores", "slStores.id = slWarehouseStores.warehouse_id");
         $query->select(array("slStores.*"));
@@ -92,9 +408,97 @@ class storeHandler
             "slWarehouseStores.store_id:=" => $id,
             "AND:slStores.active:=" => 1
         ));
+        if($visible){
+            $query->where(array(
+                "slWarehouseStores.visible:=" => 1
+            ));
+        }
         if($query->prepare() && $query->stmt->execute()) {
             $warehouses = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             return $warehouses;
+        }
+    }
+
+    /**
+     * Устанавливаем запрос в ЛОГ
+     *
+     * @param $data
+     * @return int
+     */
+    public function setApiRequest($data){
+        if($data["api_key"]){
+            $api_key = $data["api_key"];
+        }else{
+            $api_key = 0;
+        }
+        $base_api_path = $this->modx->getOption("base_path")."assets/files/api/source/".$api_key.'/';
+        if (!file_exists($base_api_path)) {
+            mkdir($base_api_path, 0755, true);
+        }
+        if($data['id']){
+            $request = $this->modx->getObject("slAPIRequestHistory", $data['id']);
+            $request->set("updatedon", time());
+        }else{
+            $request = $this->modx->newObject("slAPIRequestHistory");
+            $request->set("createdon", time());
+        }
+        if($data["finished"]) {
+            $request->set("finishedon", time());
+        }
+        if($data["store_id"]) {
+            $request->set("store_id", $data["store_id"]);
+        }
+        if($data["status"]) {
+            $request->set("status", $data["status"]);
+        }
+        $request->set("api_key", $api_key);
+        if($data["method"]) {
+            $request->set("method", $data["method"]);
+        }
+        if($data["file"]) {
+            $request->set("file", $data["file"]);
+        }
+        $ip = $this->sl->tools->get_ip();
+        if($ip){
+            $request->set("ip", $ip);
+        }
+        if($data["request"] || $data["response"]) {
+            if($data["request"]){
+                $s_key = "request";
+            }
+            if($data["response"]){
+                $s_key = "response";
+            }
+            // если передан запрос, то сначала сохраняем
+            $request->save();
+            if($request_id = $request->get("id")){
+                // пишем файл
+                $rr_path = $base_api_path.$request_id.'/';
+                if (!file_exists($rr_path)) {
+                    mkdir($rr_path, 0755, true);
+                }
+                $rr_source_file = $rr_path.$s_key."_source.json";
+                $rf = fopen($rr_source_file, 'w');
+                $rrData = json_encode($data[$s_key], JSON_UNESCAPED_UNICODE);
+                fwrite($rf, $rrData);
+                fclose($rf);
+                // архивируем
+                $zip = $this->sl->tools->toZip($rr_source_file, $s_key."_source.zip", $rr_path);
+                $this->sl->tools->log($s_key, "api_test");
+                $this->sl->tools->log($zip, "api_test");
+                if($zip){
+                    unlink($rr_source_file);
+                    $zip_file = str_replace($this->modx->getOption("base_path"), "", $zip);
+                    $request->set($s_key, $zip_file);
+                    $this->sl->tools->log($zip_file.' '.intval($request->save()), "api_test");
+                    $request->save();
+                }
+            }
+        }
+        if($request){
+            return $request->get("id");
+        }else{
+            return 0;
         }
     }
 
@@ -133,6 +537,12 @@ class storeHandler
         }
     }
 
+    /**
+     * Установка значения дня работы
+     *
+     * @param $properties
+     * @return void
+     */
     public function setWorkDate($properties){
         if($properties["id"]){
             $week = $this->modx->getObject("slStoresWeekWork", $properties["data"]["id"]);
@@ -160,6 +570,7 @@ class storeHandler
         $week->set("week_day", 0);
         $week->set("timezone", $properties["data"]["timezone"]);
         $week->save();
+        return $week->toArray();
     }
 
     /**
@@ -188,6 +599,10 @@ class storeHandler
                     if(!in_array($order["store_id"], $customers)){
                         $customers[] = $order["store_id"];
                     }
+                    $datetime = new DateTime($order['date']);
+                    $orders[$key]['date'] = $datetime->format(DateTime::ATOM);
+                    $datetime = new DateTime($order['createdon']);
+                    $orders[$key]['createdon'] = $datetime->format(DateTime::ATOM);
                     $query = $this->modx->newQuery("slOrderOptProduct");
                     $query->leftJoin("slStoresRemains", "slStoresRemains", "slStoresRemains.id = slOrderOptProduct.remain_id");
                     $query->where(array(
@@ -200,7 +615,13 @@ class storeHandler
                 }
             }
             foreach($customers as $customer){
-                $store = $this->getStore($customer);
+                $query = $this->modx->newQuery("slStores");
+                $query->where(array("id:=" => $customer));
+                $query->select(array("slStores.*"));
+                if($query->prepare() && $query->stmt->execute()){
+                    $store = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                }
+                // $store = $this->getStore($customer);
                 unset($store["apikey"]);
                 unset($store["balance"]);
                 $output["customers"][] = $store;

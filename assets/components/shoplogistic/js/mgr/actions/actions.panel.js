@@ -27,6 +27,19 @@ shopLogistic.panel.Actions = function (config) {
                     xtype: 'shoplogistic-actions-grid',
                     cls: 'main-wrapper',
                 }]
+            },{
+                title: _('shoplogistic_remains'),
+                layout: 'anchor',
+                items: [{
+                    html: _('shoplogistic_remains_desc'),
+                    bodyCssClass: 'panel-desc',
+                }, {
+                    xtype: 'shoplogistic_remains-form',
+                    cls: 'main-wrapper',
+                }, {
+                    xtype: 'shoplogistic-grid-storeremains',
+                    cls: 'main-wrapper',
+                }]
             }]
         }]
     });

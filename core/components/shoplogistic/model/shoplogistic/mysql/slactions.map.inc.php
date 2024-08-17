@@ -12,6 +12,7 @@ $xpdo_meta_map['slActions']= array (
   array (
     'name' => '',
     'image' => '',
+    'image_small' => '',
     'image_inner' => '',
     'icon' => '',
     'file_upload_products' => '',
@@ -19,6 +20,7 @@ $xpdo_meta_map['slActions']= array (
     'conditions' => '',
     'award' => '',
     'store_id' => 0,
+    'counter' => 0,
     'description' => '',
     'resource' => 0,
     'regions' => '',
@@ -54,6 +56,14 @@ $xpdo_meta_map['slActions']= array (
     'available_stores' => 0,
     'available_opt' => 0,
     'available_vendors' => 0,
+    'not_sale_client' => 0,
+    'limit_type' => 0,
+    'limit_sum' => 0.0,
+    'action_last' => 0,
+    'page_places' => '',
+    'page_geo' => 0,
+    'page_place_position' => 0,
+    'page_create' => 0,
   ),
   'fieldMeta' => 
   array (
@@ -66,6 +76,14 @@ $xpdo_meta_map['slActions']= array (
       'default' => '',
     ),
     'image' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'image_small' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -130,10 +148,19 @@ $xpdo_meta_map['slActions']= array (
       'null' => true,
       'default' => 0,
     ),
+    'counter' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
     'description' => 
     array (
       'dbtype' => 'varchar',
-      'precision' => '1024',
+      'precision' => '2048',
       'phptype' => 'string',
       'null' => true,
       'default' => '',
@@ -411,6 +438,73 @@ $xpdo_meta_map['slActions']= array (
       'null' => true,
       'default' => 0,
     ),
+    'not_sale_client' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
+    'limit_type' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'limit_sum' => 
+    array (
+      'dbtype' => 'decimal',
+      'precision' => '12,2',
+      'phptype' => 'float',
+      'null' => true,
+      'default' => 0.0,
+    ),
+    'action_last' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
+    'page_places' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '1024',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'page_geo' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'page_place_position' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'page_create' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
   ),
   'indexes' => 
   array (
@@ -456,7 +550,7 @@ $xpdo_meta_map['slActions']= array (
       array (
         'regions' => 
         array (
-          'length' => '512',
+          'length' => '',
           'collation' => 'A',
           'null' => false,
         ),
@@ -472,7 +566,7 @@ $xpdo_meta_map['slActions']= array (
       array (
         'cities' => 
         array (
-          'length' => '512',
+          'length' => '',
           'collation' => 'A',
           'null' => false,
         ),
@@ -503,6 +597,22 @@ $xpdo_meta_map['slActions']= array (
       'columns' => 
       array (
         'global' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'counter' => 
+    array (
+      'alias' => 'counter',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'counter' => 
         array (
           'length' => '',
           'collation' => 'A',

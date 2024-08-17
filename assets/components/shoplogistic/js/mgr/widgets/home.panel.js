@@ -20,6 +20,18 @@ shopLogistic.panel.Home = function (config) {
             border: true,
             hideMode: 'offsets',
             items: [{
+                title: _('shoplogistic_org'),
+                layout: 'anchor',
+                items: [{
+                    html: _('shoplogistic_intro_msg'),
+                    cls: 'panel-desc',
+                }, {
+                    xtype: 'shoplogistic-grid-org',
+                    type: 0,
+                    id: 'shoplogistic-grid-stores__' + 0,
+                    cls: 'main-wrapper',
+                }]
+            },{
                 title: _('shoplogistic_stores'),
                 layout: 'anchor',
                 items: [{
@@ -31,31 +43,33 @@ shopLogistic.panel.Home = function (config) {
                     id: 'shoplogistic-grid-stores__' + 1,
                     cls: 'main-wrapper',
                 }]
-            },{
-                title: _('shoplogistic_warehouses'),
-                layout: 'anchor',
-                items: [{
-                    html: _('shoplogistic_intro_msg'),
-                    cls: 'panel-desc',
-                }, {
-                    xtype: 'shoplogistic-grid-stores',
-                    type: 2,
-                    id: 'shoplogistic-grid-stores__' + 2,
-                    cls: 'main-wrapper',
-                }]
-            },{
-                title: _('shoplogistic_vendors'),
-                layout: 'anchor',
-                items: [{
-                    html: _('shoplogistic_intro_msg'),
-                    cls: 'panel-desc',
-                }, {
-                    xtype: 'shoplogistic-grid-stores',
-                    id: 'shoplogistic-grid-stores__' + 3,
-                    type: 3,
-                    cls: 'main-wrapper',
-                }]
-            }]
+            },
+            //     {
+            //     title: _('shoplogistic_warehouses'),
+            //     layout: 'anchor',
+            //     items: [{
+            //         html: _('shoplogistic_intro_msg'),
+            //         cls: 'panel-desc',
+            //     }, {
+            //         xtype: 'shoplogistic-grid-stores',
+            //         type: 2,
+            //         id: 'shoplogistic-grid-stores__' + 2,
+            //         cls: 'main-wrapper',
+            //     }]
+            // },{
+            //     title: _('shoplogistic_vendors'),
+            //     layout: 'anchor',
+            //     items: [{
+            //         html: _('shoplogistic_intro_msg'),
+            //         cls: 'panel-desc',
+            //     }, {
+            //         xtype: 'shoplogistic-grid-stores',
+            //         id: 'shoplogistic-grid-stores__' + 3,
+            //         type: 3,
+            //         cls: 'main-wrapper',
+            //     }]
+            // }
+            ]
         }]
     });
     shopLogistic.panel.Home.superclass.constructor.call(this, config);

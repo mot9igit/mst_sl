@@ -10,7 +10,7 @@ $xpdo_meta_map['slStoreRegistry']= array (
   ),
   'fields' => 
   array (
-    'store_id' => 0,
+    'org_id' => 0,
     'num' => '',
     'file' => '',
     'date_from' => NULL,
@@ -21,7 +21,7 @@ $xpdo_meta_map['slStoreRegistry']= array (
   ),
   'fieldMeta' => 
   array (
-    'store_id' => 
+    'org_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -100,10 +100,10 @@ $xpdo_meta_map['slStoreRegistry']= array (
   ),
   'aggregates' => 
   array (
-    'Store' => 
+    'slOrg' => 
     array (
-      'class' => 'slStores',
-      'local' => 'store_id',
+      'class' => 'slOrg',
+      'local' => 'org_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

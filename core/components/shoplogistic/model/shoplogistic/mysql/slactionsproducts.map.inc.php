@@ -23,7 +23,7 @@ $xpdo_meta_map['slActionsProducts']= array (
     'updatedon' => NULL,
     'updatedby' => 0,
     'properties' => NULL,
-    'type_price' => 0,
+    'type_price' => '',
     'multiplicity' => 0,
   ),
   'fieldMeta' => 
@@ -133,12 +133,11 @@ $xpdo_meta_map['slActionsProducts']= array (
     ),
     'type_price' => 
     array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
       'null' => true,
-      'default' => 0,
+      'default' => '',
     ),
     'multiplicity' => 
     array (

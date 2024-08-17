@@ -41,6 +41,7 @@ class slStoresGetListProcessor extends modObjectGetListProcessor
             ]);
         }
 
+
         $type = trim($this->getProperty('type'));
         if ($type) {
             if($type == 1){
@@ -58,6 +59,13 @@ class slStoresGetListProcessor extends modObjectGetListProcessor
             $c->where([
                 $field.':=' => $value
             ]);
+        }
+
+        $combo = trim($this->getProperty('combo'));
+        if($combo){
+            $c->select(
+                "slStores.id, slStores.name"
+            );
         }
 
         return $c;
@@ -85,6 +93,13 @@ class slStoresGetListProcessor extends modObjectGetListProcessor
         if($array['vendor']){
             $array['type'] = 3;
         }
+
+        $org = $array['id_org'];
+        if($tmp_store = $this->modx->getObject('slOrg', $org)) {
+            $tmp[0]['id'] = $org;
+            $tmp[0]['name'] = $tmp_store->get("name");
+        }
+        $array['org'] = $tmp;
 
         // Edit
         $array['actions'][] = [

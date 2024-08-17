@@ -11,6 +11,45 @@ if ($transport->xpdo) {
             $modx->addPackage('shoplogistic', MODX_CORE_PATH . 'components/shoplogistic/model/');
             $lang = $modx->getOption('manager_language') === 'en' ? 1 : 0;
 
+            // статусы запросов к API
+            $statuses = [
+                [
+                    'name' => 'В процессе',
+                    'color' => '000000',
+                    'active' => 1,
+                    'id' => 1
+                ],
+                [
+                    'name' => 'Выполнен',
+                    'color' => '339966',
+                    'active' => 1,
+                    'id' => 2
+                ],
+                [
+                    'name' => 'Ошибка',
+                    'color' => 'FF0000',
+                    'active' => 1,
+                    'id' => 3
+                ]
+            ];
+
+            foreach ($statuses as $properties) {
+                $id = $properties['id'];
+                unset($properties['id']);
+
+                $level = $modx->getObject('slAPIRequestStatus', [
+                    'id' => $id,
+                    'OR:name:=' => $properties['name']
+                ]);
+                if (!$level) {
+                    $level = $modx->newObject('slAPIRequestStatus', $properties);
+                }
+                $level->save();
+
+                $status_id = $level->get('id');
+                $status_name = $properties['name'];
+            }
+
             $statuses = [
                 [
                     'name' => 'Новый',
@@ -246,25 +285,31 @@ if ($transport->xpdo) {
             // Статусы акций
             $statuses = [
                 [
-                    'name' => 'Активна',
-                    'color' => '000000',
+                    'name' => 'Модерация',
+                    'color' => '20c8fb',
                     'active' => 1,
                     'id' => 1
                 ],[
-                    'name' => 'На модерации',
-                    'color' => '003366',
+                    'name' => 'Отказ',
+                    'color' => 'FB203A',
                     'active' => 1,
                     'id' => 2
                 ],
                 [
-                    'name' => 'Отказ',
-                    'color' => '008000',
+                    'name' => 'Запланирована',
+                    'color' => 'fbb620',
                     'active' => 1,
                     'id' => 3
                 ],
                 [
-                    'name' => 'Не активна',
-                    'color' => '008000',
+                    'name' => 'Активна',
+                    'color' => '54e979',
+                    'active' => 1,
+                    'id' => 4
+                ],
+                [
+                    'name' => 'Архив',
+                    'color' => '202020',
                     'active' => 1,
                     'id' => 4
                 ]
@@ -445,14 +490,19 @@ if ($transport->xpdo) {
                     'name' => 'Сопоставлен',
                     'color' => '00FF00',
                     'active' => 1,
-                    'id' => 4
+                    'id' => 3
                 ],[
                     'name' => 'Нет карточки товара',
                     'color' => 'FF0000',
                     'active' => 1,
-                    'id' => 5
+                    'id' => 4
                 ],[
                     'name' => 'Укажите цену',
+                    'color' => '969696',
+                    'active' => 1,
+                    'id' => 5
+                ],[
+                    'name' => 'Проверьте цену',
                     'color' => '969696',
                     'active' => 1,
                     'id' => 6

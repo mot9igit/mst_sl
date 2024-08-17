@@ -34,9 +34,13 @@ class slStoresRemainsGetListProcessor extends modObjectGetListProcessor
     {
         $query = trim($this->getProperty('query'));
 		$store_id = trim($this->getProperty('store_id'));
+        $status = trim($this->getProperty('status'));
+        $published = trim($this->getProperty('published'));
+        $copo = trim($this->getProperty('copo'));
 
 		$c->leftJoin('msProductData', 'msProductData', '`slStoresRemains`.`product_id` = `msProductData`.`id`');
 		$c->leftJoin('modResource', 'modResource', '`slStoresRemains`.`product_id` = `modResource`.`id`');
+        $c->leftJoin('slStoresRemainsStatus', 'slStoresRemainsStatus', '`slStoresRemainsStatus`.`id` = `slStoresRemains`.`status`');
 
         if ($query) {
             $c->where([
@@ -52,6 +56,35 @@ class slStoresRemainsGetListProcessor extends modObjectGetListProcessor
 				'store_id:=' => $store_id,
 			]);
 		}
+
+        if($status){
+            $c->where([
+                'status:=' => $status,
+            ]);
+        }
+
+        if($published == 0 || $published == 1){
+            $c->where([
+                'published:=' => $published,
+            ]);
+        }
+
+        if($copo == 0 || $copo == 1){
+            if($copo == 0){
+                $c->where([
+                    'product_id:=' => 0,
+                ]);
+            }else{
+                $c->where([
+                    'product_id:>' => 0,
+                ]);
+            }
+        }
+
+        $c->select(
+            $this->modx->getSelectColumns('slStoresRemains', 'slStoresRemains', '', array(), true) . ',
+            slStoresRemainsStatus.name as status_name, slStoresRemainsStatus.color as color'
+        );
 
         return $c;
     }

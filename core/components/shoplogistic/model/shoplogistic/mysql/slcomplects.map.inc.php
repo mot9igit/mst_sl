@@ -61,6 +61,17 @@ $xpdo_meta_map['slComplects']= array (
       ),
     ),
   ),
+  'composites' => 
+  array (
+    'Products' => 
+    array (
+      'class' => 'slComplectsProducts',
+      'local' => 'id',
+      'foreign' => 'complect_id',
+      'cardinality' => 'many',
+      'owner' => 'local',
+    ),
+  ),
   'aggregates' => 
   array (
     'slStores' => 

@@ -19,7 +19,7 @@ shopLogistic.grid.StoresDocs = function (config) {
 Ext.extend(shopLogistic.grid.StoresDocs, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'store_id', 'guid', 'doc_number', 'date', 'description', 'createdon', 'properties', 'actions'];
+        return ['id', 'store_id', 'guid', 'phone', 'doc_number', 'date', 'description', 'createdon', 'properties', 'actions'];
     },
 
     getColumns: function () {
@@ -43,6 +43,12 @@ Ext.extend(shopLogistic.grid.StoresDocs, shopLogistic.grid.Default, {
             {
                 header: _('shoplogistic_stores_docs_doc_number'),
                 dataIndex: 'doc_number',
+                sortable: true,
+                width: 100,
+            },
+            {
+                header: _('shoplogistic_stores_docs_phone'),
+                dataIndex: 'phone',
                 sortable: true,
                 width: 100,
             },

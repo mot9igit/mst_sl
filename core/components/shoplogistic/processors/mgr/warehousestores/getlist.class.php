@@ -33,7 +33,7 @@ class slWarehouseStoresGetListProcessor extends modObjectGetListProcessor
     public function prepareQueryBeforeCount(xPDOQuery $c)
     {
 		$c->leftJoin('slStores', 'Store');
-		$c->leftJoin('slWarehouse', 'Warehouse');
+		$c->leftJoin('slStores', 'Warehouse');
     	$warehouse_id = trim($this->getProperty('warehouse_id'));
         $query = trim($this->getProperty('query'));
         if ($query) {

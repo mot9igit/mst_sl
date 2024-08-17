@@ -574,7 +574,7 @@ class shopLogisticPackage
             $package->save();
         }
         if ($package->install()) {
-            // $this->modx->runProcessor('system/clearcache');
+            $this->modx->runProcessor('system/clearcache');
         }
     }
 

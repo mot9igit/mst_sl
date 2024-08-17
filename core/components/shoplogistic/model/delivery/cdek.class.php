@@ -225,7 +225,7 @@
             $response_data = json_decode($out, 1);
             $this->log($url.': '.print_r($response_data, 1));
             $backtrace = $this->sl->tools->backtrace();
-            $this->sl->tools->log(print_r($backtrace, 1), "cdek_backtrace");
+            // $this->sl->tools->log(print_r($backtrace, 1), "cdek_backtrace");
             return $response_data;
         }
 

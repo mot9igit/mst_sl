@@ -64,8 +64,10 @@ class parser
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
+
         $output['content'] = curl_exec($ch);
         $output['httpcode'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // $output['content'] = mb_convert_encoding($output['content'], "utf-8", "windows-1251");
         // $this->modx->log(1, print_r($output));
         usleep(500000);
         curl_close($ch);
@@ -233,7 +235,11 @@ class parser
                     }
                 }
                 if($data['href']){
-                    $href = $data['href'][0];
+                    if(is_array($data['href'])){
+                        $href = $data['href'][0];
+                    }else{
+                        $href = $data['href'];
+                    }
                     $inner_data = $this->get_inner_products($href);
                 }
                 $this->checkprogress(print_r($inner_data, 1));
@@ -450,6 +456,8 @@ class parser
                     $array = explode(" ", trim($value));
                     $array = array_reverse($array);
                     $field_value = html_entity_decode(strip_tags(trim($array[0])));
+                    $vowels = array("(", ")");
+                    $field_value = str_replace($vowels, "", $field_value);
                 }
                 break;
             case 'elements':
@@ -762,7 +770,6 @@ class parser
                 foreach($elems as $key => $elem){
                     $dt[] = $elem->{$config['name']};
                 }
-                $this->modx->log(1, print_r($dt,1));
                 if($config["index_search"] && isset($dt[$config["index"]])){
                     $field_value = trim($dt[$config["index"]]);
                 }else{

@@ -316,7 +316,7 @@ class filters
                     }
                     $records = $search->query($query);
                     $config["total"] = count($records);
-                    $config["records"] = $records;
+                    $config["recordеуs"] = $records;
                     if($records){
                         $config["resources"] = implode(",", $records);
                     }
@@ -398,23 +398,6 @@ class filters
                     }
                     for($i = $config["offset"]; $i < ($config["offset"] + $config["limit"]); $i++){
                         if(isset($output["config"]['records'][$i])) {
-                            // чекаем есть ли в наличии
-                            /*$query = $this->modx->newQuery("slStoresRemains");
-                            $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
-                            $query->where(array(
-                                "slStoresRemains.product_id:=" => $output["config"]['records'][$i],
-                                "slStoresRemains.remains:>" => 0,
-                                "slStores.active:=" => 1
-                            ));
-                            if($query->prepare() && $query->stmt->execute()){
-                                $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
-                                if($remain){
-                                    $status = 1;
-                                }else{
-                                    $status = 99;
-                                }
-                                $this->sl->product->setProductStatus($output["config"]['records'][$i], $status);
-                            }*/
                             $query = $this->modx->newQuery("modResource");
                             $query->leftJoin("msProductData", "msProductData", "msProductData.id = modResource.id");
                             $query->where(array(
@@ -430,102 +413,25 @@ class filters
                                     $arr['price'] = $product->getPrice($prod);
                                     $arr['weight'] = $product->getWeight($prod);
                                     $arr = $product->modifyFields($prod);
+                                    $arr['index'] = $i;
+                                    $arr['category'] = $category->get("id");
+                                    $arr['total'] = $config["total"];
+
                                     $products .= $pdo->getChunk($config["tpl"], $arr);
                                 }
                             }
                         }
                     }
-                    // старая модель
-                    // $config["sortby"] = '{"Data.available":"ASC"}';
-                    // $remainsTable = $this->modx->getTableName('slStoresRemains');
-                    // $storesTable = $this->modx->getTableName('slStores');
-                    /*
-                    $config['loadModels'] = 'shoplogistic';
-                    $config['leftJoin'] = array(
-                        "slStoresRemainsStore" => [
-                            "class" => "slStoresRemains",
-                            "on" => "msProduct.id = slStoresRemainsStore.product_id AND slStoresRemainsStore.store_id = {$store_id} AND slStoresRemainsStore.price > 0  AND slStoresRemainsStore.remains > 0"
-                        ],
-                        "slStoresRemainsMIN" => [
-                            "class" => "slStoresRemains",
-                            "on" => "msProduct.id = slStoresRemainsMIN.product_id AND slStoresRemainsMIN.store_id != {$store_id} AND slStoresRemainsMIN.price = (
-                                SELECT min(slStoresRemains.price)
-                                FROM {$remainsTable} `slStoresRemains`
-                                LEFT JOIN {$storesTable} `slStores` ON `slStores`.`id` = `slStoresRemains`.`store_id`
-                                WHERE slStoresRemains.product_id = msProduct.id AND slStoresRemains.remains > 0 AND slStoresRemains.price > 0 AND slStores.active = 1
-                            )"
-                        ]
-                    );
-                    $config['select'] = array(
-                        "msProduct" => "*",
-                        "slStoresRemainsStore" => "CAST(coalesce(slStoresRemainsStore.remains, 0) as UNSIGNED) * 1 as sl_remains, CAST(coalesce(slStoresRemainsStore.price, slStoresRemainsMIN.price, 0) as DECIMAL) * 1 AS sl_price"
-                    );
-
-                    if($filter_price){
-                        $config['having'] = array(
-                            "sl_price:>=" => $filter_price["min"],
-                            "sl_price:<=" => $filter_price["max"]
-                        );
-                    }
-                    if($_POST["instock"]){
-                        $config['having']["sl_remains:>"] = 0;
-                    }
-                    */
-                    // $config["return"] = 'sql';
-                    // $config["showLog"] = 1;
-                    // $this->modx->log(1, print_r($config, 1));
-                    // $this->modx->log(1, print_r($filter_price, 1));
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Конец подготовительной работы с msProducts", "filter");
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Вызов msProducts", "filter");
-                    // $products = $this->modx->runSnippet("msProducts", $config);
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Начало формирование данных", "filter");
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Начало запроса к БД", "filter");
-                    // $sql = str_replace("`msProduct`.`sl_price`", "`sl_price`", $sql);
-                    // $sql = str_replace("`msProduct`.`sl_remains`", "`sl_remains`", $sql);
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c ".$sql, "filter");
-                    // $statement = $this->modx->query($sql);
-                    // $array = $statement->fetchAll(PDO::FETCH_ASSOC);
-                    // Операция долгая, просто считаем записи
-                    // $total_sql = "SELECT COUNT(*) as count FROM ({$sql}) t";
-                    // $total_sql = str_replace("LIMIT ".$config['limit'], "", $total_sql);
-                    // $q = $this->modx->prepare($total_sql);
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c ".$total_sql, "filter");
-                    // $q->execute();
-                    // $total_data = $q->fetch(PDO::FETCH_COLUMN);
-                    // $this->modx->log(1, print_r($total_data, 1));
-                    // $output["config"]["total"] = $total_data;
                     $output["config"]["total"] = $config["total"];
                     $output["config"]["pages"] = ceil($output["config"]["total"] / $output["config"]['limit']);
-                    // $this->modx->log(1, print_r($output, 1));
                     $this->modx->setPlaceholder("total", $config["total"]);
                     $output["pagination"] = $this->preparePagination($output["config"]);
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Конец запроса к БД", "filter");
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Начало Обработка msProductData", "filter");
-                    // $pdo = $this->modx->getParser()->pdoTools;
-                    // $product = $this->modx->newObject('msProductData');
-                    /*foreach($array as $arr){
-                        $arr['price'] = $product->getPrice($arr);
-                        $arr['weight'] = $product->getWeight($arr);
-                        if ($arr['price'] < $tmp) {
-                            $arr['old_price'] = $tmp;
-                        }
-                        $arr = $product->modifyFields($arr);
-                        $products .= $pdo->getChunk($config["tpl"], $arr);
-                    }*/
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Конец Обработка msProductData", "filter");
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Конец формирования данных", "filter");
                     $output["products"] = $products;
-                    // if($config["page"] == 1){
-                    // $this->sl->tools->log(round(microtime(true) - $start, 4)."c Конец обработки msProducts", "filter");
-                    // }
-                    // $this->modx->log(1, print_r($output, 1));
-                    // $output["products"] = $this->modx->runSnippet("msProducts", $config);
                 }else{
                     $output["products"] = '<div class="dart-alert dart-alert-info" style="width: 100%;">Нет карточек, подходящих под условия фильтра.</div>';
                 }
             }
         }
-        // $this->modx->log(1, print_r($output, 1));
         return $output;
     }
 

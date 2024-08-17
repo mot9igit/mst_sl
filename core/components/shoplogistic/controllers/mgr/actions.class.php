@@ -40,6 +40,10 @@ class ShoplogisticMgrActionsManagerController extends slManagerController
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/actions/items/windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/actions/stores/grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/actions/stores/windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeremains.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeremains.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/actions/remains/remains.form.js?v='.$this->shopLogistic->config['version']);
+
 
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/actions/products/grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/actions/products/windows.js?v='.$this->shopLogistic->config['version']);

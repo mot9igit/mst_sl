@@ -11,11 +11,18 @@ $_lang['area_shoplogistic_cdek'] = 'СДЭК';
 $_lang['area_shoplogistic_yandex'] = 'Yandex';
 $_lang['area_shoplogistic_postrf'] = 'Почта России';
 $_lang['area_shoplogistic_parserdata'] = 'Parserdata';
+$_lang['area_shoplogistic_bonus'] = 'Бонусная система';
 
 $_lang['setting_shoplogistic_frontend_css'] = 'СSS-файл для фронта';
 $_lang['setting_shoplogistic_frontend_css_desc'] = 'Можно указать тут свой файл или перенести стили в свой css-файл и очистить поле.';
 $_lang['setting_shoplogistic_frontend_js'] = 'JS-файл для фронта';
 $_lang['setting_shoplogistic_frontend_js_desc'] = 'Можно указать тут свой скрипт или перенести логику в свой js-файл и очистить поле.';
+$_lang['setting_shoplogistic_bonus_percent'] = '% начисления от стоимости товара за покупку в маркетплейсе';
+$_lang['setting_shoplogistic_bonus_percent_store'] = '% начисления от стоимости товара за покупку в магазине';
+$_lang['setting_shoplogistic_bonus_percent_desc'] = 'Работает глобально на все товары';
+$_lang['setting_shoplogistic_max_bonus_percent_deduction'] = '% списания бонусов за покупку';
+$_lang['setting_shoplogistic_max_bonus_percent_deduction_desc'] = 'Работает глобально на все товары';
+
 
 $_lang['setting_shoplogistic_api_key'] = 'Ключ API eShopLogistic';
 $_lang['setting_shoplogistic_api_key_desc'] = '<a href="https://eshoplogistic.ru" target="_blank">eshoplogistic.ru</a>';

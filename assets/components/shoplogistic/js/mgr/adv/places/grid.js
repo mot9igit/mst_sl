@@ -19,7 +19,7 @@ shopLogistic.grid.Place = function (config) {
 Ext.extend(shopLogistic.grid.Place, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'pattern_id', 'name', 'active', 'key', 'description', 'actions'];
+        return ['id', 'page_id', 'name', 'active', 'key', 'description', 'actions'];
     },
 
     getTopBar: function () {
@@ -38,9 +38,9 @@ Ext.extend(shopLogistic.grid.Place, shopLogistic.grid.Default, {
                 width: 20
             },
             {
-                header: _('shoplogistic_place_pattern_id'),
+                header: _('shoplogistic_place_page_id'),
                 width: 20,
-                dataIndex: 'pattern_id'
+                dataIndex: 'page_id'
             },
             {
                 header: _('shoplogistic_place_name'),

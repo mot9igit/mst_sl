@@ -12,7 +12,9 @@ $xpdo_meta_map['slWarehouseShipment']= array (
   array (
     'ship_id' => 0,
     'date' => NULL,
+    'date_order_end' => NULL,
     'store_id' => 0,
+    'city_id' => 0,
     'status' => 1,
     'properties' => NULL,
   ),
@@ -33,7 +35,22 @@ $xpdo_meta_map['slWarehouseShipment']= array (
       'phptype' => 'datetime',
       'null' => true,
     ),
+    'date_order_end' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
+      'null' => true,
+    ),
     'store_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'city_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -78,13 +95,13 @@ $xpdo_meta_map['slWarehouseShipment']= array (
     ),
     'store_id' => 
     array (
-      'alias' => 'store_id',
+      'alias' => 'city_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'store_id' => 
+        'city_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -123,6 +140,14 @@ $xpdo_meta_map['slWarehouseShipment']= array (
     array (
       'class' => 'slStores',
       'local' => 'store_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'dartLocationCity' => 
+    array (
+      'class' => 'dartLocationCity',
+      'local' => 'city_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

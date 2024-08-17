@@ -19,6 +19,92 @@ class slTools
     }
 
     /**
+     * разница между датами в днях
+     *
+     * @param $date_from
+     * @param $date_to
+     * @return false|int
+     * @throws Exception
+     */
+    public function getDiffDates($date_from, $date_to){
+        $date1 = new DateTime($date_from);
+        $date2 = new DateTime($date_to);
+        $interval = $date1->diff($date2);
+        return $interval->days;
+    }
+
+    /**
+     * Информация о магазине + город и регион
+     *
+     * @param $store_id
+     * @return array
+     */
+    public function getStoreInfo($store_id){
+        $query = $this->modx->newQuery("slStores");
+        $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+        $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
+        $query->where(array(
+            "slStores.id:=" => $store_id
+        ));
+        $query->select(array(
+            "slStores.*",
+            "dartLocationCity.id as city_id",
+            "dartLocationRegion.id as region_id",
+        ));
+        if($query->prepare() && $query->stmt->execute()){
+            $store_data = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            return $store_data;
+        }
+        return array();
+    }
+
+    /**
+     * Форматирование цены
+     *
+     * @param $number
+     * @param $decimals
+     * @return string
+     */
+    public function numberFormat($number, $decimals = 0){
+        return number_format($number, $decimals, ',', ' ');
+    }
+
+    /**
+     * Формат номера телефона
+     *
+     * @param $number
+     * @param $decimals
+     * @return string
+     */
+
+    function phoneFormat($phone)
+    {
+        $phone = trim($phone);
+
+        $res = preg_replace(
+            array(
+                '/[\+]?([7|8])[-|\s]?\([-|\s]?(\d{3})[-|\s]?\)[-|\s]?(\d{3})[-|\s]?(\d{2})[-|\s]?(\d{2})/',
+                '/[\+]?([7|8])[-|\s]?(\d{3})[-|\s]?(\d{3})[-|\s]?(\d{2})[-|\s]?(\d{2})/',
+                '/[\+]?([7|8])[-|\s]?\([-|\s]?(\d{4})[-|\s]?\)[-|\s]?(\d{2})[-|\s]?(\d{2})[-|\s]?(\d{2})/',
+                '/[\+]?([7|8])[-|\s]?(\d{4})[-|\s]?(\d{2})[-|\s]?(\d{2})[-|\s]?(\d{2})/',
+                '/[\+]?([7|8])[-|\s]?\([-|\s]?(\d{4})[-|\s]?\)[-|\s]?(\d{3})[-|\s]?(\d{3})/',
+                '/[\+]?([7|8])[-|\s]?(\d{4})[-|\s]?(\d{3})[-|\s]?(\d{3})/',
+            ),
+            array(
+                '+7$2$3$4$5',
+                '+7$2$3$4$5',
+                '+7$2$3$4$5',
+                '+7$2$3$4$5',
+                '+7$2$3$4',
+                '+7$2$3$4',
+            ),
+            $phone
+        );
+
+        return $res;
+    }
+
+    /**
      * Генерация кода выдачи
      *
      */
@@ -180,6 +266,82 @@ class slTools
             $output[] = $tmp;
         }
         return $output;
+    }
+
+    /**
+     * Архивируем файл или папку
+     *
+     * @param $file
+     * @param $filename
+     * @param $path
+     * @return string
+     */
+    public function toZip($file, $filename, $path){
+        $zip = new ZipArchive;
+        if($zip->open($path.$filename, ZipArchive::CREATE ) === TRUE) {
+            if(is_dir($file)){
+                $dir = opendir($file);
+                while($tmp_file = readdir($dir)) {
+                    if(is_file($file.$tmp_file)) {
+                        $zip->addFile($file.$tmp_file, $tmp_file);
+                    }
+                }
+            }else{
+                if(is_file($file)) {
+                    $zip->addFile($file, basename($file));
+                }
+            }
+            $zip->close();
+        }
+        return $path.$filename;
+    }
+
+    /**
+     * Обработка изображения
+     *
+     * @param $url
+     * @param $options
+     * @return array
+     */
+    public function prepareImage($url, $options = ""){
+        $out = array();
+        $pos = strpos($url, 'assets/content/');
+        if ($pos === false) {
+            $url = 'assets/content/'.$url;
+        }
+        $image = $this->modx->getOption("base_path") . $url;
+        $out['image'] = $this->modx->getOption("site_url") . $url;
+        if($options){
+            $big_file = $this->modx->runSnippet("phpThumbOn", array(
+                "input" => $image,
+                "options" => $options
+            ));
+            $out['thumb_big'] = $this->modx->getOption("site_url") . $big_file;
+            $out['files'][] = array(
+                "thumb" => str_replace("//a", "/a", $this->modx->getOption("site_url") . $small_file),
+                "thumb_big" => str_replace("//a", "/a", $this->modx->getOption("site_url") . $big_file),
+                "url" => str_replace("//a", "/a", $this->modx->getOption("site_url") . $url)
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * Берем IP посетителя
+     *
+     * @return mixed|string
+     */
+    public function get_ip(){
+        $value = '';
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $value = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $value = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+            $value = $_SERVER['REMOTE_ADDR'];
+        }
+
+        return $value;
     }
 
     /**

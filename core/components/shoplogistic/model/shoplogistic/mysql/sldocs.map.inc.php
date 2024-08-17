@@ -12,7 +12,7 @@ $xpdo_meta_map['slDocs']= array (
   array (
     'name' => '',
     'description' => '',
-    'store_id' => '',
+    'org_id' => '',
     'global' => 0,
     'status' => 0,
     'date' => NULL,
@@ -41,7 +41,7 @@ $xpdo_meta_map['slDocs']= array (
       'null' => true,
       'default' => '',
     ),
-    'store_id' => 
+    'org_id' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -120,15 +120,15 @@ $xpdo_meta_map['slDocs']= array (
   ),
   'indexes' => 
   array (
-    'store_id' => 
+    'org_id' => 
     array (
-      'alias' => 'store_id',
+      'alias' => 'org_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'store_id' => 
+        'org_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -219,10 +219,10 @@ $xpdo_meta_map['slDocs']= array (
       'cardinality' => 'many',
       'owner' => 'foreign',
     ),
-    'Store' => 
+    'Organization' => 
     array (
-      'class' => 'slStores',
-      'local' => 'store_id',
+      'class' => 'slOrg',
+      'local' => 'org_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

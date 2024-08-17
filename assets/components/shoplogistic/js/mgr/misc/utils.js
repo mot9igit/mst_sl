@@ -55,6 +55,21 @@ shopLogistic.utils.renderFieldType = function (value) {
     }
 };
 
+shopLogistic.utils.renderFieldParamType = function (value) {
+    if(value == 1){
+        return 'Текстовое поле'
+    }
+    if(value == 2){
+        return 'Выбор цены'
+    }
+    if(value == 3){
+        return 'Да/Нет'
+    }
+    if(value == 4){
+        return 'Число'
+    }
+};
+
 shopLogistic.utils.getMenu = function (actions, grid, selected) {
     var menu = [];
     var cls, icon, title, action;
@@ -110,6 +125,45 @@ shopLogistic.utils.getMenu = function (actions, grid, selected) {
 
     return menu;
 };
+
+shopLogistic.utils.renderBonus = function (value, props, row) {
+    var res = [];
+    var cls, icon, title, action, item;
+    for (var i in row.data.actions) {
+        if (!row.data.actions.hasOwnProperty(i)) {
+            continue;
+        }
+        var a = row.data.actions[i];
+        if (!a['button']) {
+            continue;
+        }
+
+        icon = a['icon'] ? a['icon'] : '';
+        if (typeof(a['cls']) == 'object') {
+            if (typeof(a['cls']['button']) != 'undefined') {
+                icon += ' ' + a['cls']['button'];
+            }
+        }
+        else {
+            cls = a['cls'] ? a['cls'] : '';
+        }
+        action = a['action'] ? a['action'] : '';
+        title = a['title'] ? a['title'] : '';
+
+        item = String.format(
+            '<li class="{0}"><button class="shoplogistic-btn shoplogistic-btn-default {1}" action="{2}" title="{3}"></button></li>',
+            cls, icon, action, title
+        );
+
+        res.push(item);
+    }
+
+    return String.format(
+        '<ul class="shoplogistic-row-actions">{0}</ul>',
+        res.join('')
+    );
+};
+
 
 shopLogistic.utils.renderActions = function (value, props, row) {
     var res = [];

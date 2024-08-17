@@ -11,8 +11,9 @@ $xpdo_meta_map['slWarehouseShip']= array (
   'fields' => 
   array (
     'warehouse_id' => 0,
-    'store_ids' => '',
+    'org_id' => 0,
     'timing' => NULL,
+    'date_order_end' => NULL,
     'date_from' => NULL,
     'date_to' => NULL,
     'createdon' => NULL,
@@ -32,18 +33,25 @@ $xpdo_meta_map['slWarehouseShip']= array (
       'null' => true,
       'default' => 0,
     ),
-    'store_ids' => 
+    'org_id' => 
     array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
-      'phptype' => 'string',
-      'null' => false,
-      'default' => '',
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
     ),
     'timing' => 
     array (
       'dbtype' => 'text',
       'phptype' => 'json',
+      'null' => true,
+    ),
+    'date_order_end' => 
+    array (
+      'dbtype' => 'datetime',
+      'phptype' => 'datetime',
       'null' => true,
     ),
     'date_from' => 
@@ -111,22 +119,6 @@ $xpdo_meta_map['slWarehouseShip']= array (
         ),
       ),
     ),
-    'store_ids' => 
-    array (
-      'alias' => 'store_ids',
-      'primary' => false,
-      'unique' => false,
-      'type' => 'BTREE',
-      'columns' => 
-      array (
-        'store_ids' => 
-        array (
-          'length' => '',
-          'collation' => 'A',
-          'null' => false,
-        ),
-      ),
-    ),
     'active' => 
     array (
       'alias' => 'active',
@@ -143,9 +135,33 @@ $xpdo_meta_map['slWarehouseShip']= array (
         ),
       ),
     ),
+    'org_id' => 
+    array (
+      'alias' => 'org_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'org_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
   ),
   'aggregates' => 
   array (
+    'Org' => 
+    array (
+      'class' => 'slOrg',
+      'local' => 'org_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
     'Warehouse' => 
     array (
       'class' => 'slStores',

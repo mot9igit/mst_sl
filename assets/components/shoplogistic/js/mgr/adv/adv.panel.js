@@ -39,7 +39,43 @@ shopLogistic.panel.Adv = function (config) {
                     cls: 'main-wrapper',
                 }
                 ]
-            }
+            },
+            {
+                title: _('shoplogistic_adv_request'),
+                layout: 'anchor',
+                items: [{
+                    html: _('shoplogistic_adv_desc'),
+                    bodyCssClass: 'panel-desc',
+                }, {
+                    xtype: 'shoplogistic-grid-request',
+                    cls: 'main-wrapper',
+                }
+                ]
+            },
+                {
+                    title: _('shoplogistic_adv_placeB2B'),
+                    layout: 'anchor',
+                    items: [{
+                        html: _('shoplogistic_adv_desc'),
+                        bodyCssClass: 'panel-desc',
+                    }, {
+                        xtype: 'shoplogistic-grid-placeB2B',
+                        cls: 'main-wrapper',
+                    }
+                    ]
+                },
+                {
+                    title: _('shoplogistic_adv_requestB2B'),
+                    layout: 'anchor',
+                    items: [{
+                        html: _('shoplogistic_adv_desc'),
+                        bodyCssClass: 'panel-desc',
+                    }, {
+                        xtype: 'shoplogistic-grid-requestB2B',
+                        cls: 'main-wrapper',
+                    }
+                    ]
+                }
             ]
         }]
     });

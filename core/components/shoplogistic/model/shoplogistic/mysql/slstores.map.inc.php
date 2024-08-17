@@ -10,6 +10,7 @@ $xpdo_meta_map['slStores']= array (
   ),
   'fields' => 
   array (
+    'type_integration' => 0,
     'type' => 0,
     'name' => '',
     'name_short' => '',
@@ -48,6 +49,8 @@ $xpdo_meta_map['slStores']= array (
     'store' => 1,
     'warehouse' => 0,
     'vendor' => 0,
+    'marketplace' => 1,
+    'opt_marketplace' => 1,
     'date_api_ping' => NULL,
     'date_remains_update' => NULL,
     'date_docs_update' => NULL,
@@ -57,6 +60,14 @@ $xpdo_meta_map['slStores']= array (
   ),
   'fieldMeta' => 
   array (
+    'type_integration' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '11',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
     'type' => 
     array (
       'dbtype' => 'int',
@@ -361,6 +372,22 @@ $xpdo_meta_map['slStores']= array (
       'null' => true,
       'default' => 0,
     ),
+    'marketplace' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
+    ),
+    'opt_marketplace' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
+    ),
     'date_api_ping' => 
     array (
       'dbtype' => 'datetime',
@@ -509,6 +536,38 @@ $xpdo_meta_map['slStores']= array (
       'columns' => 
       array (
         'vendor' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'marketplace' => 
+    array (
+      'alias' => 'marketplace',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'marketplace' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'opt_marketplace' => 
+    array (
+      'alias' => 'opt_marketplace',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'opt_marketplace' => 
         array (
           'length' => '',
           'collation' => 'A',

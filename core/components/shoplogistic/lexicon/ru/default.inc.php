@@ -5,10 +5,72 @@ $_lang['shoplogistic'] = 'shopLogistic';
 $_lang['shoplogistic_menu_desc'] = 'Маркетплейс.';
 $_lang['shoplogistic_intro_msg'] = 'Вы можете выделять сразу несколько предметов при помощи Shift или Ctrl.';
 
-$_lang['shoplogistic_stores'] = 'Магазины';
+$_lang['shoplogistic_update'] = 'Редактировать';
+$_lang['shoplogistic_download'] = 'Скачать файл';
+
+$_lang['shoplogistic_org'] = 'Организации';
+$_lang['shoplogistic_org_create'] = 'Создать организацию';
+$_lang['shoplogistic_stores'] = 'Склады';
+
+$_lang['shoplogistic_org_id'] = 'id';
+$_lang['shoplogistic_org_name'] = 'Название';
+$_lang['shoplogistic_org_description'] = 'Описание';
+$_lang['shoplogistic_org_active'] = 'Активно';
+$_lang['shoplogistic_grid_org'] = 'Действия';
+$_lang['shoplogistic_org_image'] = 'Логотип';
+$_lang['shoplogistic_org_contact'] = 'ФИО (контактного лица)';
+$_lang['shoplogistic_org_phone'] = 'Телефон (контактного лица)';
+$_lang['shoplogistic_org_email'] = 'E-mail (контактного лица)';
+$_lang['shoplogistic_org_update'] = 'Изменить огранизацию';
+$_lang['shoplogistic_org_requisites_update'] = 'Реквизиты';
+$_lang['shoplogistic_org_requisites'] = 'Реквизиты';
+$_lang['shoplogistic_orgrequisitesbank'] = 'Банковские реквизиты';
+
+$_lang['shoplogistic_org_users'] = 'Пользователи';
+$_lang['shoplogistic_orgusers_create'] = 'Добавить пользователя';
+$_lang['shoplogistic_orgusers_id'] = 'id';
+$_lang['shoplogistic_orgusers_user_id'] = 'Пользователь';
+$_lang['shoplogistic_orgusers_description'] = 'Описание';
+
+
+
+
+
+
+$_lang['shoplogistic_orgrequisites_create'] = 'Создать реквизиты';
+$_lang['shoplogistic_orgrequisitesbank_create'] = 'Создать банковские реквизиты';
+
+$_lang['shoplogistic_orgrequisites_id'] = 'id';
+$_lang['shoplogistic_orgrequisites_name'] = 'Наименование';
+$_lang['shoplogistic_orgrequisites_ogrn'] = 'ОГРН';
+$_lang['shoplogistic_orgrequisites_inn'] = 'ИНН';
+$_lang['shoplogistic_orgrequisites_kpp'] = 'КПП';
+$_lang['shoplogistic_orgrequisites_send_request'] = 'Отправлен запрос на изменение';
+$_lang['shoplogistic_orgrequisites_marketplace'] = 'Реквизиты для маркетплейса';
+$_lang['shoplogistic_grid_orgrequisites'] = 'Действия';
+$_lang['shoplogistic_orgrequisites_fact_address'] = 'Фактический адрес';
+$_lang['shoplogistic_orgrequisites_ur_address'] = 'Адрес';
+
+$_lang['shoplogistic_orgrequisitesbank_id'] = 'id';
+$_lang['shoplogistic_orgrequisitesbank_name'] = 'Наименование';
+$_lang['shoplogistic_orgrequisitesbank_bank_name'] = 'Банк';
+$_lang['shoplogistic_orgrequisitesbank_bank_number'] = 'Расчетный счет';
+$_lang['shoplogistic_orgrequisitesbank_bank_knumber'] = 'Корреспондентский счет';
+$_lang['shoplogistic_orgrequisitesbank_bank_bik'] = 'БИК';
+
+$_lang['shoplogistic_orgstores_id'] = 'id';
+$_lang['shoplogistic_orgstores_org_id'] = 'Организация';
+$_lang['shoplogistic_orgstores_store_id'] = 'Склад';
+$_lang['shoplogistic_orgstores_description'] = 'Описание';
+$_lang['shoplogistic_orgstores_create'] = 'Добавить склад';
+
+
+
 $_lang['shoplogistic_warehouses'] = 'Склады';
 $_lang['shoplogistic_vendors'] = 'Производители';
 $_lang['shoplogistic_store_id'] = 'ID';
+$_lang['shoplogistic_store_type_integration'] = 'Тип интеграции';
+$_lang['shoplogistic_store_org'] = 'Огранизация';
 $_lang['shoplogistic_store_name'] = 'Название';
 $_lang['shoplogistic_store_name_short'] = 'Краткое название';
 $_lang['shoplogistic_store_balance'] = 'Баланс';
@@ -45,6 +107,8 @@ $_lang['shoplogistic_store_active'] = 'Активно';
 $_lang['shoplogistic_store_store'] = 'Роль магазина';
 $_lang['shoplogistic_store_warehouse'] = 'Роль оптового склада';
 $_lang['shoplogistic_store_vendor'] = 'Роль производителя';
+$_lang['shoplogistic_store_marketplace'] = 'Маркетплейс';
+$_lang['shoplogistic_store_opt_marketplace'] = 'Закупки';
 $_lang['shoplogistic_store_check_remains'] = 'Следить за обменом остатков';
 $_lang['shoplogistic_store_check_docs'] = 'Следить за обменом документов';
 $_lang['shoplogistic_store_date_api_ping'] = 'Дата последней связи по API';
@@ -52,16 +116,16 @@ $_lang['shoplogistic_store_date_remains_update'] = 'Дата последнег�
 $_lang['shoplogistic_store_date_docs_update'] = 'Дата последнего обновления документов по API';
 $_lang['shoplogistic_store_integration'] = 'Прошла интеграция?';
 
-$_lang['shoplogistic_store_create'] = 'Создать магазин';
-$_lang['shoplogistic_store_update'] = 'Изменить магазин';
-$_lang['shoplogistic_store_enable'] = 'Включить магазин';
-$_lang['shoplogistic_stores_enable'] = 'Включить магазины';
-$_lang['shoplogistic_store_disable'] = 'Отключить магазин';
-$_lang['shoplogistic_stores_disable'] = 'Отключить магазины';
-$_lang['shoplogistic_store_remove'] = 'Удалить магазин';
-$_lang['shoplogistic_stores_remove'] = 'Удалить магазины';
-$_lang['shoplogistic_store_remove_confirm'] = 'Вы уверены, что хотите удалить этот магазин?';
-$_lang['shoplogistic_stores_remove_confirm'] = 'Вы уверены, что хотите удалить эти магазины?';
+$_lang['shoplogistic_store_create'] = 'Создать склад';
+$_lang['shoplogistic_store_update'] = 'Изменить склад';
+$_lang['shoplogistic_store_enable'] = 'Включить склад';
+$_lang['shoplogistic_stores_enable'] = 'Включить склад';
+$_lang['shoplogistic_store_disable'] = 'Отключить склад';
+$_lang['shoplogistic_stores_disable'] = 'Отключить склады';
+$_lang['shoplogistic_store_remove'] = 'Удалить склад';
+$_lang['shoplogistic_stores_remove'] = 'Удалить склады';
+$_lang['shoplogistic_store_remove_confirm'] = 'Вы уверены, что хотите удалить этот склад?';
+$_lang['shoplogistic_stores_remove_confirm'] = 'Вы уверены, что хотите удалить эти склады?';
 $_lang['shoplogistic_store_active'] = 'Включено';
 
 $_lang['shoplogistic_vendor_create'] = 'Создать производителя';
@@ -370,6 +434,7 @@ $_lang['shoplogistic_storeremains_reserved'] = 'Резерв';
 $_lang['shoplogistic_storeremains_available'] = 'Доступно';
 $_lang['shoplogistic_storeremains_description'] = 'Описание';
 $_lang['shoplogistic_storeremains_price'] = 'Стоимость';
+$_lang['shoplogistic_storeremains_status'] = "Статус";
 $_lang['shoplogistic_storeremains_published'] = 'Опубликован на маркетплейсе';
 $_lang['shoplogistic_storeremains_checked'] = 'Сопоставление товаров проверено';
 $_lang['shoplogistic_storeremains_request'] = 'Запрос на добавление карточки товара';
@@ -467,7 +532,7 @@ $_lang["shoplogistic_color"] = "Цвет";
 $_lang["shoplogistic_ms2status_id"] = "Статус miniShop2";
 $_lang["shoplogistic_description"] = "Описание";
 $_lang["shoplogistic_comment"] = "Комментарий";
-$_lang["shoplogistic_actions"] = "Действия";
+$_lang["shoplogistic_col_actions"] = "Действия";
 $_lang["shoplogistic_btn_create"] = "Создать";
 $_lang["shoplogistic_status_stores_available"] = "Доступен для магазинов";
 $_lang["shoplogistic_status_warehouses_available"] = "Доступен для складов";
@@ -532,6 +597,7 @@ $_lang['shoplogistic_crm_deal_stage_active'] = 'Активно';
 $_lang['shoplogistic_crm_deal_stage_check_code'] = 'Проверить код перед переходом в другую стадию';
 $_lang['shoplogistic_crm_deal_stage_check_deal'] = 'Мониторить статус сделки?';
 $_lang['shoplogistic_crm_deal_stage_pay'] = 'Выплатить средства магазину';
+$_lang['shoplogistic_crm_deal_stage_payment_bonus'] = 'Выдать бонусы за покупку покупателю';
 $_lang['shoplogistic_crm_deal_stage_to_tk'] = 'Отправить заявку в ТК';
 $_lang["shoplogistic_crm_deal_stage_stores_available"] = "Доступен для магазинов";
 $_lang["shoplogistic_crm_deal_stage_warehouses_available"] = "Доступен для складов";
@@ -580,6 +646,7 @@ $_lang['shoplogistic_order_warehouse'] = 'Оптовый склад';
 
 $_lang['shoplogistic_docs'] = "Документы";
 $_lang['shoplogistic_stores_docs_id'] = "ID";
+$_lang['shoplogistic_stores_docs_phone'] = "Телефон";
 $_lang['shoplogistic_stores_docs_store_id'] = "Магазин";
 $_lang['shoplogistic_stores_docs_guid'] = "GUID";
 $_lang['shoplogistic_stores_docs_base_guid'] = 'GUID Базы 1С';
@@ -1041,7 +1108,7 @@ $_lang['shoplogistic_queue_remove_confirm'] = 'Вы уверены, что хо�
 $_lang['shoplogistic_queues_remove_confirm'] = 'Вы уверены, что хотите удалить эти задания?';
 
 // РАЗДЕЛ АКЦИИ
-$_lang['shoplogistic_actions'] = 'Акции';
+$_lang['shoplogistic_actions'] = 'Акции и остатки';
 $_lang['shoplogistic_actions_desc'] = 'Создавайте маркетинговые акции';
 $_lang['shoplogistic_actions_stores'] = 'Магазины, участвующие в акции';
 $_lang['shoplogistic_actions_stores_desc'] = 'Здесь будут размещени магазины, которые попали под условия акции, также Вы можете добавить некоторые вручную.';
@@ -1067,6 +1134,71 @@ $_lang['shoplogistic_action_store_name'] = 'Организатор акции';
 $_lang['shoplogistic_action_global'] = 'Глобальная';
 $_lang['shoplogistic_action_active'] = 'Активно';
 $_lang['shoplogistic_action_properties'] = 'Свойства';
+
+$_lang['shoplogistic_form_reset'] = "Сбросить";
+$_lang['shoplogistic_form_submit'] = "Применить";
+$_lang["shoplogistic_form_search"] = "Введите фразу для поиска";
+
+$_lang['shoplogistic_remains'] = 'Остатки';
+$_lang['shoplogistic_remains_desc'] = 'Здесь Вы можете посмотреть все переданные остатки из организаций';
+
+$_lang['shoplogistic_store_remain_status'] = "Статус";
+$_lang['shoplogistic_store_remain_store_id'] = "Магазин";
+$_lang['shoplogistic_store_remain_published'] = "Статус публикации";
+$_lang['shoplogistic_store_remain_copo'] = "Статус сопоставления";
+
+// РАЗДЕЛ БОНУСЫ
+$_lang['shoplogistic_adv'] = 'Реклама';
+$_lang['shoplogistic_bonus'] = 'Бонусы';
+$_lang['shoplogistic_bonus_desc'] = 'Управляйте вознаграждениями бонусной системой';
+$_lang['shoplogistic_bonus_motivation_desc'] = 'Управляйте целями бонусной системы для продавцов';
+
+$_lang['shoplogistic_bonus_gift'] = 'Вознаграждения';
+$_lang['shoplogistic_bonus_motivation'] = 'Цели';
+$_lang['shoplogistic_grid_gift'] = 'Действия';
+
+$_lang['shoplogistic_gift_create'] = 'Создать вознаграждение';
+$_lang["shoplogistic_gift_err_name"] = "Вы должны указать имя страницы";
+$_lang["shoplogistic_gift_err_ae"] = "Страница с таким именем уже существует";
+$_lang["shoplogistic_gift_err_ns"] = "Страница не найдена";
+$_lang["shoplogistic_gift_id"] = "id";
+$_lang["shoplogistic_gift_name"] = "Наименование";
+$_lang["shoplogistic_gift_description"] = "Описание";
+$_lang["shoplogistic_gift_image"] = "Изображение";
+$_lang["shoplogistic_gift_update"] = "Редактировать вознаграждение";
+$_lang["shoplogistic_gift_active"] = "Активен";
+$_lang['shoplogistic_gift_remove'] = 'Удалить вознаграждение';
+$_lang['shoplogistic_gifts_remove'] = 'Удалить вознаграждения';
+$_lang['shoplogistic_gift_remove_confirm'] = 'Вы уверены, что хотите удалить это вознаграждение?';
+$_lang['shoplogistic_gifts_remove_confirm'] = 'Вы уверены, что хотите удалить эти вознаграждения?';
+
+$_lang['shoplogistic_motivation_create'] = 'Создать цель';
+$_lang["shoplogistic_motivation_err_name"] = "Вы должны указать имя цели";
+$_lang["shoplogistic_motivation_err_ae"] = "Цель с таким именем уже существует";
+$_lang["shoplogistic_motivation_err_ns"] = "Цель не найдена";
+$_lang["shoplogistic_motivation_id"] = "id";
+$_lang["shoplogistic_motivation_name"] = "Наименование";
+$_lang["shoplogistic_motivation_description"] = "Описание";
+$_lang["shoplogistic_motivation_description_gifts"] = "Описание вознаграждения";
+$_lang["shoplogistic_motivation_gift"] = "Вознаграждения";
+$_lang["shoplogistic_motivation_image"] = "Изображение";
+$_lang["shoplogistic_motivation_active"] = "Активность";
+$_lang["shoplogistic_motivation_available"] = "Доступно";
+$_lang["shoplogistic_motivation_date_from"] = "С";
+$_lang["shoplogistic_motivation_date_to"] = "ПО";
+$_lang["shoplogistic_motivation_percent"] = "% с бонусной программой";
+$_lang["shoplogistic_motivation_global"] = "Всех";
+$_lang["shoplogistic_motivation_available_store"] = "Доступно для";
+$_lang["shoplogistic_motivation_stores"] = "Магазинов";
+$_lang["shoplogistic_grid_motivation"] = "Действия";
+
+
+$_lang["shoplogistic_motivation_update"] = "Редактировать цель";
+$_lang["shoplogistic_motivation_active"] = "Активен";
+$_lang['shoplogistic_motivation_remove'] = 'Удалить цель';
+$_lang['shoplogistic_motivations_remove'] = 'Удалить цели';
+$_lang['shoplogistic_motivation_remove_confirm'] = 'Вы уверены, что хотите удалить эту цель?';
+$_lang['shoplogistic_motivations_remove_confirm'] = 'Вы уверены, что хотите удалить эти цели?';
 
 $_lang['shoplogistic_action_create'] = 'Создать акцию';
 $_lang['shoplogistic_action_update'] = 'Изменить акцию';
@@ -1260,6 +1392,7 @@ $_lang['shoplogistic_pages_remove'] = 'Удалить страницы';
 $_lang['shoplogistic_page_remove_confirm'] = 'Вы уверены, что хотите удалить эту страницу?';
 $_lang['shoplogistic_pages_remove_confirm'] = 'Вы уверены, что хотите удалить эти страницы?';
 
+
 $_lang["shoplogistic_place_err_name"] = "Вы должны указать имя места";
 $_lang["shoplogistic_place_err_ae"] = "Место с таким именем уже существует";
 $_lang["shoplogistic_place_err_ns"] = "Место не найдена";
@@ -1281,15 +1414,15 @@ $_lang['shoplogistic_places_remove'] = 'Удалить места';
 $_lang['shoplogistic_place_remove_confirm'] = 'Вы уверены, что хотите удалить это место?';
 $_lang['shoplogistic_places_remove_confirm'] = 'Вы уверены, что хотите удалить эти места?';
 
-
-
 $_lang['shoplogistic_adv'] = 'Реклама';
 $_lang['shoplogistic_adv_page'] = 'Страницы';
 $_lang['shoplogistic_adv_place'] = 'Места';
+$_lang['shoplogistic_adv_placeB2B'] = 'Места b2b';
+$_lang['shoplogistic_adv_request'] = 'Запросы';
+$_lang['shoplogistic_adv_requestB2B'] = 'Запросы b2b';
 $_lang['shoplogistic_adv_desc'] = 'Создавайте и управляйте рекламой';
 
 $_lang['shoplogistic_page_create'] = 'Создать страницу';
-
 $_lang['shoplogistic_page_id'] = 'ID';
 $_lang['shoplogistic_page_resource_id'] = 'ID ресурса';
 $_lang['shoplogistic_page_name'] = 'Наименование';
@@ -1297,12 +1430,119 @@ $_lang['shoplogistic_page_active'] = 'Активен';
 $_lang['shoplogistic_page_description'] = 'Описание';
 
 $_lang['shoplogistic_place_id'] = 'ID';
-$_lang['shoplogistic_place_pattern_id'] = 'ID шаблона';
+$_lang['shoplogistic_place_page_id'] = 'Страница';
 $_lang['shoplogistic_place_name'] = 'Наименование';
 $_lang['shoplogistic_place_active'] = 'Активен';
 $_lang['shoplogistic_place_key'] = 'Ключ места';
 $_lang['shoplogistic_place_description'] = 'Описание';
 $_lang['shoplogistic_place_actions'] = 'Действия';
 
+//
+$_lang['shoplogistic_request_create'] = 'Создать акцию';
+$_lang['shoplogistic_request_id'] = 'id';
+$_lang['shoplogistic_request_name'] = 'Название';
+$_lang['shoplogistic_request_description'] = 'Описание';
+$_lang['shoplogistic_request_active'] = 'Активно';
+$_lang['shoplogistic_grid_request'] = 'Действия';
+$_lang['shoplogistic_request_comment'] = 'Комментарий модератора';
+$_lang['shoplogistic_request_action_group'] = 'Статус';
+$_lang['shoplogistic_request_store_name'] = 'Автор акции';
+$_lang['shoplogistic_request_places'] = 'Места размещения';
+$_lang['shoplogistic_request_status'] = 'Статус';
+$_lang['shoplogistic_request_image_inner'] = 'Малый баннер';
+$_lang['shoplogistic_request_image_small'] = 'Квадратный баннер (внутренний)';
+$_lang['shoplogistic_request_image'] = 'Большой баннер';
+
+$_lang['shoplogistic_request_position'] = 'Позиция в карусели';
 
 
+$_lang['shoplogistic_request_status_approve'] = 'Одобрить запрос';
+$_lang['shoplogistic_request_status_deny'] = 'Отклонить запрос';
+
+
+// Параметры системы
+$_lang['shoplogistic_params'] = 'Параметры системы';
+$_lang['shoplogistic_params_desc'] = 'Настройки параметров системы для организаций';
+
+$_lang['shoplogistic_settings_group'] = 'Группы';
+$_lang['shoplogistic_settings_group_desc'] = 'Редактируйте и создавайте группы параметров системы';
+$_lang['shoplogistic_settings_group_create'] = 'Создать группу';
+$_lang['shoplogistic_settings_group_update'] = 'Редактировать группу';
+$_lang['shoplogistic_settings_group_err_name'] = 'Заполните наименование группы';
+$_lang['shoplogistic_settings_group_err_ae'] = 'Группа с таким наименованием уже существует';
+$_lang['shoplogistic_settings_group_err_ns'] = 'Укажите ID группы';
+$_lang['shoplogistic_settings_group_err_nf'] = 'Группа с указанным ID не найдена';
+$_lang['shoplogistic_settings_group_enable'] = 'Включить группу';
+$_lang['shoplogistic_settings_groups_enable'] = 'Включить группы';
+$_lang['shoplogistic_settings_group_disable'] = 'Отключить группу';
+$_lang['shoplogistic_settings_groups_disable'] = 'Отключить группы';
+$_lang['shoplogistic_settings_group_remove'] = 'Удалить группу';
+$_lang['shoplogistic_settings_groups_remove'] = 'Удалить группы';
+$_lang['shoplogistic_settings_group_remove_confirm'] = 'Вы уверены, что хотите удалить эту группу?';
+$_lang['shoplogistic_settings_groups_remove_confirm'] = 'Вы уверены, что хотите удалить эти группы?';
+$_lang['shoplogistic_settings_group_name'] = 'Наименование группы';
+$_lang['shoplogistic_settings_group_description'] = 'Описание группы';
+$_lang['shoplogistic_settings_group_label'] = 'Заголовок группы в ЛК магазина';
+$_lang['shoplogistic_settings_group_active'] = 'Активна';
+$_lang["shoplogistic_settings_group_profile_hidden"] = "Скрыть у пользователя в ЛК";
+
+$_lang['shoplogistic_store_settings'] = 'Параметры';
+$_lang['shoplogistic_setting'] = 'Параметры';
+$_lang['shoplogistic_setting_desc'] = 'Редактируйте и создавайте параметры системы';
+$_lang['shoplogistic_setting_create'] = 'Создать параметр';
+$_lang['shoplogistic_setting_update'] = 'Редактировать параметр';
+$_lang['shoplogistic_setting_err_name'] = 'Заполните ключ параметра';
+$_lang['shoplogistic_setting_err_ae'] = 'Параметр с таким ключом уже существует';
+$_lang['shoplogistic_setting_err_ns'] = 'Укажите ID параметра';
+$_lang['shoplogistic_setting_err_nf'] = 'Параметр с указанным ID не найден';
+
+$_lang['shoplogistic_setting_enable'] = 'Включить параметр';
+$_lang['shoplogistic_settings_enable'] = 'Включить параметры';
+$_lang['shoplogistic_setting_disable'] = 'Отключить параметр';
+$_lang['shoplogistic_settings_disable'] = 'Отключить параметры';
+$_lang['shoplogistic_setting_remove'] = 'Удалить параметр';
+$_lang['shoplogistic_settings_remove'] = 'Удалить параметры';
+$_lang['shoplogistic_setting_remove_confirm'] = 'Вы уверены, что хотите удалить этот параметр?';
+$_lang['shoplogistic_settings_remove_confirm'] = 'Вы уверены, что хотите удалить эти параметры?';
+
+$_lang['shoplogistic_setting_key'] = 'Ключ параметра';
+$_lang['shoplogistic_setting_group'] = 'Группа параметра';
+$_lang['shoplogistic_setting_name'] = 'Наименование';
+$_lang['shoplogistic_setting_type'] = 'Тип';
+$_lang['shoplogistic_setting_description'] = 'Описание';
+$_lang['shoplogistic_setting_label'] = 'Метка в ЛК магазина';
+$_lang['shoplogistic_setting_default'] = 'Значение по умолчанию';
+$_lang['shoplogistic_setting_value'] = 'Значение';
+$_lang['shoplogistic_setting_profile_hidden'] = 'Скрыто для пользователя в ЛК';
+$_lang['shoplogistic_setting_active'] = 'Активен';
+
+$_lang['shoplogistic_store_apirequest'] = 'История запросов к API';
+$_lang['shoplogistic_apirequest'] = 'История запросов к API';
+$_lang['shoplogistic_apirequest_desc'] = 'Просматривайте запросы к API';
+$_lang['shoplogistic_apirequest_create'] = 'Создать запрос к API';
+$_lang['shoplogistic_apirequest_update'] = 'Редактировать запрос к API';
+$_lang['shoplogistic_apirequest_err_method'] = 'Заполните метод запрос к API';
+$_lang['shoplogistic_apirequest_err_ae'] = 'Запрос к API с таким ключом уже существует';
+$_lang['shoplogistic_apirequest_err_ns'] = 'Укажите ID запроса к API';
+$_lang['shoplogistic_apirequest_err_nf'] = 'Запрос к API с указанным ID не найден';
+
+$_lang['shoplogistic_apirequest_enable'] = 'Включить запрос к API';
+$_lang['shoplogistic_apirequests_enable'] = 'Включить запросы к API';
+$_lang['shoplogistic_apirequest_disable'] = 'Отключить запрос к API';
+$_lang['shoplogistic_apirequests_disable'] = 'Отключить запросы к API';
+$_lang['shoplogistic_apirequest_remove'] = 'Удалить запрос к API';
+$_lang['shoplogistic_apirequests_remove'] = 'Удалить запросы к API';
+$_lang['shoplogistic_apirequest_remove_confirm'] = 'Вы уверены, что хотите удалить этот запрос к API?';
+$_lang['shoplogistic_apirequests_remove_confirm'] = 'Вы уверены, что хотите удалить эти запросы к API?';
+
+$_lang['shoplogistic_apirequest_method'] = 'Метод';
+$_lang['shoplogistic_apirequest_store_id'] = 'Организация';
+$_lang['shoplogistic_apirequest_api_key'] = 'Ключ API';
+$_lang['shoplogistic_apirequest_status'] = 'Статус';
+$_lang['shoplogistic_apirequest_response'] = 'Ответ';
+$_lang['shoplogistic_apirequest_ip'] = 'IP';
+$_lang['shoplogistic_apirequest_file'] = 'Файл';
+$_lang['shoplogistic_apirequest_description'] = 'Описание';
+$_lang['shoplogistic_apirequest_request'] = 'Запрос';
+$_lang['shoplogistic_apirequest_createdon'] = 'Дата';
+$_lang['shoplogistic_apirequest_updatedon'] = 'Отредактирован';

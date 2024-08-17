@@ -21,7 +21,7 @@ class shopLogistic
 			'corePath' => $corePath,
 			'modelPath' => $corePath . 'model/',
 			'processorsPath' => $corePath . 'processors/',
-			'version' => '0.0.10',
+			'version' => '0.1.0',
             'json_response' => false,
 
 			'connectorUrl' => $assetsUrl . 'connector.php',
@@ -30,15 +30,14 @@ class shopLogistic
 			'assetsPath' => $assetsPath,
 			'cssUrl' => $assetsUrl . 'css/',
 			'jsUrl' => $assetsUrl . 'js/',
+            'urlMain' => $this->modx->getOption("site_url"),
 
 			'regexp_gen_code' => $this->modx->getOption('shoplogistic_regexp_gen_code'),
 			'city_fields' => array_merge(['id'], explode(',', $this->modx->getOption('shoplogistic_city_fields')), ['actions'])
 		], $config);
 
-
 		$this->modx->addPackage('shoplogistic', $this->config['modelPath']);
 		$this->modx->lexicon->load('shoplogistic:default');
-
 		if ($this->pdoTools = $this->modx->getParser()->pdoTools) {
 			// $this->pdoTools->setConfig($this->config);
 		}
@@ -159,7 +158,7 @@ class shopLogistic
 		}
 		if (!class_exists('minishop2_fast_api')) {
 			require_once dirname(__FILE__) . '/api.class.php';
-			$this->api = new minishop2_fast_api($this->modx, array());
+			$this->api = new minishop2_fast_api($this, $this->modx, array());
 		}
         if (!class_exists('SphinxClient')) {
             require_once dirname(__FILE__) . '/sphinx.class.php';
@@ -219,6 +218,18 @@ class shopLogistic
         if (!class_exists('optAnalyticsHandler')) {
             require_once dirname(__FILE__) . '/analytics/opt.class.php';
             $this->analyticsOpt = new optAnalyticsHandler($this, $this->modx);
+        }
+        if (!class_exists('bonusAnalyticsHandler')) {
+            require_once dirname(__FILE__) . '/analytics/bonus.class.php';
+            $this->analyticsBonus = new bonusAnalyticsHandler($this, $this->modx);
+        }
+        if (!class_exists('userHandler')) {
+            require_once dirname(__FILE__) . '/user.class.php';
+            $this->userHandler = new slUser($this, $this->modx);
+        }
+        if (!class_exists('orgHandler')) {
+            require_once dirname(__FILE__) . '/org.class.php';
+            $this->orgHandler = new slOrganization($this, $this->modx);
         }
         if (!class_exists('salesAnalyticsHandler')) {
             require_once dirname(__FILE__) . '/analytics/sales.class.php';
@@ -1170,7 +1181,7 @@ class shopLogistic
 			   sin(radians({$lat})) * 
 			   sin(radians(lat)))
 			) AS distance 
-			FROM {$this->modx->getTableName($type)} WHERE `active` = 1 {$where} ORDER BY distance LIMIT {$limit} ";
+			FROM {$this->modx->getTableName($type)} WHERE `active` = 1 AND `marketplace` = 1 {$where} ORDER BY distance LIMIT {$limit} ";
 		$statement = $this->modx->prepare($sql);
 		// $this->modx->log(1, $sql);
 		if ( $statement->execute()) {

@@ -1,5 +1,8 @@
 Changelog for shopLogistic.
 
+0.1.0-pl
+==============
+- First stable
 
 0.0.11-pl
 ==============

@@ -361,9 +361,10 @@ class objectsHandler
                                         if($resource){
                                             $resource->set("createdon", time());
                                             $resource->set("updatedon", time());
-                                            $resource->set("alias", md5($resource->get("id")));
-                                            $resource->set("uri",  md5($resource->get("id")));
-                                            $resource->set("uri_override", 1);
+                                            $alias = $resource->get("id")."_".$resource->cleanAlias($resource->get("pagetitle"));
+                                            $resource->set('alias', $alias);
+                                            $resource->set('uri', "products/".$alias);
+                                            $resource->set('uri_override', 1);
                                             $resource->save();
                                         }
                                     }
@@ -496,6 +497,7 @@ class objectsHandler
             return $this->getBalanceRequest($properties);
         }
         if($properties['type'] == 'opts'){
+            // return $this->sl->orgHandler->getWarehouses($properties["id"], $properties);
             return $this->getOpts($properties);
         }
         if($properties['type'] == 'report_copo'){
@@ -581,8 +583,8 @@ class objectsHandler
                 $keys = array_keys($properties['sort']);
                 $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
             }
-            $q->prepare();
-            $this->modx->log(1, $q->toSQL());
+//            $q->prepare();
+//            $this->modx->log(1, $q->toSQL());
             if($q->prepare() && $q->stmt->execute()){
                 $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
             }
@@ -593,7 +595,6 @@ class objectsHandler
             "total" => 0
         );
     }
-
 
     public function getReportCopoDetailsAll($properties){
         if(isset($properties['vendor_id'])){
@@ -677,8 +678,8 @@ class objectsHandler
                 $keys = array_keys($properties['sort']);
                 $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
             }
-            $q->prepare();
-            $this->modx->log(1, $q->toSQL());
+//            $q->prepare();
+//            $this->modx->log(1, $q->toSQL());
             if($q->prepare() && $q->stmt->execute()){
                 $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach($result['items'] as $key => $item){
@@ -1133,12 +1134,14 @@ class objectsHandler
 
     public function getOpts($properties){
         $query = $this->modx->newQuery("slStores");
-        $query->where(array("slStores.warehouse:=" => 1));
-        $query->leftJoin("slWarehouseStores", "slWarehouseStores", "slWarehouseStores.store_id = {$properties["id"]} AND slWarehouseStores.warehouse_id = slStores.id");
+        $query->leftJoin("slWarehouseStores", "slWarehouseStores", "slWarehouseStores.org_id = {$properties["id"]} AND slWarehouseStores.warehouse_id = slStores.id");
         $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
         $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
-
-        $this->modx->log(1, print_r($properties, 1));
+        $query->where(array(
+            "slStores.warehouse:=" => 1,
+            "slStores.active:=" => 1,
+            "slStores.opt_marketplace:=" => 1
+        ));
         if($properties['filtersdata']['region']){
             $geo_data = $this->parseRegions($properties['filtersdata']['region']);
             $criteria = array();
@@ -1154,7 +1157,7 @@ class objectsHandler
         }
 
         if ($properties['filtersdata']['our']) {
-            $query->where(array("slWarehouseStores.store_id:=" => $properties["id"]));
+            $query->where(array("slWarehouseStores.org_id:=" => $properties["id"]));
         }
 
         if ($properties['filter']) {
@@ -1187,7 +1190,6 @@ class objectsHandler
         }
 
         if ($query->prepare() && $query->stmt->execute()) {
-            $this->modx->log(1, $query->toSQL());
             $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach($result['items'] as $key => $val){
                 if($val["image"]){
@@ -2487,14 +2489,53 @@ class objectsHandler
         return $output;
     }
 
+    /**
+     * Берем регионы
+     *
+     * @param $properties
+     * @return array
+     */
+    public function getRegions ($properties) {
+        $output = array();
+        $q = $this->modx->newQuery("dartLocationRegion");
+        $q->select(array("dartLocationRegion.*"));
+        if($q->prepare() && $q->stmt->execute()) {
+            $output['regions'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        }
+        $q = $this->modx->newQuery("dartLocationCity");
+        $q->select(array("dartLocationCity.*"));
+        if($q->prepare() && $q->stmt->execute()) {
+            $output['cities'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return $output;
+    }
+
+    /**
+     * Берем данные по магазинам
+     *
+     * @param $properties
+     * @return array
+     */
     public function loadData($properties){
         $output = array();
+        $stores = array();
+        // TODO: сделать флаг проверки выгрузки данных по своим клиентам
+
+        /*
         if($this->config['loaddata'] == 'demo'){
             $stores[] = 5;
             $stores[] = 6;
         }
         if($properties['stores']){
             $stores = $properties['store'];
+        }
+        */
+        if($properties['apikey']) {
+            $store = $this->modx->getObject("slStores", array("apikey" => $properties['apikey']));
+            if ($store) {
+                $stores[] = $store->get("id");
+            }
         }
         if($stores){
             // берем магазины
@@ -2505,8 +2546,6 @@ class objectsHandler
             $q->where(array(
                 "id:IN" => $stores
             ));
-            $q->prepare();
-            $this->modx->log(1, $q->toSQL());
             if($q->prepare() && $q->stmt->execute()){
                 $stores = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach($stores as $key => $store) {
@@ -2518,14 +2557,15 @@ class objectsHandler
                     $query->leftJoin("slStoreDocs", "slStoreDocs", "slStoreDocs.id = slStoreDocsProducts.doc_id");
                     $query->leftJoin("slStoresRemains", "slStoresRemains", "slStoresRemains.id = slStoreDocsProducts.remain_id");
                     $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
-                    $query->leftJoin("msVendor", "msVendor", "msVendor.id = msProductData.vendor");
+                    $query->leftJoin("msVendor", "msVendor", "msVendor.id = slStoresRemains.brand_id");
                     $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
-                    $query->select(array("msProductData.vendor_article as article, modResource.pagetitle as name, msVendor.name as vendor_name, slStoreDocs.guid as doc_guid, slStoreDocs.date as date, slStoreDocsProducts.count as count, slStoreDocsProducts.price as price"));
+                    $query->select(array("COALESCE(msProductData.vendor_article, slStoresRemains.article) as article, COALESCE(modResource.pagetitle, slStoresRemains.name) as name, msVendor.name as vendor_name, slStoreDocs.guid as doc_guid, slStoreDocs.date as date, slStoreDocsProducts.count as count, slStoreDocsProducts.price as price"));
                     $query->where(array(
                         "slStoreDocs.store_id:=" => $str['id'],
-                        "AND:slStoresRemains.product_id:!=" => 0,
-                        "AND:msProductData.vendor_article:!=" => ""
+                        "AND:slStoresRemains.article:!=" => ""
                     ));
+                    $query->prepare();
+                    $this->modx->log(1, $query->toSQL());
                     if ($query->prepare() && $query->stmt->execute()) {
                         $sales = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                         foreach ($sales as $sale) {
@@ -2538,14 +2578,15 @@ class objectsHandler
                 foreach ($output['stores'] as $key => $str) {
                     $query = $this->modx->newQuery("slStoresRemains");
                     $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
-                    $query->leftJoin("msVendor", "msVendor", "msVendor.id = msProductData.vendor");
+                    $query->leftJoin("msVendor", "msVendor", "msVendor.id = slStoresRemains.brand_id");
                     $query->leftJoin("modResource", "modResource", "modResource.id = slStoresRemains.product_id");
-                    $query->select(array("msProductData.vendor_article as article, modResource.pagetitle as name, msVendor.name as vendor_name, slStoresRemains.remains, slStoresRemains.reserved, slStoresRemains.available, slStoresRemains.price"));
+                    $query->select(array("COALESCE(msProductData.vendor_article, slStoresRemains.article) as article, COALESCE(modResource.pagetitle, slStoresRemains.name) as name, msVendor.name as vendor_name, slStoresRemains.remains, slStoresRemains.reserved, slStoresRemains.available, slStoresRemains.price"));
                     $query->where(array(
                         "slStoresRemains.store_id:=" => $str['id'],
-                        "AND:slStoresRemains.product_id:!=" => 0,
-                        "AND:msProductData.vendor_article:!=" => ""
+                        "AND:slStoresRemains.article:!=" => ""
                     ));
+                    $query->prepare();
+                    $this->modx->log(1, $query->toSQL());
                     if ($query->prepare() && $query->stmt->execute()) {
                         $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                         foreach ($remains as $remain) {
@@ -2608,6 +2649,8 @@ class objectsHandler
                         mkdir($tmp_path, 0777, true);
                     }
 
+                    $this->clearTempFiles($tmp_path);
+
                     foreach($_FILES as $key => $file){
                         foreach($file['name'] as $k => $v){
                             $typefile = substr(strrchr(basename($file['name'][$k]), '.'), 1);
@@ -2633,6 +2676,8 @@ class objectsHandler
                         mkdir($tmp_path, 0777, true);
                     }
 
+                    $this->clearTempFiles($tmp_path);
+
 
                     foreach($_FILES as $key => $file){
                         $typefile = substr(strrchr(basename($file['name']), '.'), 1);
@@ -2649,6 +2694,31 @@ class objectsHandler
                         }
                     }
                 }
+
+                if($properties['upload_org_avatar']){
+                    $tmp_path = $this->modx->getOption('base_path').'assets/components/shoplogistic/tmp/avatar/';
+                    $tmp_url = 'assets/components/shoplogistic/tmp/avatar/';
+                    if(!file_exists($tmp_path)){
+                        mkdir($tmp_path, 0777, true);
+                    }
+
+                    $this->clearTempFiles($tmp_path);
+
+                    foreach($_FILES as $key => $file){
+                        $typefile = substr(strrchr(basename($file['name']), '.'), 1);
+                        $namefile = uniqid() . "." . $typefile;
+
+                        $target = $tmp_path . $namefile;
+                        if (move_uploaded_file($file['tmp_name'], $target)) {
+                            $output['files'][] = array(
+                                "name" => $namefile,
+                                "original" => $tmp_url . $namefile,
+                                "original_href" => str_replace("//assets", "/assets", $this->modx->getOption('site_url') . $tmp_url . $namefile),
+                                "type" => $properties['upload_org_avatar'],
+                            );
+                        }
+                    }
+                }
                 // уведомление, что не указана организация
             }
         }else{
@@ -2656,6 +2726,21 @@ class objectsHandler
             return false;
         }
         return $output;
+    }
+
+    //Удаляет временные файлы спустя час
+    public function clearTempFiles ($tmp_path) {
+        if (file_exists($tmp_path)) {
+            foreach (glob($tmp_path . '*') as $file) {
+                $filectime = filectime($file);
+                $date = strtotime(date('Y-m-d H:i',strtotime('-1 hour')));
+
+                if($filectime < $date){
+                    unlink($file);
+                    $this->modx->log(1, "{$file}");
+                }
+            }
+        }
     }
 
     public function setObjects($properties){
@@ -2696,6 +2781,9 @@ class objectsHandler
         if($properties['type'] == 'toggleOpts') {
             $response = $this->toggleOpts($properties);
         }
+        if($properties['type'] == 'toggleOptsVisible') {
+            $response = $this->toggleOptsVisible($properties);
+        }
         if($properties['type'] == 'work_week' && $properties['action'] == 'set'){
             $response = $this->sl->store->setWork($properties);
         }
@@ -2706,7 +2794,30 @@ class objectsHandler
             // TODO: перенести в opt.class.php
             $response = $this->orderSubmit($properties);
         }
+        if($properties["action"] == 'diler/set'){
+            $response = $this->setDiler($properties);
+        }
+        if($properties["action"] == "set/organization/settings"){
+            $response = $this->sl->store->setSettings($properties);
+        }
         return $response;
+    }
+
+    /**
+     * set Diler sale
+     *
+     * @param $properties
+     * @return mixed
+     *
+     */
+    public function setDiler($properties){
+        $output = array();
+        if($object = $this->modx->getObject("slWarehouseStores", $properties["id"])){
+            $object->set("base_sale", $properties["base_sale"]);
+            $object->save();
+            $output = $object->toArray();
+        }
+        return $this->sl->tools->success("", $output);;
     }
 
     // TODO: перенести в opt.class.php
@@ -2801,21 +2912,44 @@ class objectsHandler
             if(count($properties['vendors'])){
                 foreach($properties['vendors'] as $key => $v){
                     if($v){
-                        if(!$object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["id"], "warehouse_id" => $key))){
-                            $object = $this->modx->newObject("slWarehouseStores");
+                        if($object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["id"], "warehouse_id" => $key))){
+                            $object->set("visible", 1);
+                            $object->save();
+                            $outputs[] = $object->toArray();
                         }
-                        $object->set("store_id", $properties["id"]);
-                        $object->set("warehouse_id", $key);
-                        $object->set("description", "Установлено через ЛК магазина");
-                        $object->set("sync", 0);
-                        $object->set("date", time());
-                        $object->save();
-                        $outputs[] = $object->toArray();
                     }
                 }
             }
         }
         return $this->sl->success("Объекты создан", $outputs);
+    }
+
+    /**
+     * Чекаем оптовиков (видимость)
+     *
+     * @param $properties
+     * @return mixed
+     */
+    public function toggleOptsVisible($properties)
+    {
+        // $this->modx->log(1, print_r($properties, 1));
+        if($properties['action']){
+            // установить
+            if($object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["id"], "warehouse_id" => $properties["store"]))){
+                $object->set("visible", 1);
+                $object->save();
+                return $this->sl->success("Объект создан", $object->toArray());
+            }
+        }else{
+            // удалить
+            $object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]));
+            if($object){
+                $object->set("visible", 0);
+                $object->save();
+                return $this->sl->success("Объект удален", $object->toArray());
+            }
+        }
+        return $this->sl->tools->error("Объект не найден", $properties);
     }
 
     /**
@@ -2829,10 +2963,10 @@ class objectsHandler
         // $this->modx->log(1, print_r($properties, 1));
         if($properties['action']){
             // установить
-            if(!$object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["id"], "warehouse_id" => $properties["store"]))){
+            if(!$object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["id"], "warehouse_id" => $properties["store"]))){
                 $object = $this->modx->newObject("slWarehouseStores");
             }
-            $object->set("store_id", $properties["store"]);
+            $object->set("org_id", $properties["store"]);
             $object->set("warehouse_id", $properties["id"]);
             $object->set("description", "Установлено через ЛК магазина");
             $object->set("sync", 0);
@@ -2841,7 +2975,7 @@ class objectsHandler
             return $this->sl->success("Объект создан", $object->toArray());
         }else{
             // удалить
-            $object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["store"], "warehouse_id" => $properties["id"]));
+            $object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]));
             if($object){
                 $data = $object->toArray();
                 $object->remove();
@@ -3234,6 +3368,12 @@ class objectsHandler
         return $output;
     }
 
+    /**
+     * Изменение профиля организации
+     *
+     * @param $properties
+     * @return void
+     */
     public function setOrganization($properties){
         if($properties['action'] == 'set'){
             $store_id = $properties['id'];
@@ -3241,6 +3381,7 @@ class objectsHandler
             $store->set("contact", $properties['contact']);
             $store->set("phone", $properties['phone']);
             $store->set("email", $properties['email']);
+            $store->set("description", $properties['description']);
             $store->set("updatedon", time());
             if($properties['files']){
                 if($file = $store->get("image")){
@@ -3341,6 +3482,193 @@ class objectsHandler
         return array();
     }
 
+//    public function getAllProducts($store_id, $properties = array(), $include = 1){
+//        $results = array();
+//
+//        $q = $this->modx->newQuery("slStoresRemains");
+//        $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+//        $q->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+//        $q->where(array(
+//            "slStoresRemains.store_id:=" => $properties['id'],
+//            "slStoresRemains.price:>" => 0,
+////            "slStoresRemains.remains:>" => 0
+//        ));
+//
+//        $q->select(array(
+//            'slStoresRemains.price as price',
+//            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+//            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+//            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+//            "`slStoresRemains`.`id` as id"
+//        ));
+//
+//        $urlMain = $this->modx->getOption("site_url");
+//
+//        $idsProducts = array();
+//        //Если нет выбранных, выдаём весь список
+//        if($properties['selected']){
+//
+//            foreach ($properties['selected'] as $key => $value) {
+//                array_push($idsProducts, $value['id']);
+//            }
+//
+//            $q->where(array(
+//                "slStoresRemains.id:NOT IN" => $idsProducts
+//            ));
+//        }
+//
+//        $q_selected = $this->modx->newQuery("slStoresRemains");
+//        $q_selected->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+//        $q_selected->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+//        $q_selected->where(array(
+//            "slStoresRemains.store_id:=" => $properties['id'],
+//            "slStoresRemains.price:>" => 0,
+////            "slStoresRemains.remains:>" => 0
+//        ));
+//
+//        $q_selected->select(array(
+//            'slStoresRemains.price as price',
+//            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+//            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+//            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+//            "`slStoresRemains`.`id` as id",
+//            "`slStoresRemains`.`category_id` as category_id"
+//        ));
+//
+//        if(!$properties['isallproducts']){
+//            $q_selected->where(array(
+//                "slStoresRemains.id:IN" => $idsProducts
+//            ));
+//        }
+//
+//
+//        if($properties['filterselected']) {
+//            if ($properties['filterselected']['name']) {
+//                $q_selected->where(array(
+//                    "modResource.pagetitle:LIKE" => "%{$properties['filterselected']['name']}%",
+//                    "OR:slStoresRemains.name:LIKE" => "%{$properties['filterselected']['name']}%",
+//                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filterselected']['name']}%",
+//                    "OR:slStoresRemains.article:LIKE" => "%{$properties['filterselected']['name']}%"
+//                ));
+//            }
+//
+//            if($properties['filterselected']['category']){
+//
+//                $idsProductsCategory = [];
+//
+//                foreach ($properties['filterselected']['category'] as $key => $value) {
+//                    if($value['checked']){
+//                        array_push($idsProductsCategory, $key);
+//                    }
+//                }
+//
+//                $q_selected->where(array(
+//                    "slStoresRemains.category_id:IN" => $idsProductsCategory
+//                ));
+//            }
+//        }
+//
+//        $q_selected->prepare();
+//        $this->modx->log(1, $q_selected->toSQL());
+//
+//        // Подсчитываем общее число записей
+//        $results['total_selected'] = $this->modx->getCount('slStoresRemains', $q_selected);
+//
+//
+//        $properties_selected = $properties['selected'];
+//
+//        if($q_selected->prepare() && $q_selected->stmt->execute()) {
+//            $qselected = $q_selected->stmt->fetchAll(PDO::FETCH_ASSOC);
+//
+//            foreach ($properties_selected as $key => $value){
+//                $properties_selected[$key]['hide'] = false;
+//            }
+//
+//            $index = 0;
+//            foreach ($qselected as $select){
+//                if($index >= ($properties['perpage'] * ($properties['page_selected'] - 1)) && $index < ($properties['perpage'] * $properties['page_selected'])){
+//                    $properties_selected[$select['id']]['hide'] = true;
+//                }
+//                $index++;
+//
+//                if(!$properties_selected[$select['id']]['name']) {
+//                    $properties_selected[$select['id']]['name'] = $select['name'];
+//                    $properties_selected[$select['id']]['article'] = $select['article'];
+//                    $properties_selected[$select['id']]['discountInRubles'] = 0;
+//                    $properties_selected[$select['id']]['discountInterest'] = 0;
+//                    $properties_selected[$select['id']]['finalPrice'] = $select['price'];
+//                    $properties_selected[$select['id']]['id'] = $select['id'];
+//                    $properties_selected[$select['id']]['image'] = $this->sl->config["urlMain"] . $select['image'];
+//                    $properties_selected[$select['id']]['multiplicity'] = 1;
+//                    $properties_selected[$select['id']]['price'] = $select['price'];
+//                    $properties_selected[$select['id']]['prices'] = $this->sl->analyticsOpt->getRemainPrices(array("remain_id" => $select['id']));
+//                }
+//            }
+//        }
+//
+//
+//        if($properties['filter']){
+//            if($properties['filter']['name']) {
+//                $q->where(array(
+//                    "modResource.pagetitle:LIKE" => "%{$properties['filter']['name']}%",
+//                    "OR:slStoresRemains.name:LIKE" => "%{$properties['filter']['name']}%",
+//                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']['name']}%",
+//                    "OR:slStoresRemains.article:LIKE" => "%{$properties['filter']['name']}%"
+//                ));
+//            }
+//
+//
+//            if($properties['filter']['category']){
+//
+//                $idsProductsCategory = [];
+//
+//                foreach ($properties['filter']['category'] as $key => $value) {
+//                    if($value['checked']){
+//                        array_push($idsProductsCategory, $key);
+//                    }
+//                }
+//
+//                $q->where(array(
+//                    "slStoresRemains.category_id:IN" => $idsProductsCategory
+//                ));
+//            }
+//        }
+//
+//        if($properties['page'] && $properties['perpage']){
+//            $limit = $properties['perpage'];
+//            $offset = ($properties['page'] - 1) * $properties['perpage'];
+//            $q->limit($limit, $offset);
+//        }else{
+//            $limit = 50;
+//            $offset = 0;
+//            $q->limit($limit, $offset);
+//        }
+//
+//        // Подсчитываем общее число записей
+//        $results['total'] = $this->modx->getCount('slStoresRemains', $q);
+//
+////        $q->prepare();
+////        $this->modx->log(1, $q->toSQL());
+//        if($q->prepare() && $q->stmt->execute()){
+//            $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+//
+//            foreach ($out as $key => $product){
+//                $out[$key]['image'] = $urlMain . $product['image'];
+//            }
+//
+//            if(!$properties['selected'] && !$properties['isallproducts']){
+//                $results['products'] = $out;
+//
+//            }else{
+//                $results['products'] = $out;
+//                $results['selected'] = $properties_selected;
+//            }
+//            return $results;
+//        }
+//
+//        return array();
+//    }
+
     public function getAllProducts($store_id, $properties = array(), $include = 1){
         $results = array();
 
@@ -3350,7 +3678,6 @@ class objectsHandler
         $q->where(array(
             "slStoresRemains.store_id:=" => $properties['id'],
             "slStoresRemains.price:>" => 0,
-//            "slStoresRemains.remains:>" => 0
         ));
 
         $q->select(array(
@@ -3361,24 +3688,15 @@ class objectsHandler
             "`slStoresRemains`.`id` as id"
         ));
 
+        $urlMain = $this->modx->getOption("site_url");
+
         $idsProducts = array();
         //Если нет выбранных, выдаём весь список
-        if($properties['selected']){
-
-            foreach ($properties['selected'] as $key => $value) {
-                array_push($idsProducts, $value['id']);
-            }
-
-            //for($i = 0; $i < count($properties['selected']); $i++){
-            //$idsProducts[$i] = $properties['selected'][$i]['id'];
-            //}
-
+        if($properties['selected'] && !$properties['isallproducts']){
             $q->where(array(
-                "slStoresRemains.id:NOT IN" => $idsProducts
+                "slStoresRemains.id:NOT IN" => $properties['selected']
             ));
         }
-
-        $idsProductsCategory = array();
 
         if($properties['filter']){
             if($properties['filter']['name']) {
@@ -3392,6 +3710,9 @@ class objectsHandler
 
 
             if($properties['filter']['category']){
+
+                $idsProductsCategory = [];
+
                 foreach ($properties['filter']['category'] as $key => $value) {
                     if($value['checked']){
                         array_push($idsProductsCategory, $key);
@@ -3399,10 +3720,29 @@ class objectsHandler
                 }
 
                 $q->where(array(
-                    "modResource.parent:IN" => $idsProductsCategory
+                    "slStoresRemains.category_id:IN" => $idsProductsCategory
                 ));
             }
         }
+
+        if($properties['isallproducts'] == "all"){
+            if($q->prepare() && $q->stmt->execute()) {
+                $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                $selected = [];
+                foreach ($out as $key => $product){
+                    $selected[$product['id']] = $product;
+                    $selected[$product['id']]['image'] = $urlMain . $product['image'];
+                    $selected[$product['id']]['prices'] = $this->sl->analyticsOpt->getRemainPrices(array("remain_id" => $product['id']));
+                }
+                $results['selected'] = $selected;
+            }
+        } elseif ($properties['isallproducts']  == "null"){
+            $results['selected'] = [];
+            $results['visible'] = [];
+        }
+
+        // Подсчитываем общее число записей
+        $results['total'] = $this->modx->getCount('slStoresRemains', $q);
 
         if($properties['page'] && $properties['perpage']){
             $limit = $properties['perpage'];
@@ -3414,23 +3754,116 @@ class objectsHandler
             $q->limit($limit, $offset);
         }
 
-        // Подсчитываем общее число записей
-        $results['total'] = $this->modx->getCount('slStoresRemains', $q);
+        $q_selected = $this->modx->newQuery("slStoresRemains");
+        $q_selected->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+        $q_selected->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+        $q_selected->where(array(
+            "slStoresRemains.store_id:=" => $properties['id'],
+            "slStoresRemains.price:>" => 0,
+        ));
 
-        $q->prepare();
-        $this->modx->log(1, $q->toSQL());
-        if($q->prepare() && $q->stmt->execute()){
-            $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+        $q_selected->select(array(
+            'slStoresRemains.price as price',
+            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
+            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
+            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
+            "`slStoresRemains`.`id` as id",
+            "`slStoresRemains`.`category_id` as category_id"
+        ));
 
-            if(!$properties['selected']){
-                $results['products'] = $out;
-
-            }else{
-                $results['products'] = $out;
-                $results['selected'] = $properties['selected'];
-            }
-            return $results;
+        if($properties['isallproducts']){
+            $q_selected->where(array(
+                "slStoresRemains.id:IN" => array_keys($results['selected'])
+            ));
+        }elseif(count($properties['selected']) == 0){
+            $q_selected->where(array(
+                "slStoresRemains.id:IN" => []
+            ));
+        }elseif($properties['selected']){
+            $q_selected->where(array(
+                "slStoresRemains.id:IN" => $properties['selected']
+            ));
         }
+
+
+        if($properties['filterselected']) {
+            if ($properties['filterselected']['name']) {
+                $q_selected->where(array(
+                    "modResource.pagetitle:LIKE" => "%{$properties['filterselected']['name']}%",
+                    "OR:slStoresRemains.name:LIKE" => "%{$properties['filterselected']['name']}%",
+                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filterselected']['name']}%",
+                    "OR:slStoresRemains.article:LIKE" => "%{$properties['filterselected']['name']}%"
+                ));
+            }
+
+            if($properties['filterselected']['category']){
+
+                $idsProductsCategory = [];
+
+                foreach ($properties['filterselected']['category'] as $key => $value) {
+                    if($value['checked']){
+                        array_push($idsProductsCategory, $key);
+                    }
+                }
+
+                $q_selected->where(array(
+                    "slStoresRemains.category_id:IN" => $idsProductsCategory
+                ));
+            }
+        }
+
+        //Подсчитываем общее число записей
+        $results['total_selected'] = $this->modx->getCount('slStoresRemains', $q_selected);
+
+        if($properties['page_selected'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page_selected'] - 1) * $properties['perpage'];
+            $q_selected->limit($limit, $offset);
+        }else{
+            $limit = 50;
+            $offset = 0;
+            $q_selected->limit($limit, $offset);
+        }
+
+
+
+        if($q_selected->prepare() && $q_selected->stmt->execute()) {
+            $qselected = $q_selected->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($qselected as $key => $product){
+                $qselected[$key]['image'] = $urlMain . $product['image'];
+            }
+            $results['visible'] = $qselected;
+        }
+
+        if($properties['type']){
+            $results['type'] = $properties['type'];
+        }
+
+        $results['properties'] = $properties;
+
+        if($properties['isallproducts']  == "all"){
+            $results['products'] = [];
+            $results['total'] = 0;
+        }else
+        {
+            if($q->prepare() && $q->stmt->execute()){
+                $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+                foreach ($out as $key => $product){
+                    $out[$key]['image'] = $urlMain . $product['image'];
+                }
+
+                if(!$properties['selected'] && !$properties['isallproducts']){
+                    $results['products'] = $out;
+                }else{
+                    $results['products'] = $out;
+                }
+            }
+
+        }
+
+        return $results;
 
         return array();
     }
@@ -3641,8 +4074,8 @@ class objectsHandler
             }else{
                 $q->sortby('id', "DESC");
             }
-            $q->prepare();
-            $this->modx->log(1, $q->toSQL());
+//            $q->prepare();
+//            $this->modx->log(1, $q->toSQL());
             if ($q->prepare() && $q->stmt->execute()) {
                 $output = array();
                 $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);

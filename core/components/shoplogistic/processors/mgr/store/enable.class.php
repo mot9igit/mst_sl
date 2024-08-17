@@ -44,9 +44,10 @@ class slStoresEnableProcessor extends modObjectProcessor
             if ($shopLogistic) {
                 $shopLogistic->loadServices("web");
                 // Ставим на товар статус В наличии
-                $shopLogistic->product->changeAvailableStatus($id, 1);
+                if($object->get('marketplace')){
+                    $shopLogistic->product->changeAvailableStatus($id, 1);
+                }
             }
-
         }
 
         return $this->success();

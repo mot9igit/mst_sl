@@ -59,45 +59,61 @@ class shopLogisticHomeManagerController extends modExtraManagerController
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/combo.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.window.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/misc/default.grid.js?v='.$this->shopLogistic->config['version']);
-        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores.grid.js?v='.$this->shopLogistic->config['version']);
+
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/vendors.grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/brands.grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/brands.windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/matrix.grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/vendors/matrix.windows.js?v='.$this->shopLogistic->config['version']);
-        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeusers.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeusers.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeremains.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storeremains.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/stores.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/stores.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/remains/storeremains.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/remains/storeremains.windows.js?v='.$this->shopLogistic->config['version']);
+		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/users/storeusers.grid.js?v='.$this->shopLogistic->config['version']);
+		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/users/storeusers.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/settings/grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/settings/windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/api_requests/grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/api_requests/windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/windows.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores_remains/prices.grid.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores_remains/prices.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/stores/warehousestores.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/stores/stores/warehousestores.windows.js?v='.$this->shopLogistic->config['version']);
 		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/docs/product.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/wdocs/grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/wdocs/windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/wdocs/product.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/registry.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/registry.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storebalance.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/storebalance.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouse.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouse.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouseremains.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouseremains.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouseusers.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehouseusers.windows.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehousestores.grid.js?v='.$this->shopLogistic->config['version']);
-		$this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/warehousestores.windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/home.panel.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/sections/home.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/org.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/org.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/balance/storebalance.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/balance/storebalance.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/requizites/orgrequisites.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/requizites/orgrequisites.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/bank_requizites/orgrequisitesbank.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/bank_requizites/orgrequisitesbank.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/stores/orgstores.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/stores/orgstores.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/users/orgusers.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/users/orgusers.windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/registry/registry.grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/widgets/org/registry/registry.windows.js?v='.$this->shopLogistic->config['version']);
 
         $this->addHtml('<script type="text/javascript">
         shopLogistic.config = ' . json_encode($this->shopLogistic->config) . ';
         shopLogistic.config.connector_url = "' . $this->shopLogistic->config['connectorUrl'] . '";
         Ext.onReady(function() {MODx.load({ xtype: "shoplogistic-page-home"});});
         </script>');
+
+        $this->addHtml('
+          <script>
+          Ext.onReady(function(){
+            MODx.ux.Ace.replaceTextAreas(
+              Ext.query(".shoplogistic-window textarea")
+            );
+          });
+          </script>
+        ');
     }
 
 

@@ -20,6 +20,11 @@ class slDocsCreateProcessor extends modObjectCreateProcessor
             $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_doc_err_ae'));
         }
 
+        $store_ids = $this->getProperty('store_ids');
+        if(!empty($store_ids)){
+            $this->setProperty("stores", $store_ids);
+        }
+
         return parent::beforeSet();
     }
 

@@ -11,7 +11,7 @@ class ShoplogisticMgrADVManagerController extends slManagerController
      */
     public function getPageTitle()
     {
-        return $this->modx->lexicon('shoplogistic_pages') . ' | shoplogistic';
+        return $this->modx->lexicon('shoplogistic_adv') . ' | shoplogistic';
     }
 
 
@@ -40,10 +40,13 @@ class ShoplogisticMgrADVManagerController extends slManagerController
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/pages/windows.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/places/grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/places/windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/requests/grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/requests/windows.js?v='.$this->shopLogistic->config['version']);
 
 
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/adv.panel.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/adv/adv.js?v='.$this->shopLogistic->config['version']);
+
 
         $this->addHtml('<script type="text/javascript">
 			shopLogistic.config = ' . json_encode($this->shopLogistic->config) . ';

@@ -15,6 +15,7 @@ $xpdo_meta_map['slStoreDocs']= array (
     'base_guid' => '',
     'doc_number' => '',
     'date' => NULL,
+    'phone' => '',
     'description' => '',
     'createdon' => NULL,
     'properties' => NULL,
@@ -59,6 +60,14 @@ $xpdo_meta_map['slStoreDocs']= array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
+    ),
+    'phone' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
     ),
     'description' => 
     array (
@@ -108,6 +117,22 @@ $xpdo_meta_map['slStoreDocs']= array (
       'columns' => 
       array (
         'doc_number' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'phone' => 
+    array (
+      'alias' => 'phone',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'phone' => 
         array (
           'length' => '',
           'collation' => 'A',

@@ -34,77 +34,84 @@ class slXSLX{
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Reader\Exception
      */
-    public function processActionFile ($store_id, $file) {
-        $output = array();
-        $inputFileType = 'Xlsx';
+    public function processActionFile ($store_id, $file, $type) {
         $file_in = $this->modx->getOption("base_path").$file;
         if(file_exists($file_in)){
             try {
                 $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
-            } catch (InvalidArgumentException $e) {
+            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
                 $output = $this->sl->tools->error("Некорректный файл для загрузки!");
             }
             $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
             // Структура по столбцам
+
+            //b2b
             // А - артикул, B - бренд, C - Наименование, D - Цена, E - Старая цена, F - Кратность, G -  GUID
+
+            //b2c
+            // А - артикул, B - бренд, C - Наименование, D - Цена, E - Старая цена, F - GUID
+
+
             // Также по умолчанию игнорируем первую строку
             foreach($sheetData as $key => $value){
                 if($key != 1){
                     // сначала чекаем GIUD
-                    if(isset($value["G"])){
-                        $query = $this->modx->newQuery("slStoresRemains");
-                        $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
-
-                        $query->where(array(
-                            "store_id:=" => $store_id,
-                            "giud:=" => $value["G"]
-                        ));
-                        $query->select(array(
-                            "slStoresRemains.*",
-                            'COALESCE(msProductData.image, "/assets/files/img/nopic.png") as image'
-                        ));
-                        if($query->prepare() && $query->stmt->execute()){
-                            $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
-
-                            if($remain){
-//                                $urlMain = $this->modx->getOption("site_url");
-//                                $remain['image'] = $urlMain . $remain['image'];
-                                $sheetData[$key]["remain"] = $remain;
-                            }else{
-                                $sheetData[$key]["error"] = array(
-                                    "message" => "Остаток не найден"
-                                );
-                            }
+                    if($type == 'b2b'){
+                        if(isset($value["G"])){
+                            $criteria = array(
+                                "store_id:=" => $store_id,
+                                "giud:=" => $value["G"]
+                            );
+                        }else{
+                            $criteria = array(
+                                "store_id:=" => $store_id,
+                                "article:=" => $value["A"]
+                            );
                         }
-                    }else{
-                        $query = $this->modx->newQuery("slStoresRemains");
-                        $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
-                        $query->where(array(
-                            "store_id:=" => $store_id,
-                            "article:=" => $value["A"]
-                        ));
-                        $query->select(array(
-                            "slStoresRemains.*",
-                            'COALESCE(msProductData.image, "/assets/files/img/nopic.png") as image'
-                        ));
-                        if($query->prepare() && $query->stmt->execute()) {
-                            $remain = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-                            if($remain){
-                                if(count($remain) > 1){
-                                    $sheetData[$key]["error"] = array(
-                                        "message" => "По указанному артикулу найдено больше 1 товара",
-                                        "data" => $remain
-                                    );
-                                }else{
-//                                    $urlMain = $this->modx->getOption("site_url");
-//                                    $remain[0]['image'] = $urlMain . $remain[0]['image'];
-                                    $sheetData[$key]["remain"] = $remain[0];
+                    } else if($type == 'b2c') {
+                        if(isset($value["F"])){
+                            $criteria = array(
+                                "store_id:=" => $store_id,
+                                "giud:=" => $value["F"]
+                            );
+                        }else{
+                            $criteria = array(
+                                "store_id:=" => $store_id,
+                                "article:=" => $value["A"]
+                            );
+                        }
+                    }
+
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->leftJoin("msProductData", "msProductData", "msProductData.id = slStoresRemains.product_id");
+                    $query->where($criteria);
+                    $query->select(array(
+                        "slStoresRemains.*",
+                        'COALESCE(msProductData.image, "/assets/files/img/nopic.png") as image'
+                    ));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if($remain){
+
+                            $urlMain = $this->modx->getOption("site_url");
+                            $remain['image'] = $urlMain . $remain['image'];
+
+                            $sheetData[$key]["remain"] = $remain;
+                            if(!isset($value["E"])){
+                                if($remain['price'] > 0){
+                                    $sheetData[$key]["E"] = $remain['price'];
                                 }
-                            }else{
-                                $sheetData[$key]["error"] = array(
-                                    "message" => "Остаток не найден"
-                                );
                             }
+                            if($type == 'b2b') {
+                                if(!isset($value["F"])){
+                                    $sheetData[$key]["F"] = 1;
+                                }
+                            }
+                        }else{
+                            $sheetData[$key]["error"] = array(
+                                "message" => "Остаток не найден"
+                            );
                         }
                     }
                 }
@@ -148,6 +155,136 @@ class slXSLX{
 		$writer->save($file_path);
 		return $file;
 	}
+
+    public function generateOptOrder($basket, $properties){
+        if($properties['store_id']){
+            $spreadsheet = new Spreadsheet();
+            $myWorkSheet = new Worksheet($spreadsheet, mb_strimwidth($basket['stores'][$properties['store_id']]['name_short'], 0, 29));
+            $spreadsheet->addSheet($myWorkSheet);
+            $spreadsheet->removeSheetByIndex(0);
+            $spreadsheet->setActiveSheetIndex(0);
+            $sheet = $spreadsheet->getActiveSheet();
+
+
+            $sheet->mergeCells("A1:J1");
+            $sheet->getStyle('A1:J1')->getFont()->setSize(14);
+            $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+
+            $sheet->getCell('A2')->setValue('Артикул');
+            $sheet->getCell('B2')->setValue('Наименование');
+            $sheet->getCell('C2')->setValue('Количество');
+            $sheet->getCell('D2')->setValue('Цена');
+            $sheet->getCell('E2')->setValue('Сумма');
+//            $sheet->getCell('F2')->setValue('Отсрочка');
+//            $sheet->getCell('G2')->setValue('Оплата доставки');
+//            $sheet->getCell('H2')->setValue('Акции');
+//            $sheet->getCell('J2')->setValue('Срок доставки');
+
+
+
+            $sheet->getCell('A1')->setValue('Заказ у поставщика ' . $basket['stores'][$properties['store_id']]['name']);
+
+            $start_position = 3;
+            foreach($basket['stores'][$properties['store_id']]['products'] as $key => $product){
+                $sheet->insertNewRowBefore($start_position);
+
+                $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
+                $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
+                $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
+
+                $start_position++;
+            }
+            if(count($basket['stores'][$properties['store_id']]['complects'])) {
+                foreach ($basket['stores'][$properties['store_id']]['complects'] as $key => $complect) {
+                    foreach ($complect['products'] as $k => $product) {
+                        $sheet->insertNewRowBefore($start_position);
+
+                        $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                        $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                        $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
+                        $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
+                        $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
+                        $start_position++;
+                    }
+                }
+
+            }
+        } else {
+            $spreadsheet = new Spreadsheet();
+            $spreadsheet->removeSheetByIndex(0);
+
+            $index_active = 0;
+            foreach ($basket['stores'] as $key => $store) {
+                $myWorkSheet = new Worksheet($spreadsheet, mb_strimwidth($store['name_short'], 0, 29));
+                $spreadsheet->addSheet($myWorkSheet);
+                $spreadsheet->setActiveSheetIndex($index_active);
+                $sheet = $spreadsheet->getActiveSheet();
+
+                $sheet->mergeCells("A1:E1");
+                $sheet->getStyle('A1:E1')->getFont()->setSize(14);
+                $sheet->getStyle('A1:E1')->getFont()->setBold(true);
+
+                $sheet->getCell('A2')->setValue('Артикул');
+                $sheet->getCell('B2')->setValue('Наименование');
+                $sheet->getCell('C2')->setValue('Количество');
+                $sheet->getCell('D2')->setValue('Цена');
+                $sheet->getCell('E2')->setValue('Сумма');
+
+                $sheet->getCell('A1')->setValue('Заказ у поставщика ' . $store['name']);
+
+                $start_position = 3;
+                foreach ($store['products'] as $k => $product) {
+                    $sheet->insertNewRowBefore($start_position);
+
+                    $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
+                    $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
+                    $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
+
+                    $start_position++;
+                }
+
+                if(count($store['complects'])){
+                    foreach($store['complects'] as $key_c => $complect){
+
+                        foreach($complect['products'] as $k_c => $product){
+                            $sheet->insertNewRowBefore($start_position);
+
+                            $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
+                            $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
+                            $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
+
+                            $start_position++;
+                        }
+
+                    }
+                }
+
+                $index_active++;
+
+
+            }
+        }
+
+
+
+
+        // пишем файл в формат Excel
+        $writer = new Xlsx($spreadsheet);
+        $path = 'assets/files/stores/reports/test/';
+        $file = $path.'order.xlsx';
+        $file_path = $this->modx->getOption('base_path').$file;
+        if (!file_exists($this->modx->getOption('base_path').$path)) {
+            mkdir($this->modx->getOption('base_path').$path, 0777, true);
+        }
+        $writer->save($file_path);
+        return $file;
+    }
 
 	public function getNum(){
 		// вычисляем номер регистра

@@ -115,7 +115,7 @@ Ext.extend(shopLogistic.grid.FileDocs, shopLogistic.grid.Default, {
             xtype: 'shoplogistic-window-files-docs-update',
             id: 'shoplogistic-window-files-docs-updater',
             record: this.menu.record,
-            title: this.menu.record['store'],
+            title: this.menu.record['name'],
             listeners: {
                 success: {
                     fn: function () {

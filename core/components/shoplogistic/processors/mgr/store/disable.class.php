@@ -44,7 +44,9 @@ class slStoresDisableProcessor extends modObjectProcessor
             if ($shopLogistic) {
                 $shopLogistic->loadServices("web");
                 // Ставим на товар статус НЕ в наличии
-                $shopLogistic->product->changeAvailableStatus($id, 99);
+                if($object->get('marketplace')){
+                    $shopLogistic->product->changeAvailableStatus($id, 99);
+                }
             }
 
         }

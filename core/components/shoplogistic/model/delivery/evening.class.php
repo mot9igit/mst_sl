@@ -21,7 +21,7 @@ class evening{
             'assetsPath' => $assetsPath,
             'cssUrl' => $assetsUrl . 'css/',
             'jsUrl' => $assetsUrl . 'js/',
-            'cities' => array(10,18,17)
+            'cities' => array(10,18,17,22)
         ], $config);
 
     }

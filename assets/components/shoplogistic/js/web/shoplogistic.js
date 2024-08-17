@@ -187,7 +187,7 @@ var profile = {
         }
     },
     reinitButtons: function(){
-        const newAddresToggleModal = document.querySelectorAll('._js_addresses_list ' + this.options.modal);
+        const newAddresToggleModal = document.querySelectorAll('._js_addresses_list ' + this.options.modal + ', .dart-order ' + this.options.modal + ', ._js_addresses_list_modal ' + this.options.modal);
         const newAddresDelivery = document.querySelector(this.options.delivery);
 
         if(newAddresToggleModal) {
@@ -223,6 +223,11 @@ var profile = {
                             }
                             if (newAddresToggleModal[i].classList.contains('select')) {
                                 newAddresDelivery.classList.add('select')
+                                const sting_dt = newAddresToggleModal[i].dataset.data
+                                if (sting_dt) {
+                                    const data = JSON.parse(sting_dt)
+                                    profile.set(data)
+                                }
                             }
                             data.sl_action = "profile/address/getlocation"
                             const location = this.send(data)
@@ -238,9 +243,14 @@ var profile = {
             e.preventDefault();
             const data = e.target.closest('.addressModalForm');
             const elem = data.querySelector("input[name=location_data]")
-            const selectAddress = elem.value;
+            const selectAddress = JSON.parse(elem.value);
+            selectAddress.text_address = data.querySelector("input[name=text_address]").value
+            selectAddress.room = data.querySelector("input[name=room]").value
+            selectAddress.floor = data.querySelector("input[name=floor]").value
+            selectAddress.entrance = data.querySelector("input[name=entrance]").value
+            selectAddress.doorphone = data.querySelector("input[name=doorphone]").value
             const dt = {
-                data: JSON.parse(selectAddress)
+                data: selectAddress
             }
             sl_delivery.setDeliveryFields(dt);
         })
@@ -361,7 +371,8 @@ var profile = {
                     profile.reinitButtons()
                 }
                 if(Object.prototype.hasOwnProperty.call(data_r, "update_data_modal")){
-                    $("._js_addresses_list").html(data_r.update_data_modal)
+                    $("._js_addresses_list_modal").html(data_r.update_data_modal)
+                    profile.reinitButtons()
                 }
                 if (data_r.success) {
                     const newAddresToggleModal = document.querySelectorAll(profile.options.modal);
@@ -702,6 +713,33 @@ var dart_filters = {
                 }
                 const container = document.querySelector(dart_filters.options.products)
                 container.classList.remove('loading')
+
+                const blockTextInfo = document.querySelectorAll('.block-text-info');
+                if(blockTextInfo){
+                    for(let i = 0; i < blockTextInfo.length; i++){
+                        if(blockTextInfo[i].scrollHeight >= 333){
+                            blockTextInfo[i].classList.add("block-text-info__button");
+                        }
+                    }
+                }
+
+                const blockTextInfoMore = document.querySelectorAll('.block-text-info__more');
+
+                if(blockTextInfoMore){
+                    for(let i = 0; i < blockTextInfoMore.length; i++){
+                        blockTextInfoMore[i].addEventListener('click', () => {
+                            if (blockTextInfoMore[i].parentNode.parentNode.style.maxHeight != '333px') {
+                                blockTextInfoMore[i].parentNode.parentNode.style.maxHeight = '333px';
+                                blockTextInfoMore[i].innerText = "Читать далее"
+                                blockTextInfoMore[i].parentNode.parentNode.classList.remove('show')
+                            } else {
+                                blockTextInfoMore[i].parentNode.parentNode.style.maxHeight =  blockTextInfoMore[i].parentNode.parentNode.scrollHeight + 60 + "px";
+                                blockTextInfoMore[i].innerText = "Скрыть"
+                                blockTextInfoMore[i].parentNode.parentNode.classList.add('show')
+                            }
+                        })
+                    }
+                }
             }
         });
     },
@@ -891,7 +929,6 @@ var sl_delivery = {
                     sl_delivery.getDeliveryPrices(geo_data);
                 }
             }
-
         });
         // radio fix in miniShop2 default.js (order.add)
         $(document).on("change", this.options.wrapper + ' input[type=radio][name=sl_service]', function() {
@@ -1131,17 +1168,48 @@ var sl_delivery = {
     },
     pvzclick: function(code){
         if(code){
-            sl_delivery.options.placemarks[code].balloon.open();
-            if(sl_delivery.options.terminals[code]){
-                var btn = $(".changeAddresPoint__content .changeshop__button .sl_check");
-                btn.attr("data-code", code);
-            }
+            const placemarks = sl_delivery.options.placemarks
+            placemarks.forEach((element, index) => {
+                if(element.properties._data.pvz_code == code){
+                    sl_delivery.map.setCenter(sl_delivery.options.placemarks[index].geometry.getBounds()[0], 15, {
+                        checkZoomRange: true, //контролируем доступность масштаба
+                        callback: function() { //спозиционировались
+                            sl_delivery.options.placemarks[index].events.add('mapchange', function(e){
+                                //точка появилась
+                                if( e.get('newMap') != null) {
+                                    //точка загрузилась
+                                    setTimeout(function() {
+                                        //задержка
+                                        // sl_delivery.options.placemarks[index].balloon.open();//открытие балуна
+                                    }, 300);
+                                } });
+                        }
+                    });
+                    // sl_delivery.options.placemarks[index].balloon.open();
+                }
+            })
+
+            // sl_delivery.options.placemarks[code].balloon.open();
+            const terminals = sl_delivery.options.terminals
+            terminals.forEach((element) => {
+                if(element.code == code){
+                    var btn = $(".changeAddresPoint__content .changeshop__button .sl_check");
+                    btn.attr("data-code", code);
+                }
+            });
         }
     },
     pvzcheck: function(elem){
         var code = elem.dataset.code;
         var save_data = {};
-        var data = sl_delivery.options.terminals[code];
+        var data = {}
+        const terminals = sl_delivery.options.terminals
+        terminals.forEach((element) => {
+            if(element.code == code){
+                data = element
+            }
+        });
+        // var data = sl_delivery.options.terminals[code];
         var d = $('input[type=radio][name=sl_service]:checked').val();
         var main_data = $('input[type=radio][name=sl_service]:checked').data('data');
         if (typeof data === 'object'){
@@ -1211,7 +1279,8 @@ var sl_delivery = {
             text = text+'<div class="sl_baloon_submit sl_baloon_block"><button type="button" class="sl_check" onclick="sl_delivery.pvzcheck(this)" data-code="'+ element['code'] +'">Забрать отсюда</button></div>';
             sl_delivery.options.placemarks.push(new ymaps.Placemark(coords, {
                 hintContent: element['address'],
-                balloonContent: text
+                balloonContent: text,
+                pvz_code: element['code']
             }, {
                 iconLayout: 'default#image',
                 iconImageHref: element['map_image'],

@@ -18,6 +18,7 @@ $xpdo_meta_map['slStoresRemains']= array (
     'brand_id' => 0,
     'guid' => '',
     'base_guid' => '',
+    'catalog_guid' => '',
     'name' => '',
     'article' => '',
     'barcode' => '',
@@ -31,7 +32,8 @@ $xpdo_meta_map['slStoresRemains']= array (
     'createdon' => NULL,
     'updatedon' => NULL,
     'request' => 0,
-    'published' => 0,
+    'force_price' => 0,
+    'published' => 1,
     'checked' => 0,
     'autolink' => 1,
     'purchase_speed' => 0.0,
@@ -106,6 +108,14 @@ $xpdo_meta_map['slStoresRemains']= array (
       'default' => '',
     ),
     'base_guid' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'catalog_guid' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -213,13 +223,21 @@ $xpdo_meta_map['slStoresRemains']= array (
       'null' => true,
       'default' => 0,
     ),
-    'published' => 
+    'force_price' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',
       'phptype' => 'boolean',
       'null' => true,
       'default' => 0,
+    ),
+    'published' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
     ),
     'checked' => 
     array (
@@ -320,6 +338,22 @@ $xpdo_meta_map['slStoresRemains']= array (
         ),
       ),
     ),
+    'catalog_guid' => 
+    array (
+      'alias' => 'catalog_guid',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'catalog_guid' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'article' => 
     array (
       'alias' => 'article',
@@ -377,6 +411,22 @@ $xpdo_meta_map['slStoresRemains']= array (
       'columns' => 
       array (
         'product_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'category_id' => 
+    array (
+      'alias' => 'category_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'category_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -676,6 +726,14 @@ $xpdo_meta_map['slStoresRemains']= array (
       'local' => 'updatedby',
       'foreign' => 'id',
       'cardinality' => 'many',
+      'owner' => 'foreign',
+    ),
+    'Category' => 
+    array (
+      'class' => 'slStoresRemainsCategories',
+      'local' => 'category_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
       'owner' => 'foreign',
     ),
   ),

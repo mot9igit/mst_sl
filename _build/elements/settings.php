@@ -270,5 +270,23 @@ return [
         'xtype' => 'numberfield',
         'value' => 0,
         'area' => 'shoplogistic_order',
-    ]
+    ],
+    'bonus_percent' => [
+        'xtype' => 'numberfield',
+        'decimalPrecision' => 2,
+        'value' => '2',
+        'area' => 'shoplogistic_bonus',
+    ],
+    'bonus_percent_store' => [
+        'xtype' => 'numberfield',
+        'decimalPrecision' => 2,
+        'value' => '1',
+        'area' => 'shoplogistic_bonus',
+    ],
+    'max_bonus_percent_deduction' => [
+        'xtype' => 'numberfield',
+        'decimalPrecision' => 100,
+        'value' => '2',
+        'area' => 'shoplogistic_bonus',
+    ],
 ];

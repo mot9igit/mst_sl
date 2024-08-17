@@ -1,0 +1,7 @@
+.sl-services{
+    display: none;
+}
+
+.sl-services.active{
+    display: block;
+}

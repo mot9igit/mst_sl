@@ -91,6 +91,12 @@ Ext.extend(shopLogistic.window.UpdateStage, MODx.Window, {
             checked: false,
         },{
             xtype: 'xcheckbox',
+            boxLabel: _('shoplogistic_crm_deal_stage_payment_bonus'),
+            name: 'payment_bonus',
+            id: config.id + '-payment_bonus',
+            checked: false,
+        },{
+            xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_crm_deal_stage_check_code'),
             name: 'check_code',
             id: config.id + '-check_code',

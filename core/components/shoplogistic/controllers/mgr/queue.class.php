@@ -41,6 +41,8 @@ class ShoplogisticMgrQueueManagerController extends slManagerController
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/panel.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/grid.js?v='.$this->shopLogistic->config['version']);
         $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/windows.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/api_request/grid.js?v='.$this->shopLogistic->config['version']);
+        $this->addJavascript($this->shopLogistic->config['jsUrl'] . 'mgr/queue/api_request/windows.js?v='.$this->shopLogistic->config['version']);
 
         $this->addHtml('<script type="text/javascript">
 			shopLogistic.config = ' . json_encode($this->shopLogistic->config) . ';

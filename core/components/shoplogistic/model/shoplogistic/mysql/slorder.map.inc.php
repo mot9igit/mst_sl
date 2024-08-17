@@ -10,8 +10,7 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'fields' => 
   array (
-    'warehouse_id' => 0,
-    'store_id' => 0,
+    'org_id' => 0,
     'order_id' => 0,
     'crm_id' => 0,
     'ship_id' => 0,
@@ -35,16 +34,7 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'fieldMeta' => 
   array (
-    'warehouse_id' => 
-    array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
-      'null' => true,
-      'default' => 0,
-    ),
-    'store_id' => 
+    'org_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -222,6 +212,22 @@ $xpdo_meta_map['slOrder']= array (
         ),
       ),
     ),
+    'org_id' => 
+    array (
+      'alias' => 'org_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'org_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'store_id' => 
     array (
       'alias' => 'store_id',
@@ -332,18 +338,10 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'aggregates' => 
   array (
-    'Warehouse' => 
+    'slOrg' => 
     array (
-      'class' => 'slWarehouse',
-      'local' => 'warehouse_id',
-      'foreign' => 'id',
-      'cardinality' => 'one',
-      'owner' => 'foreign',
-    ),
-    'Store' => 
-    array (
-      'class' => 'slStores',
-      'local' => 'store_id',
+      'class' => 'slOrg',
+      'local' => 'org_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

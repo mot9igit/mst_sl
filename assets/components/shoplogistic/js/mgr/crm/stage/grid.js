@@ -108,6 +108,7 @@ Ext.extend(shopLogistic.grid.Stage, MODx.grid.Grid, {
             'active',
             'to_tk',
             'pay',
+            'payment_bonus',
             'check_deal',
             'check_code',
             'crm_id',
@@ -171,6 +172,12 @@ Ext.extend(shopLogistic.grid.Stage, MODx.grid.Grid, {
         },{
             header: _('shoplogistic_crm_deal_stage_pay'),
             dataIndex: 'pay',
+            renderer: shopLogistic.utils.renderBoolean,
+            sortable: false,
+            width: 250,
+        },{
+            header: _('shoplogistic_crm_deal_stage_payment_bonus'),
+            dataIndex: 'payment_bonus',
             renderer: shopLogistic.utils.renderBoolean,
             sortable: false,
             width: 250,

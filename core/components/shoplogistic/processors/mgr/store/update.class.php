@@ -30,6 +30,7 @@ class slStoresUpdateProcessor extends modObjectUpdateProcessor
     public function beforeSet()
     {
         $id = (int)$this->getProperty('id');
+        $marketplace = (int)$this->getProperty('marketplace');
         $name = trim($this->getProperty('name'));
         if (empty($id)) {
             return $this->modx->lexicon('shoplogistic_store_err_ns');
@@ -47,12 +48,14 @@ class slStoresUpdateProcessor extends modObjectUpdateProcessor
         $shopLogistic = $this->modx->getService('shopLogistic', 'shopLogistic', $corePath . 'model/');
         if ($shopLogistic) {
             $shopLogistic->loadServices("web");
-            if($active){
-                // Ставим на товар статус В наличии
-                $shopLogistic->product->changeAvailableStatus($id, 1);
-            }else{
-                // Ставим на товар статус НЕ в наличии
-                $shopLogistic->product->changeAvailableStatus($id, 99);
+            if($marketplace){
+                if($active){
+                    // Ставим на товар статус В наличии
+                    $shopLogistic->product->changeAvailableStatus($id, 1);
+                }else{
+                    // Ставим на товар статус НЕ в наличии
+                    $shopLogistic->product->changeAvailableStatus($id, 99);
+                }
             }
         }
 

@@ -12,6 +12,7 @@ $xpdo_meta_map['slOrderProduct']= array (
   array (
     'product_id' => NULL,
     'order_id' => NULL,
+    'store_id' => NULL,
     'name' => NULL,
     'count' => 1,
     'price' => 0.0,
@@ -30,6 +31,14 @@ $xpdo_meta_map['slOrderProduct']= array (
       'null' => false,
     ),
     'order_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'phptype' => 'integer',
+      'attributes' => 'unsigned',
+      'null' => false,
+    ),
+    'store_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -128,6 +137,14 @@ $xpdo_meta_map['slOrderProduct']= array (
       'foreign' => 'id',
       'owner' => 'foreign',
       'cardinality' => 'one',
+    ),
+    'slStores' => 
+    array (
+      'class' => 'slStores',
+      'local' => 'store_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
     ),
     'Order' => 
     array (

@@ -10,7 +10,7 @@ $xpdo_meta_map['slStoreBalance']= array (
   ),
   'fields' => 
   array (
-    'store_id' => 0,
+    'org_id' => 0,
     'order_id' => 0,
     'type' => '',
     'value' => 0.0,
@@ -21,7 +21,7 @@ $xpdo_meta_map['slStoreBalance']= array (
   ),
   'fieldMeta' => 
   array (
-    'store_id' => 
+    'org_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -138,10 +138,10 @@ $xpdo_meta_map['slStoreBalance']= array (
   ),
   'aggregates' => 
   array (
-    'Store' => 
+    'Organization' => 
     array (
-      'class' => 'slStores',
-      'local' => 'store_id',
+      'class' => 'slOrg',
+      'local' => 'org_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

@@ -10,16 +10,17 @@ $xpdo_meta_map['slWarehouseStores']= array (
   ),
   'fields' => 
   array (
-    'store_id' => 0,
+    'org_id' => 0,
     'warehouse_id' => 0,
     'description' => '',
-    'sync' => 0,
+    'visible' => 1,
+    'base_sale' => 0.0,
     'date' => NULL,
     'properties' => NULL,
   ),
   'fieldMeta' => 
   array (
-    'store_id' => 
+    'org_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -45,13 +46,21 @@ $xpdo_meta_map['slWarehouseStores']= array (
       'null' => true,
       'default' => '',
     ),
-    'sync' => 
+    'visible' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',
       'phptype' => 'boolean',
       'null' => false,
-      'default' => 0,
+      'default' => 1,
+    ),
+    'base_sale' => 
+    array (
+      'dbtype' => 'decimal',
+      'precision' => '12,2',
+      'phptype' => 'float',
+      'null' => true,
+      'default' => 0.0,
     ),
     'date' => 
     array (
@@ -100,15 +109,31 @@ $xpdo_meta_map['slWarehouseStores']= array (
         ),
       ),
     ),
-    'sync' => 
+    'visible' => 
     array (
-      'alias' => 'sync',
+      'alias' => 'visible',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'sync' => 
+        'visible' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'base_sale' => 
+    array (
+      'alias' => 'base_sale',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'base_sale' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -127,10 +152,10 @@ $xpdo_meta_map['slWarehouseStores']= array (
       'cardinality' => 'many',
       'owner' => 'foreign',
     ),
-    'Store' => 
+    'Org' => 
     array (
-      'class' => 'slStores',
-      'local' => 'store_id',
+      'class' => 'slOrg',
+      'local' => 'org_id',
       'foreign' => 'id',
       'cardinality' => 'many',
       'owner' => 'foreign',

@@ -15,6 +15,7 @@ $xpdo_meta_map['slPlaceBanners']= array (
     'active' => 1,
     'description' => '',
     'key' => '',
+    'type' => 0,
   ),
   'fieldMeta' => 
   array (
@@ -58,6 +59,15 @@ $xpdo_meta_map['slPlaceBanners']= array (
       'phptype' => 'string',
       'null' => true,
       'default' => '',
+    ),
+    'type' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
     ),
   ),
   'indexes' => 

@@ -22,6 +22,16 @@ shopLogistic.panel.Queue = function (config) {
                     xtype: 'shoplogistic-grid-queue',
                     id: 'shoplogistic-grid-queue',
                 }]
+            }, {
+                title: _('shoplogistic_apirequest'),
+                layout: 'anchor',
+                items: [{
+                    html: _('shoplogistic_apirequest_desc'),
+                    cls: 'panel-desc'
+                },{
+                    xtype: 'shoplogistic-store-apirequest-grid',
+                    id: 'shoplogistic-store-apirequest-grid',
+                }]
             }]
         }]
     });

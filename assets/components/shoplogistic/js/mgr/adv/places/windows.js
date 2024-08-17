@@ -18,10 +18,10 @@ Ext.extend(shopLogistic.window.CreatePlace, shopLogistic.window.Default, {
             name: 'id',
             id: config.id + '-id',
         }, {
-            xtype: 'textfield',
-            fieldLabel: _('shoplogistic_place_pattern_id'),
-            name: 'pattern_id',
-            id: config.id + '-pattern_id',
+            xtype: 'shoplogistic-combo-adv-pages',
+            fieldLabel: _('shoplogistic_place_page_id'),
+            name: 'page_id',
+            id: config.id + '-page_id',
             anchor: '99%'
         }, {
             xtype: 'textfield',

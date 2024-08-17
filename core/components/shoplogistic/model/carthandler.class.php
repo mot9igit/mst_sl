@@ -87,10 +87,12 @@ class cartDifficultHandler
         $query = $this->modx->newQuery("slStoresRemains");
         $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
         $query->where(array(
-            "product_id:=" => $product_id,
-            "AND:remains:>=" => 1,
-            "AND:price:>" => 0,
-            'AND:store_id:=' => $location['store']['id']
+            "slStoresRemains.product_id:=" => $product_id,
+            "slStoresRemains.remains:>=" => 1,
+            "slStoresRemains.published:=" => 1,
+            "slStoresRemains.price:>" => 0,
+            'slStoresRemains.store_id:=' => $location['store']['id'],
+            "slStores.marketplace:=" => 1
         ));
         $query->select(array("slStoresRemains.*,slStores.name as store_name,slStores.address as store_address"));
         if($query->prepare() && $query->stmt->execute()){
@@ -99,10 +101,7 @@ class cartDifficultHandler
                 $this->modx->log(1, print_r($remain, 1));
             }*/
             if($remain){
-                $action = $this->getSales($product_id, $remain["store_id"]);
-                /*if($product_id == 4571 && $this->modx->user->id == 439){
-                    $this->modx->log(1, print_r($action, 1));
-                }*/
+                $action = $this->getSales($remain['id'], $remain["store_id"]);
                 if($action){
                     if($action["new_price"]){
                         $remain["price"] = $action["new_price"];
@@ -111,16 +110,11 @@ class cartDifficultHandler
                         $remain["old_price"] = $action["old_price"];
                     }
                 }
-                /*if($product_id == 4571 && $this->modx->user->id == 439){
-                    $this->modx->log(1, print_r($remain, 1));
-                }*/
                 $output['selected_store'] = $remain;
             }else{
                 // если остатка нет в магазине проверяем склад (если складов несколько, берем один с наименьшей ценой)
                 $whs = array();
                 $warehouses = $this->sl->store->getWarehouses($location['store']['id']);
-                // $this->modx->log(1, print_r($warehouses, 1));
-                // return $warehouses;
                 foreach($warehouses as $wh) {
                     $whs[] = $wh['id'];
                 }
@@ -128,21 +122,22 @@ class cartDifficultHandler
                     $q = $this->modx->newQuery("slStoresRemains");
                     $q->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
                     $q->where(array(
-                        "product_id:=" => $product_id,
-                        "AND:remains:>=" => 1,
-                        "AND:price:>" => 0,
-                        'AND:store_id:IN' => $whs
+                        "slStoresRemains.product_id:=" => $product_id,
+                        "slStoresRemains.remains:>=" => 1,
+                        "slStoresRemains.price:>" => 0,
+                        "slStoresRemains.published:=" => 1,
+                        'slStoresRemains.store_id:IN' => $whs,
+                        "slStores.active:=" => 1,
+                        "slStores.marketplace:=" => 1
                     ));
                     $q->sortby("price", "ASC");
                     $q->select(array("slStoresRemains.*,slStores.name as store_name,slStores.address as store_address"));
-                    $q->prepare();
-                    // echo '2 '.$q->toSQL();
                     if($q->prepare() && $q->stmt->execute()) {
                         $remains = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                         if($remains){
                             foreach($remains as $key => $remain){
                                 $remains[$key]['type'] = "slWarehouse";
-                                $action = $this->getSales($product_id, $remain["store_id"]);
+                                $action = $this->getSales($remain['id'], $remain["store_id"]);
                                 if($action){
                                     if($action["new_price"]){
                                         $remains[$key]["price"] = $action["new_price"];
@@ -165,15 +160,16 @@ class cartDifficultHandler
             $whs[] = $wh['id'];
         }
         $criteria = array(
-            "product_id:=" => $product_id,
-            "AND:remains:>=" => 1,
-            "AND:price:>" => 0,
-            "AND:slStores.active:=" => 1,
-            "AND:slStores.city:=" => $output['location_store']['city'],
-            "AND:slStores.id:!=" => $output['location_store']['id']
+            "slStoresRemains.product_id:=" => $product_id,
+            "slStoresRemains.remains:>=" => 1,
+            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.published:=" => 1,
+            "slStores.active:=" => 1,
+            "slStores.city:=" => $output['location_store']['city'],
+            "slStores.marketplace:=" => 1
         );
         if(count($whs)){
-            $criteria["AND:slStores.id:NOT IN"] = $whs;
+            // $criteria["AND:slStores.id:NOT IN"] = $whs;
         }
         $query = $this->modx->newQuery("slStoresRemains");
         $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
@@ -186,7 +182,7 @@ class cartDifficultHandler
             $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             if($remains){
                 foreach($remains as $key => $remain){
-                    $action = $this->getSales($product_id, $remain["store_id"]);
+                    $action = $this->getSales($remain['id'], $remain["store_id"]);
                     if($action){
                         if($action["new_price"]){
                             $remains[$key]["price"] = $action["new_price"];
@@ -201,15 +197,16 @@ class cartDifficultHandler
         }
         // ищем все предложения из других городов
         $criteria = array(
-            "product_id:=" => $product_id,
-            "AND:remains:>=" => 1,
-            "AND:price:>" => 0,
-            "AND:slStores.active:=" => 1,
-            "AND:slStores.city:!=" => $output['location_store']['city'],
-            "AND:slStores.id:!=" => $output['location_store']['id']
+            "slStoresRemains.product_id:=" => $product_id,
+            "slStoresRemains.remains:>=" => 1,
+            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.published:=" => 1,
+            "slStores.active:=" => 1,
+            "slStores.city:!=" => $output['location_store']['city'],
+            "slStores.marketplace:=" => 1
         );
         if(count($whs)){
-            $criteria["AND:slStores.id:NOT IN"] = $whs;
+            // $criteria["AND:slStores.id:NOT IN"] = $whs;
         }
         $query = $this->modx->newQuery("slStoresRemains");
         $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
@@ -222,7 +219,7 @@ class cartDifficultHandler
             $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             if($remains){
                 foreach($remains as $key => $remain){
-                    $action = $this->getSales($product_id, $remain["store_id"]);
+                    $action = $this->getSales($remain['id'], $remain["store_id"]);
                     if($action){
                         if($action["new_price"]){
                             $remains[$key]["price"] = $action["new_price"];
@@ -626,10 +623,10 @@ class cartDifficultHandler
     /**
      * Ищем активные акции
      *
-     * @param $product_id
+     * @param $remain_id
      * @return array|void
      */
-    public function getSales($product_id, $store_id = 0){
+    public function getSales($remain_id, $store_id = 0){
         $city = 0;
         $region = 0;
         $location = $this->sl->getLocationData('web');
@@ -661,7 +658,7 @@ class cartDifficultHandler
             if($object){
                 $region = $object->get("id");
             }else{
-                $region = 44;
+                // $region = 44;
             }
         }
         // регион должен 100% определиться
@@ -684,23 +681,36 @@ class cartDifficultHandler
                 $query->where(array(
                     "slActions.store_id:=" => $store_id,
                     "OR:slActionsStores.active:=" => 1
-                ));
+                ), xPDOQuery::SQL_AND);
             }
+            // remain
             $query->where(array(
                 "slActions.date_from:<=" => date('Y-m-d H:i:s'),
                 "slActions.date_to:>=" => date('Y-m-d H:i:s'),
                 "slActions.active:=" => 1,
-                "slActionsProducts.product_id:=" => $product_id
+                "slActions.type:=" => 2,
+                "slActionsProducts.remain_id:=" => $remain_id
             ), xPDOQuery::SQL_AND);
 
             $query->select(array("slActions.*,slActionsProducts.*"));
+
             $query->prepare();
-            if($product_id == 4571){
-                $this->modx->log(1, $query->toSQL());
-            }
+            $this->modx->log(1, $query->toSQL());
             if($query->prepare() && $query->stmt->execute()){
-                $results = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
                 if($results){
+                    $min_price = $results[0]['new_price'];
+                    $index = 0;
+                    foreach ($results as $k => $result){
+                        if($min_price > $result['new_price']){
+                            $min_price = $result['new_price'];
+                            $index = $k;
+                        }
+                    }
+                    // чекнуть принуждение
+                    return $results[$index];
+                    /*
                     if($results["force"]){
                         return $results;
                     }else{
@@ -708,6 +718,7 @@ class cartDifficultHandler
                             "old_price" => $results['old_price']
                         );
                     }
+                    */
                 }
                 return array();
             }
@@ -730,18 +741,17 @@ class cartDifficultHandler
         $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
         $query->where(array(
             "product_id:=" => $product_id,
-            "AND:available:>=" => 1,
+            "AND:remains:>=" => 1,
             "AND:price:>" => 0,
             'AND:store_id:=' => $object_id
         ));
         $query->select(array("slStoresRemains.*,slStores.name as store_name,slStores.address as store_address"));
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
         if($query->prepare() && $query->stmt->execute()){
             $remains = $query->stmt->fetch(PDO::FETCH_ASSOC);
             $tmp = array();
-            $action = $this->getSales($product_id, $object_id);
-            if($product_id == 7021){
-                $this->modx->log(1, print_r($action, 1));
-            }
+            $action = $this->getSales($remains['id'], $object_id);
             if($action){
                 if($action["new_price"]){
                     $remains["price"] = $action["new_price"];
@@ -779,7 +789,7 @@ class cartDifficultHandler
 			}
 			return $offset;
 		}else{
-			$this->modx->log(xPDO::LOG_LEVEL_ERROR, '[shopLogistic] Store link with warehouse not found.');
+			// $this->modx->log(xPDO::LOG_LEVEL_ERROR, '[shopLogistic] Store link with warehouse not found.');
 			return 10;
 		}
 	}
@@ -928,11 +938,11 @@ class cartDifficultHandler
                 }
             }else{
                 // остаток 0, закладываем 999 дней?
-                $offset = 999;
+                $offset = 10;
             }
         } else {
             // остаток 0, закладываем 999 дней?
-            $offset = 999;
+            $offset = 10;
         }
         if ($return == 'offsets') {
             return $offset;
@@ -1429,11 +1439,11 @@ class cartDifficultHandler
             $city['id'] = 0;
         }
         // $this->modx->log(1, print_r($city, 1));
-		// $this->modx->log(1, print_r($data, 1));
+		$this->modx->log(1, 'ПОЧТА АХТУНГ 1!: '.print_r($data, 1));
         if($data['service'] == "postrf"){
             // чекаем индекс на всякий случай
             $postrf_data = array_values($this->sl->postrf->getNearPVZ($data['location']['geo_lon'], $data['location']['geo_lat']));
-            // $this->modx->log(1, print_r($postrf_data, 1));
+            $this->modx->log(1, 'ПОЧТА АХТУНГ!: '.print_r($postrf_data, 1));
             if($postrf_data){
                 $data['location']['postal_code'] = $postrf_data[0]['postal-code'];
             }
@@ -1835,6 +1845,68 @@ class cartDifficultHandler
                         $b = $store->get('balance');
                         $store->set('balance', $b + $cost);
                         $store->save();
+                    }
+                }
+                // Выдача бонусов
+                if($st->get("payment_bonus")){
+                    //СИСТЕМА БОНУСОВ (НАЧИСЛЕНИЕ)
+
+                    //Достаём user_id
+                    $query = $this->modx->newQuery("msOrder");
+                    $query->where(array(
+                        "msOrder.id:=" => $order->get('order_id'),
+                    ));
+                    $query->select(array("msOrder.user_id"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $msOrder = $query->stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $user_id = $msOrder['user_id'];
+
+                        //Есть ли у пользователя бонусный счёт?
+                        $bonus = $this->modx->getObject('slBonusAccount', array("user_id" => $user_id));
+
+                        //Если нет, создаём
+                        if(!$bonus){
+                            $bonus = $this->modx->newObject("slBonusAccount");
+                            $bonus->set("user_id", $user_id);
+                            $bonus->set("value", 0);
+                            $bonus->save();
+                        }
+
+                        $q = $this->modx->newQuery("slOrderProduct");
+                        $q->where(array(
+                            "slOrderProduct.order_id:=" => $order->get('id'),
+                        ));
+                        $q->select(array(
+                            "slOrderProduct.product_id",
+                            "slOrderProduct.cost",
+                            "slOrderProduct.count"
+                        ));
+                        if($q->prepare() && $q->stmt->execute()){
+                            $order_products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                            foreach ($order_products as $key => $product){
+                                //Количество бонусов за покупку
+                                $bonus_count = round(($product['cost'] / 100) * $this->modx->getOption('shoplogistic_bonus_percent'));
+
+                                $dateBonus = date('Y-m-d H:i:s');
+
+                                //Новая операция начисления
+                                $bonusOperations = $this->modx->newObject("slBonusOperations");
+                                $bonusOperations->set("bonus_id", $bonus->get("id"));
+                                $bonusOperations->set("type", "plus");
+                                $bonusOperations->set("value", $bonus_count);
+                                $bonusOperations->set("comment", "Начисление бонусов за покупку товара " . $product['product_id'] . " / " . $product['count'] ."шт");
+                                $bonusOperations->set("context_type", "website");
+                                $bonusOperations->set("order_id", $order->get('order_id'));
+                                $bonusOperations->set("date", $dateBonus);
+                                $bonusOperations->set("product_id", $product['product_id']);
+                                $bonusOperations->save();
+
+                                $bonus->set("value", $bonus->get("value") + $bonus_count);
+                                $bonus->save();
+                            }
+                        }
                     }
                 }
             }

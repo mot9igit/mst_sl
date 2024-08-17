@@ -40,6 +40,10 @@ class slPlaceGetListProcessor extends modObjectGetListProcessor
             ]);
         }
 
+        $c->where([
+            'type' => 2
+        ]);
+
         return $c;
     }
 

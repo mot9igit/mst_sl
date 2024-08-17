@@ -439,7 +439,7 @@ class postrf{
      */
     public function request($url, $data = array(), $method = "POST"){
         $ch = curl_init();
-        $this->sl->tools->log($method.' '.print_r($data, 1), $this->config["log_file_name"]);
+        $this->sl->tools->log($url. ' || ' . $method.' '.print_r($data, 1), $this->config["log_file_name"]);
         curl_setopt($ch, CURLOPT_URL, $this->config['url'].$url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         if($data){
@@ -454,6 +454,7 @@ class postrf{
         $headers[] = "Accept: application/json";
         $headers[] = "Authorization: AccessToken ".$this->config['token'];
         $headers[] = "X-User-Authorization: Basic ".$this->config["key"];
+        $this->sl->tools->log(print_r($headers, 1), $this->config["log_file_name"]);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $result = curl_exec($ch);

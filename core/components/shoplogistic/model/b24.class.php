@@ -346,6 +346,127 @@ class b24Handler
 		return $response;
 	}
 
+    /**
+     * Чекаем организацию пока по имени
+     *
+     * @param $data
+     * @return array|mixed|string|string[]|void
+     */
+    public function checkCompany($data){
+        $method = "crm.company.list";
+        $filter = array();
+        // check by phone default
+        if($data['TITLE']){
+            $filter["TITLE"] = $data['TITLE'];
+        }
+        if(count($filter)){
+            $data = array(
+                "filter" => $filter ,
+                "select" => array('*', 'UF_*')
+            );
+            $response = $this->request($method, $data);
+            $this->sl->tools->log("CHECK!!! ".print_r($response, 1), "api_test");
+            return $response;
+        }
+    }
+
+    /**
+     * Добавляем организацию
+     *
+     * @param $data
+     * @return mixed|string|void
+     */
+    public function addCompany($data){
+        $company = $this->checkCompany($data);
+        if(count($company['result']) && $company['total'] == 1){
+            $method = "crm.company.update";
+            $rdata = array(
+                "id" => $company['result'][0]['ID'],
+                "fields" => $data
+            );
+            $response = $this->request($method, $rdata);
+            $this->sl->tools->log("UPDATE!!! ".print_r($rdata, 1), "api_test");
+            $this->sl->tools->log("UPDATE!!! ".print_r($response, 1), "api_test");
+            $company_id = $company['result'][0]['ID'];
+        }else{
+            $method = "crm.company.add";
+            $rdata = array(
+                "fields" => $data
+            );
+            $response = $this->request($method, $rdata);
+            $this->sl->tools->log("ADD!!! ".print_r($rdata, 1), "api_test");
+            $this->sl->tools->log("ADD!!! ".print_r($response, 1), "api_test");
+            if($response['result']){
+                $company_id = $response['result'];
+            }
+        }
+        return $company_id;
+    }
+
+    /**
+     * Добавляем реквизитов
+     *
+     * @param $data
+     * @return mixed|string|void
+     */
+    public function addRequizite($data){
+        $req_id = 0;
+        $method = "crm.requisite.add";
+        $rdata = array(
+            "fields" => $data
+        );
+        $response = $this->request($method, $rdata);
+        $this->sl->tools->log("ADD REQUIZITE!!! ".print_r($rdata, 1), "api_test");
+        $this->sl->tools->log("ADD REQUIZITE!!! ".print_r($response, 1), "api_test");
+        if($response['result']) {
+            $req_id = $response['result'];
+        }
+        return $req_id;
+    }
+
+    /**
+     * Добавляем банковских реквизитов
+     *
+     * @param $data
+     * @return mixed|string|void
+     */
+    public function addBankRequizite($data){
+        $req_id = 0;
+        $method = "crm.requisite.bankdetail.add";
+        $rdata = array(
+            "fields" => $data
+        );
+        $response = $this->request($method, $rdata);
+        $this->sl->tools->log("ADD BANKREQUIZITE!!! ".print_r($rdata, 1), "api_test");
+        $this->sl->tools->log("ADD BANKREQUIZITE!!! ".print_r($response, 1), "api_test");
+        if($response['result']) {
+            $req_id = $response['result'];
+        }
+        return $req_id;
+    }
+
+    /**
+     * Добавляем карточку смарт процесса
+     *
+     * @param $data
+     * @return mixed|string|void
+     */
+    public function addCard($data){
+        $card_id = 0;
+        $method = "crm.item.add";
+        $response = $this->request($method, $data);
+        if($response['result']) {
+            $card_id = $response['result'];
+        }
+        return $card_id;
+    }
+
+    /**
+     * Добавление контакта
+     *
+     * @param $data
+     * @return false|mixed|string
+     */
 	public function addContact($data) {
 		$contact = $this->checkContact($data);
 		$phone = $data['phone'];

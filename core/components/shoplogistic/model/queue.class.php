@@ -184,6 +184,9 @@ class queueHandler
                             if($data['key']) {
                                 $store = $this->sl->product->getStore($data['key'], "date_remains_update");
                                 if ($store['id']) {
+                                    if ($data['catalog_list']) {
+                                        $response['catalog_list'] = $this->sl->product->importCatalogs($data);
+                                    }
                                     // обнуляем остатки
                                     $table = $this->modx->getTableName("slStoresRemains");
                                     if ($table) {

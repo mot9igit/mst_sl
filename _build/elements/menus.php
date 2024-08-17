@@ -7,11 +7,23 @@ return [
 		'icon' => '<i class="icon-shopping-cart icon icon-large"></i>',
 		'action' => 'home',
 	),
+    'shoplogistic_bonus' => array(
+        'description' => 'shoplogistic_bonus_desc',
+        'parent' => 'shoplogistic',
+        'menuindex' => 1,
+        'action' => 'mgr/bonus',
+    ),
     'shoplogistic_actions' => array(
         'description' => 'shoplogistic_actions_desc',
         'parent' => 'shoplogistic',
         'menuindex' => 1,
         'action' => 'mgr/actions',
+    ),
+    'shoplogistic_params' => array(
+        'description' => 'shoplogistic_params_desc',
+        'parent' => 'shoplogistic',
+        'menuindex' => 1,
+        'action' => 'mgr/params',
     ),
     'shoplogistic_adv' => array(
         'description' => 'shoplogistic_adv_desc',
