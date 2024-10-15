@@ -1197,9 +1197,7 @@ class slOrganization
                 "slOrgStores.org_id:=" => $properties['id'],
             ));
             $query->select(array(
-                "slStores.*",
-                "COALESCE(slStores.name_short, slStores.name) as name_short",
-                "COALESCE(slStores.address_short, slStores.address) as address_short"
+                "slStores.*"
             ));
             $result['total'] = $this->modx->getCount('slOrgStores', $query);
 
@@ -1221,6 +1219,12 @@ class slOrganization
             if($query->prepare() && $query->stmt->execute()) {
                 $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($result['items'] as $key => $store){
+                    if($result['items'][$key]['name_short'] == ''){
+                        $result['items'][$key]['name_short'] = $result['items'][$key]['name'];
+                    }
+                    if($result['items'][$key]['address_short'] == ''){
+                        $result['items'][$key]['address_short'] = $result['items'][$key]['address'];
+                    }
                     $query = $this->modx->newQuery("slStoresRemains");
                     $query->where(array("slStoresRemains.store_id:=" => $store["id"]));
                     $result['items'][$key]["remains"] = number_format($this->modx->getCount("slStoresRemains", $query), 0, "", " ");
@@ -1248,7 +1252,16 @@ class slOrganization
                 "user_id:=" => $user_id
             );
             $ulink = $this->modx->getObject("slOrgUsers", $criteria);
-            if($ulink){
+            $org = false;
+            if($properties['owner_id']) {
+                // проверяем связь владельца и организации
+                $criteria = array(
+                    "id:=" => $properties['id'],
+                    "owner_id:=" => $properties['owner_id']
+                );
+                $org = $this->modx->getObject("slOrg", $criteria);
+            }
+            if($ulink || $org){
                 $urlMain = $this->modx->getOption("site_url");
                 $query = $this->modx->newQuery("slOrg");
                 $query->where(array(
