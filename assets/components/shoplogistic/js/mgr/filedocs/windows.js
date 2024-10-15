@@ -22,7 +22,8 @@ Ext.extend(shopLogistic.window.CreateFilesDoc, shopLogistic.window.Default, {
             fieldLabel: _('shoplogistic_doc_store_id'),
             name: 'store_ids',
             anchor: '99%',
-            id: config.id + '-store_ids'
+            id: config.id + '-store_ids',
+            value: config.record['store_ids']
         }, {
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_doc_name'),

@@ -29,17 +29,17 @@ Ext.extend(shopLogistic.grid.StoresRemainsPrices, shopLogistic.grid.Default, {
                 width: 20
             },
             {
-                header: _('shoplogistic_store_remains_prices_name'),
+                header: "Наименование",
                 width: 50,
                 dataIndex: 'name'
             },
             {
-                header: _('shoplogistic_store_remains_prices_key'),
+                header: "GUID",
                 width: 50,
                 dataIndex: 'key'
             },
             {
-                header: _('shoplogistic_store_remains_prices_price'),
+                header: "Цена",
                 dataIndex: 'price',
                 sortable: true,
                 width: 100,
@@ -56,7 +56,7 @@ Ext.extend(shopLogistic.grid.StoresRemainsPrices, shopLogistic.grid.Default, {
 
     getTopBar: function () {
         return [{
-            text: '<i class="icon icon-plus"></i> ' + _('shoplogistic_store_remains_prices_create'),
+            text: '<i class="icon icon-plus"></i> Создать цену',
             handler: this.createPrice,
             scope: this
         }];

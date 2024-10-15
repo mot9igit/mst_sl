@@ -52,6 +52,10 @@ class slSettingsGetListProcessor extends modObjectGetListProcessor
     public function prepareRow(xPDOObject $object)
     {
         $array = $object->toArray();
+        if(!$array['properties']){
+            $array['properties'] = array();
+        }
+        $array['properties'] = json_encode($array['properties'], JSON_UNESCAPED_UNICODE);
         $array['actions'] = [];
 
         // Edit

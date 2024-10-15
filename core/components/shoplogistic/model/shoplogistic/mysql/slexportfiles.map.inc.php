@@ -50,8 +50,7 @@ $xpdo_meta_map['slExportFiles']= array (
     ),
     'vendors' => 
     array (
-      'dbtype' => 'varchar',
-      'precision' => '255',
+      'dbtype' => 'text',
       'phptype' => 'string',
       'null' => true,
       'default' => '',

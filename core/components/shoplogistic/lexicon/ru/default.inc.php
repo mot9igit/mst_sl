@@ -6,7 +6,15 @@ $_lang['shoplogistic_menu_desc'] = 'Маркетплейс.';
 $_lang['shoplogistic_intro_msg'] = 'Вы можете выделять сразу несколько предметов при помощи Shift или Ctrl.';
 
 $_lang['shoplogistic_update'] = 'Редактировать';
+$_lang['shoplogistic_remove'] = 'Удалить';
+$_lang['shoplogistic_enable'] = 'Включить';
+$_lang['shoplogistic_disable'] = 'Выключить';
 $_lang['shoplogistic_download'] = 'Скачать файл';
+$_lang['shoplogistic_save'] = 'Сохранить';
+$_lang['shoplogistic_cancel'] = 'Отмена';
+$_lang['shoplogistic_add'] = 'Добавить';
+$_lang['shoplogistic_confirm'] = 'Вы уверены?';
+$_lang['shoplogistic_confirm_remove'] = 'В удалении объекта.';
 
 $_lang['shoplogistic_org'] = 'Организации';
 $_lang['shoplogistic_org_create'] = 'Создать организацию';
@@ -15,12 +23,14 @@ $_lang['shoplogistic_stores'] = 'Склады';
 $_lang['shoplogistic_org_id'] = 'id';
 $_lang['shoplogistic_org_name'] = 'Название';
 $_lang['shoplogistic_org_description'] = 'Описание';
-$_lang['shoplogistic_org_active'] = 'Активно';
+$_lang['shoplogistic_org_active'] = 'Активна';
 $_lang['shoplogistic_grid_org'] = 'Действия';
 $_lang['shoplogistic_org_image'] = 'Логотип';
-$_lang['shoplogistic_org_contact'] = 'ФИО (контактного лица)';
-$_lang['shoplogistic_org_phone'] = 'Телефон (контактного лица)';
-$_lang['shoplogistic_org_email'] = 'E-mail (контактного лица)';
+$_lang['shoplogistic_org_store'] = 'Роль магазина';
+$_lang['shoplogistic_org_warehouse'] = 'Роль оптового склада';
+$_lang['shoplogistic_org_contact'] = 'ФИО';
+$_lang['shoplogistic_org_phone'] = 'Телефон';
+$_lang['shoplogistic_org_email'] = 'E-mail';
 $_lang['shoplogistic_org_update'] = 'Изменить огранизацию';
 $_lang['shoplogistic_org_requisites_update'] = 'Реквизиты';
 $_lang['shoplogistic_org_requisites'] = 'Реквизиты';
@@ -31,11 +41,6 @@ $_lang['shoplogistic_orgusers_create'] = 'Добавить пользовате�
 $_lang['shoplogistic_orgusers_id'] = 'id';
 $_lang['shoplogistic_orgusers_user_id'] = 'Пользователь';
 $_lang['shoplogistic_orgusers_description'] = 'Описание';
-
-
-
-
-
 
 $_lang['shoplogistic_orgrequisites_create'] = 'Создать реквизиты';
 $_lang['shoplogistic_orgrequisitesbank_create'] = 'Создать банковские реквизиты';
@@ -96,6 +101,7 @@ $_lang['shoplogistic_store_contact'] = 'Контактное лицо';
 $_lang['shoplogistic_store_email'] = 'E-mail';
 $_lang['shoplogistic_store_phone'] = 'Телефон';
 $_lang['shoplogistic_store_file'] = 'Ссылка на файл';
+$_lang['shoplogistic_store_yml_file'] = 'Ссылка на YML файл';
 $_lang['shoplogistic_store_image'] = 'Изображение';
 $_lang['shoplogistic_store_coordinats'] = 'Координаты';
 $_lang['shoplogistic_store_lat'] = 'Широта';
@@ -328,12 +334,6 @@ $_lang['shoplogistic_warehousestores_err_save'] = 'Ошибка при сохр�
 
 $_lang['shoplogistic_grid_search'] = 'Поиск';
 $_lang['shoplogistic_grid_actions'] = 'Действия';
-
-$_lang['shoplogistic_save'] = 'Сохранить';
-$_lang['shoplogistic_cancel'] = 'Отмена';
-$_lang['shoplogistic_add'] = 'Добавить';
-$_lang['shoplogistic_confirm'] = 'Вы уверены?';
-$_lang['shoplogistic_remove'] = 'В удалении объекта.';
 
 $_lang["shoplogistic_createdon"] = "Дата создания";
 $_lang["shoplogistic_createdby"] = "Создатель";
@@ -1484,6 +1484,7 @@ $_lang['shoplogistic_settings_group_name'] = 'Наименование груп�
 $_lang['shoplogistic_settings_group_description'] = 'Описание группы';
 $_lang['shoplogistic_settings_group_label'] = 'Заголовок группы в ЛК магазина';
 $_lang['shoplogistic_settings_group_active'] = 'Активна';
+$_lang['shoplogistic_setting_rank'] = 'Сортировка';
 $_lang["shoplogistic_settings_group_profile_hidden"] = "Скрыть у пользователя в ЛК";
 
 $_lang['shoplogistic_store_settings'] = 'Параметры';
@@ -1515,6 +1516,8 @@ $_lang['shoplogistic_setting_default'] = 'Значение по умолчани
 $_lang['shoplogistic_setting_value'] = 'Значение';
 $_lang['shoplogistic_setting_profile_hidden'] = 'Скрыто для пользователя в ЛК';
 $_lang['shoplogistic_setting_active'] = 'Активен';
+$_lang['shoplogistic_setting_rank'] = 'Сортировка';
+$_lang['shoplogistic_setting_properties'] = 'Возможные значание и доп. свойства (JSON)';
 
 $_lang['shoplogistic_store_apirequest'] = 'История запросов к API';
 $_lang['shoplogistic_apirequest'] = 'История запросов к API';

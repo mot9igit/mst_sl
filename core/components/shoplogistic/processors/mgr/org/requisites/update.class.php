@@ -36,9 +36,9 @@ class slOrgRequisitesUpdateProcessor extends modObjectUpdateProcessor
         }
 
         if (empty($name)) {
-            $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_delivery_err_name'));
+            // $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_delivery_err_name'));
         } elseif ($this->modx->getCount($this->classKey, ['name' => $name, 'id:!=' => $id])) {
-            $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_delivery_err_ae'));
+            // $this->modx->error->addField('name', $this->modx->lexicon('shoplogistic_delivery_err_ae'));
         }
 
         return parent::beforeSet();

@@ -25,6 +25,7 @@ $xpdo_meta_map['slActionsProducts']= array (
     'properties' => NULL,
     'type_price' => '',
     'multiplicity' => 0,
+    'min_count' => 0,
   ),
   'fieldMeta' => 
   array (
@@ -140,6 +141,15 @@ $xpdo_meta_map['slActionsProducts']= array (
       'default' => '',
     ),
     'multiplicity' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'min_count' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',

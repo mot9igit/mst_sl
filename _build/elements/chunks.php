@@ -33,4 +33,8 @@ return [
 		'file' => 'sl.geomodal',
 		'description' => 'Чанк для вывода информации о геолокации в модальном окне',
 	],
+    'sl.notification' => [
+        'file' => 'sl.notification',
+        'description' => 'Чанк уведомлений',
+    ]
 ];

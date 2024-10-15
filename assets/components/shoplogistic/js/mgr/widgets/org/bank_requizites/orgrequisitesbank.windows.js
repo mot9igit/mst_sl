@@ -18,6 +18,10 @@ Ext.extend(shopLogistic.window.CreateOrgRequisitesBank, shopLogistic.window.Defa
             name: 'id',
             id: config.id + '-id',
         },{
+            xtype: 'hidden',
+            name: 'org_requisite_id',
+            id: config.id + '-org_requisite_id',
+        },{
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_orgrequisitesbank_name'),
             name: 'name',

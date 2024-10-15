@@ -28,6 +28,12 @@ Ext.extend(shopLogistic.window.UpdateAPIRequest,  shopLogistic.window.Default, {
             id: config.id + '-key'
         }, {
             xtype: 'statictextfield',
+            fieldLabel: 'Версия модуля',
+            name: 'version',
+            anchor: '99%',
+            id: config.id + '-version'
+        }, {
+            xtype: 'statictextfield',
             fieldLabel: _('shoplogistic_apirequest_createdon'),
             name: 'createdon',
             anchor: '99%',

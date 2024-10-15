@@ -19,7 +19,7 @@ shopLogistic.grid.OrgRequisitesBank = function (config) {
 Ext.extend(shopLogistic.grid.OrgRequisitesBank, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'name', 'bank_number', 'bank_knumber', 'bank_bik', 'bank_name', 'actions'];
+        return ['id', 'name', 'bank_number', 'org_requisite_id', 'bank_knumber', 'bank_bik', 'bank_name', 'actions'];
     },
 
     getTopBar: function () {
@@ -103,7 +103,9 @@ Ext.extend(shopLogistic.grid.OrgRequisitesBank, shopLogistic.grid.Default, {
             }
         });
         w.fp.getForm().reset();
-        w.fp.getForm().setValues({});
+        w.fp.getForm().setValues({
+            org_requisite_id: this.config.record.id
+        });
         w.show(e.target);
     },
 

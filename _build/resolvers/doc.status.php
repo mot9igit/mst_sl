@@ -332,6 +332,50 @@ if ($transport->xpdo) {
                 $status_name = $properties['name'];
             }
 
+        // Статусы акций
+        $statuses = [
+            [
+                'name' => 'Согласование поставщиком',
+                'color' => '20c8fb',
+                'active' => 1,
+                'id' => 1
+            ],[
+                'name' => 'Отменён',
+                'color' => 'FB203A',
+                'active' => 1,
+                'id' => 2
+            ],
+            [
+                'name' => 'Согласование покупателем',
+                'color' => '20c8fb',
+                'active' => 1,
+                'id' => 3
+            ],
+            [
+                'name' => 'Согласован',
+                'color' => '54e979',
+                'active' => 1,
+                'id' => 4
+            ]
+        ];
+
+        foreach ($statuses as $properties) {
+            $id = $properties['id'];
+            unset($properties['id']);
+
+            $level = $modx->getObject('slOrderOptStatus', [
+                'id' => $id,
+                'OR:name:=' => $properties['name']
+            ]);
+            if (!$level) {
+                $level = $modx->newObject('slOrderOptStatus', $properties);
+            }
+            $level->save();
+
+            $status_id = $level->get('id');
+            $status_name = $properties['name'];
+        }
+
             // Статусы подключений к программам
             $statuses = [
                 [

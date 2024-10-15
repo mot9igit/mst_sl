@@ -472,7 +472,7 @@ class SphinxClient
         // per-query settings
         $this->_offset		= 0;
         $this->_limit		= 20;
-        $this->_mode		= SPH_MATCH_EXTENDED2;
+        $this->_mode		= SPH_MATCH_ANY;
         $this->_weights		= array ();
         $this->_sort		= SPH_SORT_RELEVANCE;
         $this->_sortby		= "";
@@ -489,7 +489,7 @@ class SphinxClient
         $this->_retrydelay	= 0;
         $this->_anchor		= array ();
         $this->_indexweights= array ();
-        $this->_ranker		= SPH_RANK_PROXIMITY_BM25;
+        $this->_ranker		= SPH_RANK_SPH04;
         $this->_rankexpr	= "";
         $this->_maxquerytime= 0;
         $this->_fieldweights= array();

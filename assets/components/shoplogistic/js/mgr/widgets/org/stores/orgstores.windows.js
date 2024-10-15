@@ -28,8 +28,9 @@ Ext.extend(shopLogistic.window.CreateOrgStores, shopLogistic.window.Default, {
             id: config.id + '-store_id',
             anchor: '99%'
         },{
-            xtype: 'textfield',
+            xtype: 'textarea',
             fieldLabel: _('shoplogistic_orgstores_description'),
+            description: "Описание для команды подключения",
             name: 'description',
             id: config.id + '-description',
             anchor: '99%'

@@ -81,15 +81,15 @@ $xpdo_meta_map['slStoreRegistry']= array (
   ),
   'indexes' => 
   array (
-    'store_id' => 
+    'org_id' => 
     array (
-      'alias' => 'store_id',
+      'alias' => 'org_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'store_id' => 
+        'org_id' => 
         array (
           'length' => '',
           'collation' => 'A',

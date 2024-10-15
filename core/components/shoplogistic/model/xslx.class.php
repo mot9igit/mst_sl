@@ -27,6 +27,82 @@ class slXSLX{
 	}
 
     /**
+     * Парсим файл РРЦ
+     *
+     * @param $store_id
+     * @param $file
+     * @return void
+     */
+    public function parseRRCFile ($store_id, $file) {
+        $out = array(
+            "total" => 0,
+            "success" => array(
+                "total" => 0,
+                "data" => array()
+            ),
+            "errors" => array(
+                "total" => 0,
+                "data" => array()
+            )
+        );
+        $file_in = $this->modx->getOption("base_path").$file;
+        if(file_exists($file_in)){
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
+            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+            }
+            $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+            $out["total"] = count($sheetData);
+            foreach($sheetData as $key => $value) {
+                // пропускаем шапку
+                if ($key != 1) {
+                    $criteria = array(
+                        "store_id:=" => $store_id,
+                        "article:=" => $value["A"]
+                    );
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->where($criteria);
+                    $query->select(array(
+                        "slStoresRemains.*"
+                    ));
+                    $count = $this->modx->getCount("slStoresRemains", $query);
+                    if(!$count){
+                        $out['errors'][] = $this->sl->tools->error("Остаток не найден!", $value);
+                    }else{
+                        if($count == 1){
+                            if($query->prepare() && $query->stmt->execute()) {
+                                $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                                if($remain){
+                                    $object = $this->modx->getObject("slStoresRemains", $remain["id"]);
+                                    if($object){
+                                        $object->set("price", $value["D"]);
+                                        if($object->save()){
+                                            $out['success']['data'][] = $this->sl->tools->error("Объект остатка обновлен!", $value);
+                                        }else{
+                                            $out['errors']['data'][] = $this->sl->tools->error("Объект остатка не обновлен, ошибка!", $value);
+                                        }
+                                    }else{
+                                        $out['errors']['data'][] = $this->sl->tools->error("Объект остатка не найден!", $value);
+                                    }
+                                }else{
+                                    $out['errors']['data'][] = $this->sl->tools->error("Остаток не найден!", $value);
+                                }
+                            }
+                        }else{
+                            $out['errors']['data'][] = $this->sl->tools->error("Найдено больше 1 товара с аналогичным артикулом!", $value);
+                        }
+                    }
+                }
+            }
+            $out['success']['total'] = count($out['success']['data']);
+            $out['errors']['total'] = count($out['errors']['data']);
+        }
+        $output = $this->sl->tools->error("Файл обработан!", $out);
+        return $output;
+    }
+
+    /**
      * Читаем файл товаров для акций
      *
      * @param $file
@@ -59,24 +135,24 @@ class slXSLX{
                     if($type == 'b2b'){
                         if(isset($value["G"])){
                             $criteria = array(
-                                "store_id:=" => $store_id,
+                                "store_id:IN" => $store_id,
                                 "giud:=" => $value["G"]
                             );
                         }else{
                             $criteria = array(
-                                "store_id:=" => $store_id,
+                                "store_id:IN" => $store_id,
                                 "article:=" => $value["A"]
                             );
                         }
                     } else if($type == 'b2c') {
                         if(isset($value["F"])){
                             $criteria = array(
-                                "store_id:=" => $store_id,
+                                "store_id:IN" => $store_id,
                                 "giud:=" => $value["F"]
                             );
                         }else{
                             $criteria = array(
-                                "store_id:=" => $store_id,
+                                "store_id:IN" => $store_id,
                                 "article:=" => $value["A"]
                             );
                         }
@@ -156,8 +232,11 @@ class slXSLX{
 		return $file;
 	}
 
-    public function generateOptOrder($basket, $properties){
-        if($properties['store_id']){
+    public function generateOptOrder($data, $properties){
+
+        if($properties['store_id'] && $properties['warehouse_id']){
+            $basket = $data['basket'][$properties['warehouse_id']];
+
             $spreadsheet = new Spreadsheet();
             $myWorkSheet = new Worksheet($spreadsheet, mb_strimwidth($basket['stores'][$properties['store_id']]['name_short'], 0, 29));
             $spreadsheet->addSheet($myWorkSheet);
@@ -165,110 +244,586 @@ class slXSLX{
             $spreadsheet->setActiveSheetIndex(0);
             $sheet = $spreadsheet->getActiveSheet();
 
+            $sheet->getColumnDimension('A')->setWidth(22);
+            $sheet->getColumnDimension('B')->setWidth(24);
+            $sheet->getColumnDimension('C')->setWidth(20);
+            $sheet->getColumnDimension('D')->setWidth(20);
+            $sheet->getColumnDimension('E')->setWidth(20);
+            $sheet->getColumnDimension('F')->setWidth(11);
+            $sheet->getColumnDimension('G')->setWidth(18);
+            $sheet->getColumnDimension('H')->setWidth(15);
+            $sheet->getColumnDimension('I')->setWidth(15);
+            $sheet->getColumnDimension('J')->setWidth(15);
+            $sheet->getColumnDimension('K')->setWidth(15);
+            $sheet->getColumnDimension('L')->setWidth(50);
+            $sheet->getColumnDimension('M')->setWidth(50);
+            $sheet->getStyle('A1:G999')->getAlignment()->setVertical('center');
 
-            $sheet->mergeCells("A1:J1");
-            $sheet->getStyle('A1:J1')->getFont()->setSize(14);
-            $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+            $sheet->getCell('A1')->setValue('Заказы от ');
 
-            $sheet->getCell('A2')->setValue('Артикул');
-            $sheet->getCell('B2')->setValue('Наименование');
-            $sheet->getCell('C2')->setValue('Количество');
-            $sheet->getCell('D2')->setValue('Цена');
-            $sheet->getCell('E2')->setValue('Сумма');
-//            $sheet->getCell('F2')->setValue('Отсрочка');
-//            $sheet->getCell('G2')->setValue('Оплата доставки');
-//            $sheet->getCell('H2')->setValue('Акции');
-//            $sheet->getCell('J2')->setValue('Срок доставки');
+            $sheet->mergeCells("B1:C1");
+            $sheet->getStyle('A1:C1')->getFont()->setSize(24);
+            $sheet->getStyle('A1:C1')->getFont()->setBold(true);
+            $sheet->getCell('B1')->setValue(date('d.m.Y'));
 
+            $sheet->getCell('A2')->setValue('Поставщик:');
+            $sheet->getCell('A3')->setValue('Склад поставщика:');
+            $sheet->getCell('A4')->setValue('Оплата доставки:');
+            $sheet->getCell('A5')->setValue('Срок доставки:');
+            $sheet->getCell('A6')->setValue('Адрес доставки:');
 
+//            $sheet->getCell('E2')->setValue('Отсрочка платежа:');
+//            $sheet->getCell('E3')->setValue('График платежей:');
 
-            $sheet->getCell('A1')->setValue('Заказ у поставщика ' . $basket['stores'][$properties['store_id']]['name']);
+            $sheet->getStyle('E2:E3')->getFont()->setSize(10);
+            $sheet->getStyle('E2:E3')->getFont()->setBold(true);
+            $sheet->getStyle('E2:E3')->getAlignment()->setHorizontal('right');
 
-            $start_position = 3;
-            foreach($basket['stores'][$properties['store_id']]['products'] as $key => $product){
-                $sheet->insertNewRowBefore($start_position);
+            $sheet->getStyle('A2:A6')->getFont()->setSize(10);
+            $sheet->getStyle('A2:A6')->getFont()->setBold(true);
+            $sheet->getStyle('A2:A6')->getAlignment()->setHorizontal('right');
 
-                $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
-                $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
-                $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
-                $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
-                $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
-
-                $start_position++;
+            for($i = 2; $i <= 6; $i++){
+                $sheet->getRowDimension($i)->setRowHeight(27);
             }
-            if(count($basket['stores'][$properties['store_id']]['complects'])) {
-                foreach ($basket['stores'][$properties['store_id']]['complects'] as $key => $complect) {
-                    foreach ($complect['products'] as $k => $product) {
-                        $sheet->insertNewRowBefore($start_position);
 
-                        $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
-                        $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
-                        $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
-                        $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
-                        $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
-                        $start_position++;
-                    }
+            //Отсрочка
+
+
+            //СБОР ДАННЫХ
+            //TODO: Не учитывается если несколько складов привязано к одной организации
+            $q = $this->modx->newQuery("slOrgStores");
+            $q->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgStores.org_id");
+            $q->where(array(
+                "`slOrgStores`.`store_id`:=" => $basket['stores'][$properties['store_id']]['id'],
+            ));
+            $q->select(array(
+                "`slOrg`.*"
+            ));
+
+            if($q->prepare() && $q->stmt->execute()){
+                $org = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                $sheet->getCell('B2')->setValue($org['name'] . ", ИНН: " . $org['inn']);
+            }
+
+            //Склад
+            $sheet->getCell('B3')->setValue("«".$basket['stores'][$properties['store_id']]['name_short'] . "», " . $basket['stores'][$properties['store_id']]['address_short']);
+
+            //Оплата доставки
+            $payer = 0;
+            foreach($basket['stores'][$properties['store_id']]['products'] as $product){
+                if($product['payer'] == 1){
+                    $payer = 1;
+                    break;
                 }
-
             }
+            $sheet->getCell('B4')->setValue($payer == 1 ? "Поставщик" : "Покупатель");
+
+            //Срок доставки
+            if($basket['stores'][$properties['store_id']]['products']){
+                $product_first = array_key_first($basket['stores'][$properties['store_id']]['products']);
+                $delivery = $this->sl->cart->getNearShipment($basket['stores'][$properties['store_id']]['products'][$product_first]['remain_id'], $basket['stores'][$properties['store_id']]['products'][$product_first]["store_id"]);
+
+                $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
+
+                $sheet->getCell('B5')->setValue($date_delivery);
+                $sheet->getCell('C5')->setValue($delivery . " дней");
+                $sheet->getStyle('C5')->getFont()->setItalic(true);
+            } else if($basket['stores'][$properties['store_id']]['complects']) {
+                $this->modx->log(1, print_r($basket['stores'][$properties['store_id']]['complects'], 1));
+                $this->modx->log(1, "KENOST xslx");
+                //TODO КОПЛЕКТЫ
+                $product_first = array_key_first($basket['stores'][$properties['store_id']]['complects']);
+//
+                $delivery = $this->sl->cart->getNearShipment($basket['stores'][$properties['store_id']]['complects'][$product_first]['products'][0]['remain_id'], $basket['stores'][$properties['store_id']]['products'][$product_first]['products'][0]["store_id"]);
+//
+                $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
+//
+                $sheet->getCell('B5')->setValue($date_delivery);
+                $sheet->getCell('C5')->setValue($delivery . " дней");
+                $sheet->getStyle('C5')->getFont()->setItalic(true);
+            }
+
+            //Получаем склад доставки
+            $warehouse = array();
+            foreach ($data['warehouses'] as $warehous){
+                if($warehous['id'] == $basket['stores'][$properties['store_id']]['id_warehouse']) {
+                    $warehouse = $warehous;
+                    break;
+                }
+            }
+            $sheet->getCell('B6')->setValue($warehouse['name']);
+
+            $sheet->getCell('A8')->setValue('№');
+            $sheet->getCell('B8')->setValue('Артикул');
+            $sheet->getCell('C8')->setValue('Наименование');
+            $sheet->getCell('H8')->setValue('Количество');
+            $sheet->getCell('I8')->setValue('Цена');
+            $sheet->getCell('J8')->setValue('Сумма');
+            $sheet->getCell('K8')->setValue('Отсрочка (дн.)');
+            $sheet->getCell('L8')->setValue('Условия акции');
+            $sheet->getCell('M8')->setValue('Название акции');
+
+            $sheet->getCell('L7')->setValue('Акции');
+            $sheet->getStyle('L7')->getFont()->setSize(24);
+            $sheet->getStyle('L7')->getFont()->setBold(true);
+            $sheet->getStyle('L7')->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+            $sheet->getStyle('L7')->getAlignment()->setHorizontal('center');
+
+            $sheet->getStyle('L8:M8')->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+            $sheet->mergeCells("C8:G8");
+            $sheet->getStyle('A8:M8')->getFont()->setSize(12);
+            $sheet->getStyle('A8:M8')->getFont()->setBold(true);
+            $sheet->getStyle('A8:M8')->getAlignment()->setHorizontal('center');
+
+            $sheet->getRowDimension(7)->setRowHeight(32);
+
+            $num = 1;
+            $start_position = 9;
+            foreach($basket['stores'][$properties['store_id']]['products'] as $key => $items){
+//                $this->modx->log(1, print_r($items, 1));
+//                $this->modx->log(1, "KENOST xslx");
+                foreach($items['basket'] as $k => $product){
+                    $sheet->insertNewRowBefore($start_position);
+                    $sheet->setCellValueExplicit('A'.$start_position, $num, PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit('B'.$start_position, $items['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit('C'.$start_position, $items['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->mergeCells('C'.$start_position.":".'G'.$start_position);
+                    $sheet->getStyle('C'.$start_position.":".'G'.$start_position)->getAlignment()->setHorizontal('left');
+                    $sheet->getCell('H'.$start_position)->setValue($product['count']);
+                    $sheet->getCell('I'.$start_position)->setValue($product['price']);
+                    $sheet->getCell('J'.$start_position)->setValue($product['cost']);
+                    $delay = "Предоплата";
+                    if($product['delay']){
+                        $delay = $product['delay'];
+                    }
+                    $sheet->getCell('K'.$start_position)->setValue($delay);
+
+                    $sheet->getStyle( 'A'.$start_position.":".'K'.$start_position )->getBorders()->getAllBorders()->setBorderStyle(PHPExcel_Style_Border::BORDER_THIN);
+                    $sheet->getRowDimension($start_position)->setRowHeight(25);
+                    $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setBold(false);
+
+                    //Получаем акции
+
+                    if($product['tags']){
+                        $tagsText = "";
+                        foreach($product['tags'] as $action) {
+                            foreach ($action as $tag) {
+                                if($tag['type'] == 'sale'){
+                                    $tagsText = $tagsText . "Скидка " . $tag['value'] . "%";
+                                    if($tag['min_count'] > 1){
+                                        $tagsText = $tagsText . " при покупке от " . $tag['min_count'] . 'шт';
+                                    }
+                                    $tagsText = $tagsText . ", ";
+
+                                }
+
+                                if($tag['type'] == 'min_sum'){
+                                    $tagsText = $tagsText . "Минимальна сумма покупки " . $tag['value'] . "₽";
+                                    $tagsText = $tagsText . ", ";
+                                }
+
+                                if($tag['type'] == 'min_sum'){
+                                    $tagsText = $tagsText . "Минимальна сумма покупки " . $tag['value'] . "₽";
+                                    $tagsText = $tagsText . ", ";
+                                }
+
+                                if($tag['type'] == 'free_delivery'){
+                                    $tagsText = $tagsText . "Бесплатная доставка";
+                                    if($tag['condition'] == '2'){
+                                        $tagsText = $tagsText . " при покупке от " . $tag['value'] . '₽';
+                                    }
+                                    if($tag['condition'] == '3'){
+                                        $tagsText = $tagsText . " при покупке от " . $tag['value'] . 'шт';
+                                    }
+                                    $tagsText = $tagsText . ", ";
+                                }
+
+                                if($tag['type'] == 'gift'){
+                                    $tagsText = $tagsText . " Подарок";
+                                    $tagsText = $tagsText . ", ";
+                                }
+
+                                if($tag['type'] == 'multiplicity'){
+                                    $tagsText = $tagsText . "Кратность упаковки" . $tag['value'] . 'шт';
+                                    $tagsText = $tagsText . ", ";
+                                }
+                            }
+                            $tagsText = substr($tagsText,0,-2);
+                            $tagsText = $tagsText . " \n";
+                        }
+                        $sheet->getCell('L'.$start_position)->setValue($tagsText);
+                        $sheet->getStyle('L'.$start_position)->getAlignment()->setVertical('center');
+                        $sheet->getStyle('L'.$start_position)->getAlignment()->setHorizontal('left');
+                        $sheet->getStyle('L'.$start_position)->getFont()->setBold(false);
+                        $sheet->getStyle('L'.$start_position)->getFont()->setSize(10);
+                        $sheet->getStyle('L'.$start_position)->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+                    }
+
+                    $tagsTextName = "";
+                    if($product['actions_ids']){
+                        foreach($product['actions_ids'] as $action_id){
+                            $q = $this->modx->newQuery("slActions");
+                            $q->where(array(
+                                "`slActions`.`id`:=" => $action_id,
+                            ));
+                            $q->select(array(
+                                "`slActions`.name"
+                            ));
+
+                            if($q->prepare() && $q->stmt->execute()){
+                                $action = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                                if($tagsTextName == ""){
+                                    $tagsTextName = $action['name'];
+                                } else {
+                                    $tagsTextName = $tagsTextName . " \n" . $action['name'];
+                                }
+                            }
+                        }
+                        $sheet->getCell('M'.$start_position)->setValue($tagsTextName);
+                        $sheet->getStyle('M'.$start_position)->getAlignment()->setVertical('center');
+                        $sheet->getStyle('M'.$start_position)->getAlignment()->setHorizontal('left');
+                        $sheet->getStyle('M'.$start_position)->getFont()->setBold(false);
+                        $sheet->getStyle('M'.$start_position)->getFont()->setSize(10);
+                        $sheet->getStyle('M'.$start_position)->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+                    }
+
+                    $start_position++;
+                    $num++;
+                }
+            }
+            foreach($basket['stores'][$properties['store_id']]['complects'] as $key => $items){
+//                $this->modx->log(1, print_r($items, 1));
+//                $this->modx->log(1, "KENOST xslx");
+                foreach($items['products'] as $k => $product){
+                    $sheet->insertNewRowBefore($start_position);
+                    $sheet->setCellValueExplicit('A'.$start_position, $num, PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit('B'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit('C'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                    $sheet->mergeCells('C'.$start_position.":".'G'.$start_position);
+                    $sheet->getStyle('C'.$start_position.":".'G'.$start_position)->getAlignment()->setHorizontal('left');
+                    $sheet->getCell('H'.$start_position)->setValue($product['info']['count']);
+                    $sheet->getCell('I'.$start_position)->setValue($product['info']['price']);
+                    $sheet->getCell('J'.$start_position)->setValue($product['info']['count'] * $product['info']['price']);
+
+                    $delay = "Предоплата";
+                    if($product['delay']){
+                        $delay = $product['delay'];
+                    }
+                    $sheet->getCell('K'.$start_position)->setValue($delay);
+
+                    $sheet->getStyle( 'A'.$start_position.":".'K'.$start_position )->getBorders()->getAllBorders()->setBorderStyle(PHPExcel_Style_Border::BORDER_THIN);
+                    $sheet->getRowDimension($start_position)->setRowHeight(25);
+                    $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setBold(false);
+
+                    $start_position++;
+                    $num++;
+                }
+            }
+            $sheet->mergeCells('A'.$start_position.":".'I'.$start_position);
+            $sheet->getStyle('A'.$start_position.":".'I'.$start_position)->getAlignment()->setHorizontal('right');
+            $sheet->getCell('A'.$start_position)->setValue("Итого:");
+            $sheet->getCell('J'.$start_position)->setValue($basket['stores'][$properties['store_id']]['cost']);
+            $sheet->getRowDimension($start_position)->setRowHeight(25);
+            $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setBold(true);
+            $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setSize(14);
+
         } else {
+            $this->modx->log(1, print_r($data, 1));
+            $this->modx->log(1, "KENOST DaTa");
             $spreadsheet = new Spreadsheet();
             $spreadsheet->removeSheetByIndex(0);
 
             $index_active = 0;
-            foreach ($basket['stores'] as $key => $store) {
-                $myWorkSheet = new Worksheet($spreadsheet, mb_strimwidth($store['name_short'], 0, 29));
-                $spreadsheet->addSheet($myWorkSheet);
-                $spreadsheet->setActiveSheetIndex($index_active);
-                $sheet = $spreadsheet->getActiveSheet();
+            foreach ($data['basket'] as $k => $warehouse){
+                foreach ($warehouse['stores'] as $key => $store) {
+                    $myWorkSheet = new Worksheet($spreadsheet, mb_strimwidth($store['name_short'], 0, 29));
+                    $spreadsheet->addSheet($myWorkSheet);
+                    $spreadsheet->setActiveSheetIndex($index_active);
+                    $sheet = $spreadsheet->getActiveSheet();
 
-                $sheet->mergeCells("A1:E1");
-                $sheet->getStyle('A1:E1')->getFont()->setSize(14);
-                $sheet->getStyle('A1:E1')->getFont()->setBold(true);
+                    $sheet->getColumnDimension('A')->setWidth(22);
+                    $sheet->getColumnDimension('B')->setWidth(24);
+                    $sheet->getColumnDimension('C')->setWidth(20);
+                    $sheet->getColumnDimension('D')->setWidth(20);
+                    $sheet->getColumnDimension('E')->setWidth(20);
+                    $sheet->getColumnDimension('F')->setWidth(11);
+                    $sheet->getColumnDimension('G')->setWidth(18);
+                    $sheet->getColumnDimension('H')->setWidth(15);
+                    $sheet->getColumnDimension('I')->setWidth(15);
+                    $sheet->getColumnDimension('J')->setWidth(15);
+                    $sheet->getColumnDimension('K')->setWidth(15);
+                    $sheet->getColumnDimension('L')->setWidth(50);
+                    $sheet->getColumnDimension('M')->setWidth(50);
+                    $sheet->getStyle('A1:G999')->getAlignment()->setVertical('center');
 
-                $sheet->getCell('A2')->setValue('Артикул');
-                $sheet->getCell('B2')->setValue('Наименование');
-                $sheet->getCell('C2')->setValue('Количество');
-                $sheet->getCell('D2')->setValue('Цена');
-                $sheet->getCell('E2')->setValue('Сумма');
+                    $sheet->getCell('A1')->setValue('Заказы от ');
 
-                $sheet->getCell('A1')->setValue('Заказ у поставщика ' . $store['name']);
+                    $sheet->mergeCells("B1:C1");
+                    $sheet->getStyle('A1:C1')->getFont()->setSize(24);
+                    $sheet->getStyle('A1:C1')->getFont()->setBold(true);
+                    $sheet->getCell('B1')->setValue(date('d.m.Y'));
 
-                $start_position = 3;
-                foreach ($store['products'] as $k => $product) {
-                    $sheet->insertNewRowBefore($start_position);
+                    $sheet->getCell('A2')->setValue('Поставщик:');
+                    $sheet->getCell('A3')->setValue('Склад поставщика:');
+                    $sheet->getCell('A4')->setValue('Оплата доставки:');
+                    $sheet->getCell('A5')->setValue('Срок доставки:');
+                    $sheet->getCell('A6')->setValue('Адрес доставки:');
 
-                    $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
-                    $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
-                    $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
-                    $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
-                    $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
 
-                    $start_position++;
-                }
+                    $sheet->getStyle('E2:E3')->getFont()->setSize(10);
+                    $sheet->getStyle('E2:E3')->getFont()->setBold(true);
+                    $sheet->getStyle('E2:E3')->getAlignment()->setHorizontal('right');
 
-                if(count($store['complects'])){
-                    foreach($store['complects'] as $key_c => $complect){
+                    $sheet->getStyle('A2:A6')->getFont()->setSize(10);
+                    $sheet->getStyle('A2:A6')->getFont()->setBold(true);
+                    $sheet->getStyle('A2:A6')->getAlignment()->setHorizontal('right');
 
-                        foreach($complect['products'] as $k_c => $product){
+                    for($i = 2; $i <= 6; $i++){
+                        $sheet->getRowDimension($i)->setRowHeight(27);
+                    }
+
+                    //Отсрочка
+
+
+                    //СБОР ДАННЫХ
+                    //TODO: Не учитывается если несколько складов привязано к одной организации
+                    $q = $this->modx->newQuery("slOrgStores");
+                    $q->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgStores.org_id");
+                    $q->where(array(
+                        "`slOrgStores`.`store_id`:=" => $store['id'],
+                    ));
+                    $q->select(array(
+                        "`slOrg`.*"
+                    ));
+
+                    if($q->prepare() && $q->stmt->execute()){
+                        $org = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                        $sheet->getCell('B2')->setValue($org['name'] . ", ИНН: " . $org['inn']);
+                    }
+
+                    //Склад
+                    $sheet->getCell('B3')->setValue("«".$store['name_short'] . "», " . $store['address_short']);
+
+                    //Оплата доставки
+                    $payer = 0;
+                    foreach($store['products'] as $product){
+                        if($product['payer'] == 1){
+                            $payer = 1;
+                            break;
+                        }
+                    }
+                    $sheet->getCell('B4')->setValue($payer == 1 ? "Поставщик" : "Покупатель");
+
+                    //Срок доставки
+                    if($store['products']){
+                        $product_first = array_key_first($store['products']);
+                        $delivery = $this->sl->cart->getNearShipment($store['products'][$product_first]['remain_id'], $store['products'][$product_first]["store_id"]);
+
+                        $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
+
+                        $sheet->getCell('B5')->setValue($date_delivery);
+                        $sheet->getCell('C5')->setValue($delivery . " дней");
+                        $sheet->getStyle('C5')->getFont()->setItalic(true);
+                    } else if($store['complects']) {
+                        $this->modx->log(1, print_r($store['complects'], 1));
+                        $this->modx->log(1, "KENOST xslx");
+                        //TODO КОПЛЕКТЫ
+                        $product_first = array_key_first($store['complects']);
+//
+                        $delivery = $this->sl->cart->getNearShipment($store['complects'][$product_first]['products'][0]['remain_id'], $store['products'][$product_first]['products'][0]["store_id"]);
+//
+                        $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
+//
+                        $sheet->getCell('B5')->setValue($date_delivery);
+                        $sheet->getCell('C5')->setValue($delivery . " дней");
+                        $sheet->getStyle('C5')->getFont()->setItalic(true);
+                    }
+
+                    //Получаем склад доставки
+                    $warehouse = array();
+                    foreach ($data['warehouses'] as $warehous){
+                        if($warehous['id'] == $store['id_warehouse']) {
+                            $warehouse = $warehous;
+                            break;
+                        }
+                    }
+                    $sheet->getCell('B6')->setValue($warehouse['name']);
+
+                    $sheet->getCell('A8')->setValue('№');
+                    $sheet->getCell('B8')->setValue('Артикул');
+                    $sheet->getCell('C8')->setValue('Наименование');
+                    $sheet->getCell('H8')->setValue('Количество');
+                    $sheet->getCell('I8')->setValue('Цена');
+                    $sheet->getCell('J8')->setValue('Сумма');
+                    $sheet->getCell('K8')->setValue('Отсрочка (дн.)');
+                    $sheet->getCell('L8')->setValue('Условия акции');
+                    $sheet->getCell('M8')->setValue('Название акции');
+
+                    $sheet->getCell('L7')->setValue('Акции');
+                    $sheet->getStyle('L7')->getFont()->setSize(24);
+                    $sheet->getStyle('L7')->getFont()->setBold(true);
+                    $sheet->getStyle('L7')->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+                    $sheet->getStyle('L7')->getAlignment()->setHorizontal('center');
+
+                    $sheet->getStyle('L8:M8')->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+                    $sheet->mergeCells("C8:G8");
+                    $sheet->getStyle('A8:M8')->getFont()->setSize(12);
+                    $sheet->getStyle('A8:M8')->getFont()->setBold(true);
+                    $sheet->getStyle('A8:M8')->getAlignment()->setHorizontal('center');
+
+                    $sheet->getRowDimension(7)->setRowHeight(32);
+
+                    $num = 1;
+                    $start_position = 9;
+                    foreach($store['products'] as $key => $items){
+                        foreach($items['basket'] as $k => $product){
                             $sheet->insertNewRowBefore($start_position);
+                            $sheet->setCellValueExplicit('A'.$start_position, $num, PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->setCellValueExplicit('B'.$start_position, $items['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->setCellValueExplicit('C'.$start_position, $items['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->mergeCells('C'.$start_position.":".'G'.$start_position);
+                            $sheet->getStyle('C'.$start_position.":".'G'.$start_position)->getAlignment()->setHorizontal('left');
+                            $sheet->getCell('H'.$start_position)->setValue($product['count']);
+                            $sheet->getCell('I'.$start_position)->setValue($product['price']);
+                            $sheet->getCell('J'.$start_position)->setValue($product['cost']);
+                            $delay = "Предоплата";
+                            if($product['delay']){
+                                $delay = $product['delay'];
+                            }
+                            $sheet->getCell('K'.$start_position)->setValue($delay);
 
-                            $sheet->setCellValueExplicit('A'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
-                            $sheet->setCellValueExplicit('B'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
-                            $sheet->getCell('C'.$start_position)->setValue($product['info']['count']);
-                            $sheet->getCell('D'.$start_position)->setValue($product['info']['price']);
-                            $sheet->getCell('E'.$start_position)->setValue($product['info']['price'] * $product['info']['count']);
+                            $sheet->getStyle( 'A'.$start_position.":".'K'.$start_position )->getBorders()->getAllBorders()->setBorderStyle(PHPExcel_Style_Border::BORDER_THIN);
+                            $sheet->getRowDimension($start_position)->setRowHeight(25);
+                            $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setBold(false);
+
+                            //Получаем акции
+
+                            if($product['tags']){
+                                $tagsText = "";
+                                foreach($product['tags'] as $action) {
+                                    foreach ($action as $tag) {
+                                        if($tag['type'] == 'sale'){
+                                            $tagsText = $tagsText . "Скидка " . $tag['value'] . "%";
+                                            if($tag['min_count'] > 1){
+                                                $tagsText = $tagsText . " при покупке от " . $tag['min_count'] . 'шт';
+                                            }
+                                            $tagsText = $tagsText . ", ";
+
+                                        }
+
+                                        if($tag['type'] == 'min_sum'){
+                                            $tagsText = $tagsText . "Минимальна сумма покупки " . $tag['value'] . "₽";
+                                            $tagsText = $tagsText . ", ";
+                                        }
+
+                                        if($tag['type'] == 'min_sum'){
+                                            $tagsText = $tagsText . "Минимальна сумма покупки " . $tag['value'] . "₽";
+                                            $tagsText = $tagsText . ", ";
+                                        }
+
+                                        if($tag['type'] == 'free_delivery'){
+                                            $tagsText = $tagsText . "Бесплатная доставка";
+                                            if($tag['condition'] == '2'){
+                                                $tagsText = $tagsText . " при покупке от " . $tag['value'] . '₽';
+                                            }
+                                            if($tag['condition'] == '3'){
+                                                $tagsText = $tagsText . " при покупке от " . $tag['value'] . 'шт';
+                                            }
+                                            $tagsText = $tagsText . ", ";
+                                        }
+
+                                        if($tag['type'] == 'gift'){
+                                            $tagsText = $tagsText . " Подарок";
+                                            $tagsText = $tagsText . ", ";
+                                        }
+
+                                        if($tag['type'] == 'multiplicity'){
+                                            $tagsText = $tagsText . "Кратность упаковки" . $tag['value'] . 'шт';
+                                            $tagsText = $tagsText . ", ";
+                                        }
+                                    }
+                                    $tagsText = substr($tagsText,0,-2);
+                                    $tagsText = $tagsText . " \n";
+                                }
+                                $sheet->getCell('L'.$start_position)->setValue($tagsText);
+                                $sheet->getStyle('L'.$start_position)->getAlignment()->setVertical('center');
+                                $sheet->getStyle('L'.$start_position)->getAlignment()->setHorizontal('left');
+                                $sheet->getStyle('L'.$start_position)->getFont()->setBold(false);
+                                $sheet->getStyle('L'.$start_position)->getFont()->setSize(10);
+                                $sheet->getStyle('L'.$start_position)->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+                            }
+
+                            $tagsTextName = "";
+                            if($product['actions_ids']){
+                                foreach($product['actions_ids'] as $action_id){
+                                    $q = $this->modx->newQuery("slActions");
+                                    $q->where(array(
+                                        "`slActions`.`id`:=" => $action_id,
+                                    ));
+                                    $q->select(array(
+                                        "`slActions`.name"
+                                    ));
+
+                                    if($q->prepare() && $q->stmt->execute()){
+                                        $action = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                                        if($tagsTextName == ""){
+                                            $tagsTextName = $action['name'];
+                                        } else {
+                                            $tagsTextName = $tagsTextName . " \n" . $action['name'];
+                                        }
+                                    }
+                                }
+                                $sheet->getCell('M'.$start_position)->setValue($tagsTextName);
+                                $sheet->getStyle('M'.$start_position)->getAlignment()->setVertical('center');
+                                $sheet->getStyle('M'.$start_position)->getAlignment()->setHorizontal('left');
+                                $sheet->getStyle('M'.$start_position)->getFont()->setBold(false);
+                                $sheet->getStyle('M'.$start_position)->getFont()->setSize(10);
+                                $sheet->getStyle('M'.$start_position)->getFont()->getColor(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->setARGB('808080');
+                            }
 
                             $start_position++;
+                            $num++;
                         }
-
                     }
+                    foreach($store['complects'] as $key => $items){
+                        foreach($items['products'] as $k => $product){
+                            $sheet->insertNewRowBefore($start_position);
+                            $sheet->setCellValueExplicit('A'.$start_position, $num, PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->setCellValueExplicit('B'.$start_position, $product['article'], PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->setCellValueExplicit('C'.$start_position, $product['name'], PHPExcel_Cell_DataType::TYPE_STRING);
+                            $sheet->mergeCells('C'.$start_position.":".'G'.$start_position);
+                            $sheet->getStyle('C'.$start_position.":".'G'.$start_position)->getAlignment()->setHorizontal('left');
+                            $sheet->getCell('H'.$start_position)->setValue($product['info']['count']);
+                            $sheet->getCell('I'.$start_position)->setValue($product['info']['price']);
+                            $sheet->getCell('J'.$start_position)->setValue($product['info']['count'] * $product['info']['price']);
+
+                            $delay = "Предоплата";
+                            if($product['delay']){
+                                $delay = $product['delay'];
+                            }
+                            $sheet->getCell('K'.$start_position)->setValue($delay);
+
+                            $sheet->getStyle( 'A'.$start_position.":".'K'.$start_position )->getBorders()->getAllBorders()->setBorderStyle(PHPExcel_Style_Border::BORDER_THIN);
+                            $sheet->getRowDimension($start_position)->setRowHeight(25);
+                            $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setBold(false);
+
+                            $start_position++;
+                            $num++;
+                        }
+                    }
+                    $sheet->mergeCells('A'.$start_position.":".'I'.$start_position);
+                    $sheet->getStyle('A'.$start_position.":".'I'.$start_position)->getAlignment()->setHorizontal('right');
+                    $sheet->getCell('A'.$start_position)->setValue("Итого:");
+                    $sheet->getCell('J'.$start_position)->setValue($store['cost']);
+                    $sheet->getRowDimension($start_position)->setRowHeight(25);
+                    $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setBold(true);
+                    $sheet->getStyle('A'.$start_position.":".'K'.$start_position)->getFont()->setSize(14);
+
+                    $index_active++;
                 }
-
-                $index_active++;
-
-
             }
+
         }
 
 

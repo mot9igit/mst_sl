@@ -166,7 +166,10 @@ class objectsHandler
                                 $cat->set("name", $option);
                                 $cat->set("cat_id", $cat_id);
                                 $cat->set("createdon", time());
-                                $cat->set("examples", strval($param));
+                                $length = strlen(strval($param));
+                                if($length < 200) {
+                                    $cat->set("examples", strval($param));
+                                }
                                 // чекаем опцию с таким наименованием
                                 $criteria = array(
                                     "caption" => $option
@@ -181,12 +184,20 @@ class objectsHandler
                                 $examples = explode("||", $cat->get("examples"));
                                 $length = strlen(strval($param));
                                 $sum = strlen($ex) + $length;
-                                if(!in_array(strval($param), $examples) && $length <= 25 && $sum < 255){
+                                if(!in_array(strval($param), $examples) && $length <= 25 && $sum < 200){
                                     $examples[] = strval($param);
                                     $cat->set("examples", implode("||", $examples));
                                 }
                             }
-                            $cat->save();
+                            if(!$cat->save()){
+                                // @var modValidator $validator
+                                $validator = $cat->getValidator();
+                                if ($validator->hasMessages()) {
+                                    foreach ($validator->getMessages() as $message) {
+                                        $this->sl->tools->log("errorers", print_r($message, 1));
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -224,7 +235,7 @@ class objectsHandler
             $feed->set("status", 6);
             $feed->set("error", "");
             $feed->save();
-            if($vendor){
+            if($vendor || $vendor_check){
                 foreach($xml->shop->offers->offer as $row) {
                     $category = strval($row->categoryId);
                     if ($category) {
@@ -235,7 +246,7 @@ class objectsHandler
                                 $parent = $cat->get("cat_id");
                                 $article = strval($row->article);
                                 $varticle = strval($row->vendorCode);
-                                if($parent && ($article || $varticle)){
+                                if($parent && ($article || $varticle) && ($vendor || strval($row->vendor))){
                                     $data = array();
                                     $data['pagetitle'] = strval($row->name);
                                     $data['source_url'] = strval($row->url);
@@ -498,7 +509,7 @@ class objectsHandler
         }
         if($properties['type'] == 'opts'){
             // return $this->sl->orgHandler->getWarehouses($properties["id"], $properties);
-            return $this->getOpts($properties);
+            return $this->sl->orgHandler->getOpts($properties);
         }
         if($properties['type'] == 'report_copo'){
             return $this->getReportCopo($properties);
@@ -881,247 +892,136 @@ class objectsHandler
         );
     }
 
+    /**
+     * Детализация отчета по бренду
+     *
+     * @param $properties
+     * @return array
+     */
     public function getReportCopoDetails($properties){
-        if($properties['brand_id']){
-            $obj = $this->sl->getObject($properties['brand_id'], "slStoresRemainsVendorReports");
-            if($obj['vendor_id']){
-                $result['vendor'] = $this->sl->getObject($obj['vendor_id'], "msVendor");
-            }else{
-                $result['vendor'] = array("name" => "Не найдено");
+        $warehouses = array();
+        if($properties['store_id']) {
+            $warehouses[] = $properties['store_id'];
+        }else{
+            $stores = $this->sl->orgHandler->getStoresOrg(array('id' => $properties['id']), 0);
+            foreach($stores["items"] as $store){
+                $warehouses[] = $store["id"];
             }
-            $prefix = $this->modx->getOption('table_prefix');
-            $criteria = array(
-                "brand_id:=" => $obj['vendor_id'],
-                "AND:store_id:=" => $properties['id']
-            );
-            $q = $this->modx->newQuery("slStoresRemains");
-            $q->leftJoin('slStoresRemainsStatus', 'slStoresRemainsStatus', 'slStoresRemainsStatus.id = slStoresRemains.status');
-            $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
-            $q->leftJoin('modResource', 'modResource', 'modResource.id = msProduct.id');
-            $q->where($criteria);
-            if($properties['filter']){
-                $words = explode(" ", $properties['filter']);
-                foreach($words as $word){
-                    $criteria = array();
-                    $criteria['name:LIKE'] = '%'.trim($word).'%';
-                    $criteria['OR:article:LIKE'] = '%'.trim($word).'%';
-                    $q->where($criteria);
-                }
-            }
-            if($properties['filtersdata']){
-                if(isset($properties['filtersdata']['status'])){
-                    $q->where(array(
-                        "slStoresRemains.status:=" => $properties['filtersdata']['status']
-                    ));
-                }
-                if(isset($properties['filtersdata']['instock'][0])){
-                    $q->where(array(
-                        "slStoresRemains.remains:>" => 0
-                    ));
-                }
-            }
-
-            $today = date_create();
-            $month_ago = date_create("-1 MONTH");
-            date_time_set($month_ago, 00, 00);
-
-            $date_from = date_format($month_ago, 'Y-m-d H:i:s');
-            $date_to = date_format($today, 'Y-m-d H:i:s');
-
-            $q->select(array(
-                'slStoresRemains.*',
-                'msProduct.image',
-                'slStoresRemainsStatus.name as status_name',
-                'slStoresRemainsStatus.color as status_color',
-                'COALESCE(slStoresRemains.remains * slStoresRemains.price, 0) as summ',
-                'COALESCE(msProduct.price_rrc, 0) as price_rrc',
-                'IF(price_rrc > 0, (slStoresRemains.price - price_rrc), 0) as price_rrc_delta',
-                "COALESCE((SELECT SUM(count) AS sales FROM `{$prefix}sl_stores_docs_products` LEFT JOIN `{$prefix}sl_stores_docs` ON `{$prefix}sl_stores_docs_products`.doc_id = `{$prefix}sl_stores_docs`.id WHERE `type` = 1 AND `remain_id` = `slStoresRemains`.`id` AND `{$prefix}sl_stores_docs`.date >= '{$date_from}' AND `{$prefix}sl_stores_docs`.date <= '{$date_to}' GROUP BY `remain_id`), 0) AS `sales_30`",
-                "COALESCE((SELECT SUM(count) AS sales FROM `{$prefix}sl_stores_docs_products` WHERE `type` = 1 AND `remain_id` = `slStoresRemains`.`id` GROUP BY `remain_id`), 0) AS `sales`,
-							   FLOOR((slStoresRemains.remains - slStoresRemains.purchase_speed)) as forecast,FLOOR((slStoresRemains.remains - (7 * slStoresRemains.purchase_speed))) as forecast_7, CONCAT(FLOOR((slStoresRemains.remains - slStoresRemains.purchase_speed)), ' / ', FLOOR((slStoresRemains.remains - (7 * slStoresRemains.purchase_speed)))) as forecast_all"
-            ));
-
-            // Подсчитываем общее число записей
-            $total_query = $q;
-            $total_query->prepare();
-            $total_sql = "SELECT COUNT(*) as count FROM ( {$total_query->toSQL()} ) AS SQ";
-            $this->modx->log(1, print_r($total_sql, 1));
-            $statement = $this->modx->query($total_sql);
-            if($statement){
-                $ress = $statement->fetch(PDO::FETCH_ASSOC);
-                $result['total'] = intval($ress["count"]);
-            }
-            // $result['total'] = $this->modx->getCount('slStoresRemains', $q);
-            $xlsx_query = $q;
-            // Устанавливаем лимит 1/10 от общего количества записей
-            // со сдвигом 1/20 (offset)
-            if($properties['page'] && $properties['perpage']){
-                $limit = $properties['perpage'];
-                $offset = ($properties['page'] - 1) * $properties['perpage'];
-                $q->limit($limit, $offset);
-            }
-
-            // И сортируем по ID в обратном порядке
-            if($properties['sort']){
-                $keys = array_keys($properties['sort']);
-                $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
-            }
-            $q->prepare();
-            $this->modx->log(1, print_r($q->toSQL(), 1));
-            if($q->prepare() && $q->stmt->execute()){
-                $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
-                foreach($result['items'] as $key => $item){
-                    if($item['price']){
-                        $result['items'][$key]["price"] = number_format($item['price'], 2, '.', ' ');
-                    }
-                    if($item['summ']){
-                        $result['items'][$key]["summ"] = number_format($item['summ'], 2, '.', ' ');
-                    }
-                }
-
-                // $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $result['items'], "copo_file_details_".$properties["id"]."_".$properties['brand_id']);
-
-                $i = $limit;
-                $limit = 1000;
-                for($i = 0; $i <= $result['total']; $i += $limit){
-                    $query = $xlsx_query;
-                    $query->limit($limit, $i);
-                    if($query->prepare() && $query->stmt->execute()){
-                        $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-                        $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $data, "copo_file_details_".$properties["id"]."_".$properties['brand_id'], 0, $xlsx["config"]);
-                    }
-                }
-                $result["file"] = $xlsx["filename"];
-
-            }
-            return $result;
         }
-
-        return array(
-            "items" => array(),
-            "total" => 0
-        );
-    }
-
-    public function getReportCopo($properties){
-        $report = $this->sl->product->generateCopoReport($properties['id']);
-        if($report){
-            $query = $this->modx->newQuery("slStoresRemainsVendorReports");
-            $query->where(array("report_id:=" => $report['id']));
-            $query->leftJoin("msVendor", "msVendor", "msVendor.id = slStoresRemainsVendorReports.vendor_id");
-            if($properties['filter']){
-                $words = explode(" ", $properties['filter']);
-                foreach($words as $word){
-                    $criteria = array();
-                    $criteria['msVendor.name:LIKE'] = '%'.trim($word).'%';
-                    $criteria['OR:msVendor.address:LIKE'] = '%'.trim($word).'%';
-                    $query->where($criteria);
+        if($warehouses) {
+            if (isset($properties['brand_id'])) {
+                // объект
+                if ($properties['brand_id']) {
+                    $result['vendor'] = $this->sl->getObject($properties['brand_id'], "msVendor");
+                } else {
+                    $result['vendor'] = array("name" => "Не найдено");
                 }
-            }
-
-            if($properties['filtersdata']){
-                if(isset($properties['filtersdata']['instock'][0])){
-                    $query->where(array(
-                        "slStoresRemainsVendorReports.find_in_stock:>" => 0
-                    ));
-                    $query->select(array("
-                        slStoresRemainsVendorReports.id,
-                        slStoresRemainsVendorReports.report_id,
-                        slStoresRemainsVendorReports.vendor_id,
-                        slStoresRemainsVendorReports.cards,
-                        slStoresRemainsVendorReports.find_in_stock as find,
-                        slStoresRemainsVendorReports.identified_in_stock as identified,
-                        (slStoresRemainsVendorReports.find_in_stock - slStoresRemainsVendorReports.identified_in_stock) as no_identified,
-                        slStoresRemainsVendorReports.summ as vendor_price,
-                        slStoresRemainsVendorReports.percent_identified_in_stock as percent_identified,
-                        ROUND((slStoresRemainsVendorReports.summ_copo / slStoresRemainsVendorReports.summ * 100), 2) as percent_summ_identified,
-                        msVendor.name as name,
-                        msVendor.export_file as export_file"));
-                    // И сортируем по ID в обратном порядке
-                    if($properties['sort']){
-                        $keys = array_keys($properties['sort']);
-                        $query->sortby($keys[0].'_in_stock', $properties['sort'][$keys[0]]['dir']);
-                    }else{
-                        $query->sortby('slStoresRemainsVendorReports.find_in_stock', 'desc');
-                    }
-                }else{
-                    $query->select(array("slStoresRemainsVendorReports.*,
-                    (slStoresRemainsVendorReports.find - slStoresRemainsVendorReports.identified) as no_identified,
-                    slStoresRemainsVendorReports.summ as vendor_price,
-                    ROUND((slStoresRemainsVendorReports.summ_copo / slStoresRemainsVendorReports.summ * 100), 2) as percent_summ_identified,
-                    msVendor.name as name,msVendor.export_file as export_file"));
-                    // И сортируем по ID в обратном порядке
-                    if($properties['sort']){
-                        $keys = array_keys($properties['sort']);
-                        $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
-                    }else{
-                        $query->sortby('slStoresRemainsVendorReports.find', 'desc');
+                $prefix = $this->modx->getOption('table_prefix');
+                $criteria = array(
+                    "brand_id:=" => $properties['brand_id'],
+                    "AND:store_id:IN" => $warehouses
+                );
+                $q = $this->modx->newQuery("slStoresRemains");
+                $q->leftJoin('slStoresRemainsStatus', 'slStoresRemainsStatus', 'slStoresRemainsStatus.id = slStoresRemains.status');
+                $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
+                $q->leftJoin('modResource', 'modResource', 'modResource.id = msProduct.id');
+                $q->where($criteria);
+                if ($properties['filter']) {
+                    $words = explode(" ", $properties['filter']);
+                    foreach ($words as $word) {
+                        $criteria = array();
+                        $criteria['name:LIKE'] = '%' . trim($word) . '%';
+                        $criteria['OR:article:LIKE'] = '%' . trim($word) . '%';
+                        $q->where($criteria);
                     }
                 }
-            }else{
-                $query->select(array("slStoresRemainsVendorReports.*, 
-                (slStoresRemainsVendorReports.find - slStoresRemainsVendorReports.identified) as no_identified,
-                slStoresRemainsVendorReports.summ as vendor_price,
-                ROUND((slStoresRemainsVendorReports.summ_copo / slStoresRemainsVendorReports.summ * 100), 2) as percent_summ_identified,
-                msVendor.name as name,msVendor.export_file as export_file"));
+                if ($properties['filtersdata']) {
+                    if (isset($properties['filtersdata']['status'])) {
+                        $q->where(array(
+                            "slStoresRemains.status:=" => $properties['filtersdata']['status']
+                        ));
+                    }
+                    if (isset($properties['filtersdata']['instock'][0])) {
+                        $q->where(array(
+                            "slStoresRemains.remains:>" => 0
+                        ));
+                    }
+                }
+
+                $today = date_create();
+                $month_ago = date_create("-1 MONTH");
+                date_time_set($month_ago, 00, 00);
+
+                $date_from = date_format($month_ago, 'Y-m-d H:i:s');
+                $date_to = date_format($today, 'Y-m-d H:i:s');
+
+                $q->select(array(
+                    'slStoresRemains.*',
+                    'msProduct.image',
+                    'slStoresRemainsStatus.name as status_name',
+                    'slStoresRemainsStatus.color as status_color',
+                    'COALESCE(slStoresRemains.remains * slStoresRemains.price, 0) as summ',
+                    'COALESCE(msProduct.price_rrc, 0) as price_rrc',
+                    'IF(price_rrc > 0, (slStoresRemains.price - price_rrc), 0) as price_rrc_delta',
+                    "COALESCE((SELECT SUM(count) AS sales FROM `{$prefix}sl_stores_docs_products` LEFT JOIN `{$prefix}sl_stores_docs` ON `{$prefix}sl_stores_docs_products`.doc_id = `{$prefix}sl_stores_docs`.id WHERE `type` = 1 AND `remain_id` = `slStoresRemains`.`id` AND `{$prefix}sl_stores_docs`.date >= '{$date_from}' AND `{$prefix}sl_stores_docs`.date <= '{$date_to}' GROUP BY `remain_id`), 0) AS `sales_30`",
+                    "COALESCE((SELECT SUM(count) AS sales FROM `{$prefix}sl_stores_docs_products` WHERE `type` = 1 AND `remain_id` = `slStoresRemains`.`id` GROUP BY `remain_id`), 0) AS `sales`,
+                                   FLOOR((slStoresRemains.remains - slStoresRemains.purchase_speed)) as forecast,FLOOR((slStoresRemains.remains - (7 * slStoresRemains.purchase_speed))) as forecast_7, CONCAT(FLOOR((slStoresRemains.remains - slStoresRemains.purchase_speed)), ' / ', FLOOR((slStoresRemains.remains - (7 * slStoresRemains.purchase_speed)))) as forecast_all"
+                ));
+
+                // Подсчитываем общее число записей
+                $total_query = $q;
+                $total_query->prepare();
+                $total_sql = "SELECT COUNT(*) as count FROM ( {$total_query->toSQL()} ) AS SQ";
+                $statement = $this->modx->query($total_sql);
+                if ($statement) {
+                    $ress = $statement->fetch(PDO::FETCH_ASSOC);
+                    $result['total'] = intval($ress["count"]);
+                }
+                // $result['total'] = $this->modx->getCount('slStoresRemains', $q);
+                $xlsx_query = $q;
+                // Устанавливаем лимит 1/10 от общего количества записей
+                // со сдвигом 1/20 (offset)
+                if ($properties['page'] && $properties['perpage']) {
+                    $limit = $properties['perpage'];
+                    $offset = ($properties['page'] - 1) * $properties['perpage'];
+                    $q->limit($limit, $offset);
+                }
+
                 // И сортируем по ID в обратном порядке
-                if($properties['sort']){
+                if ($properties['sort']) {
                     $keys = array_keys($properties['sort']);
-                    $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
-                }else{
-                    $query->sortby('slStoresRemainsVendorReports.find', 'desc');
+                    $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
                 }
-            }
-            $query->prepare();
-            $total_sql = "SELECT COUNT(*) as count FROM ( {$query->toSQL()} ) AS SQ";
-            $this->modx->log(1, print_r($total_sql, 1));
-            $statement = $this->modx->query($total_sql);
-            if($statement){
-                $ress = $statement->fetch(PDO::FETCH_ASSOC);
-                $result['total'] = intval($ress["count"]);
-            }
-            $xlsx_query = $query;
-
-            // Устанавливаем лимит 1/10 от общего количества записей
-            // со сдвигом 1/20 (offset)
-            if($properties['page'] && $properties['perpage']){
-                $limit = $properties['perpage'];
-                $offset = ($properties['page'] - 1) * $properties['perpage'];
-                $query->limit($limit, $offset);
-            }
-            // $this->modx->log(1, $query->toSQL());
-            if ($query->prepare() && $query->stmt->execute()) {
-                // $result['total'] = $query->stmt->rowCount();;
-                $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-                foreach($result['items'] as $key => $item){
-                    if(!$item['vendor_id']){
-                        $result['items'][$key]["name"] = "Не найдено";
-                    }
-                    if($item['vendor_price']){
-                        $result['items'][$key]["vendor_price"] = number_format($item['vendor_price'], 2, '.', ' ');
-                    }
-                }
-                // $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $result['items'], "copo_file_".$properties["id"]."_".$properties['brand_id']);
-
-                $limit = 1000;
-                for($i = 0; $i <= $result['total']; $i += $limit){
-                    $query = $xlsx_query;
-                    $query->limit($limit, $i);
-                    if($query->prepare() && $query->stmt->execute()){
-                        $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-                        foreach($data as $key => $item){
-                            if(!$item['vendor_id']){
-                                $data[$key]["name"] = "Не найдено";
-                            }
-                            if($item['vendor_price']){
-                                $data[$key]["vendor_price"] = number_format($item['vendor_price'], 2, '.', ' ');
-                            }
+                if ($q->prepare() && $q->stmt->execute()) {
+                    $result['items'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($result['items'] as $key => $item) {
+                        if ($item['image']) {
+                            $images = $this->sl->tools->prepareImage($item['image'], array(), 0);
+                            $result['items'][$key]["image"] = $images["image"];
                         }
-                        $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $data, "copo_file_details_".$properties["id"], 0, $xlsx["config"]);
+                        if ($item['price']) {
+                            $result['items'][$key]["price"] = number_format($item['price'], 2, '.', ' ');
+                        }
+                        if ($item['summ']) {
+                            $result['items'][$key]["summ"] = number_format($item['summ'], 2, '.', ' ');
+                        }
                     }
-                }
-                $result["file"] = $xlsx["filename"];
 
+                    // $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $result['items'], "copo_file_details_".$properties["id"]."_".$properties['brand_id']);
+
+                    $i = $limit;
+                    $limit = 1000;
+                    for ($i = 0; $i <= $result['total']; $i += $limit) {
+                        $query = $xlsx_query;
+                        $query->limit($limit, $i);
+                        if ($query->prepare() && $query->stmt->execute()) {
+                            $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                            $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $data, "copo_file_details_" . $properties["id"] . "_" . $properties['brand_id'], 0, $xlsx["config"]);
+                        }
+                    }
+                    $result["file"] = $xlsx["filename"];
+
+                }
                 return $result;
             }
         }
@@ -1132,81 +1032,177 @@ class objectsHandler
         );
     }
 
-    public function getOpts($properties){
-        $query = $this->modx->newQuery("slStores");
-        $query->leftJoin("slWarehouseStores", "slWarehouseStores", "slWarehouseStores.org_id = {$properties["id"]} AND slWarehouseStores.warehouse_id = slStores.id");
-        $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
-        $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
-        $query->where(array(
-            "slStores.warehouse:=" => 1,
-            "slStores.active:=" => 1,
-            "slStores.opt_marketplace:=" => 1
-        ));
-        if($properties['filtersdata']['region']){
-            $geo_data = $this->parseRegions($properties['filtersdata']['region']);
-            $criteria = array();
-            if ($geo_data["cities"]) {
-                $criteria["dartLocationCity.id:IN"] = $geo_data["cities"];
-            }
-            if ($geo_data["regions"]) {
-                $criteria["dartLocationRegion.id:IN"] = $geo_data["regions"];
-            }
-            if($criteria){
-                $query->where($criteria);
-            }
-        }
-
-        if ($properties['filtersdata']['our']) {
-            $query->where(array("slWarehouseStores.org_id:=" => $properties["id"]));
-        }
-
-        if ($properties['filter']) {
-            $words = explode(" ", $properties['filter']);
-            foreach ($words as $word) {
-                $criteria = array();
-                $criteria['slStores.name:LIKE'] = '%' . trim($word) . '%';
-                $criteria['OR:slStores.address:LIKE'] = '%' . trim($word) . '%';
-                $query->where($criteria);
-            }
-        }
-
-        $query->select(array("slStores.*,IF(slWarehouseStores.warehouse_id = slStores.id, 1, 0) as connection, slWarehouseStores.date as connection_date"));
-        $result['total'] = $this->modx->getCount('slStores', $query);
-
-        // Устанавливаем лимит 1/10 от общего количества записей
-        // со сдвигом 1/20 (offset)
-        if($properties['page'] && $properties['perpage']){
-            $limit = $properties['perpage'];
-            $offset = ($properties['page'] - 1) * $properties['perpage'];
-            $query->limit($limit, $offset);
-        }
-
-        // И сортируем по ID в обратном порядке
-        if($properties['sort']){
-            $keys = array_keys($properties['sort']);
-            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+    /**
+     * Отчет по сопоставлению
+     *
+     * @param $properties
+     * @return array
+     */
+    public function getReportCopo($properties){
+        // $properties['store_id'] - склад
+        $warehouses = array();
+        if($properties['store_id']) {
+            $warehouses[] = $properties['store_id'];
         }else{
-            $query->sortby('connection', 'desc');
+            $stores = $this->sl->orgHandler->getStoresOrg($properties, 0);
+            foreach($stores["items"] as $store){
+                $warehouses[] = $store["id"];
+            }
         }
-
-        if ($query->prepare() && $query->stmt->execute()) {
-            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach($result['items'] as $key => $val){
-                if($val["image"]){
-                    $result['items'][$key]['image'] = $this->modx->getOption("site_url")."assets/content/".$val["image"];
-                }else{
-                    $result['items'][$key]['image'] = $this->modx->getOption("site_url").$this->modx->getOption("shoplogistic_blank_image");
+        $this->modx->log(1, print_r($warehouses, 1));
+        if($warehouses) {
+            $reports = array();
+            foreach($warehouses as $warehouse){
+                $report = $this->sl->product->generateCopoReport($warehouse, 1);
+                $reports[] = $report["id"];
+            }
+            $reports_koef = count($reports);
+            if ($reports) {
+                $query = $this->modx->newQuery("slStoresRemainsVendorReports");
+                $query->where(array("report_id:IN" => $reports));
+                $query->leftJoin("msVendor", "msVendor", "msVendor.id = slStoresRemainsVendorReports.vendor_id");
+                if ($properties['filter']) {
+                    $words = explode(" ", $properties['filter']);
+                    foreach ($words as $word) {
+                        $criteria = array();
+                        $criteria['msVendor.name:LIKE'] = '%' . trim($word) . '%';
+                        $criteria['OR:msVendor.address:LIKE'] = '%' . trim($word) . '%';
+                        $query->where($criteria);
+                    }
                 }
 
-                $result['items'][$key]['connection_date'] = date('d.m.Y H:i', strtotime($val['connection_date']));
+                if ($properties['filtersdata']) {
+                    if (isset($properties['filtersdata']['instock'][0])) {
+                        $query->where(array(
+                            "slStoresRemainsVendorReports.find_in_stock:>" => 0
+                        ));
+                        $query->select(array("
+                            SUM(slStoresRemainsVendorReports.find_in_stock) as find,
+                            SUM(slStoresRemainsVendorReports.identified_in_stock) as identified,
+                            slStoresRemainsVendorReports.cards as cards,
+                            ROUND((SUM(slStoresRemainsVendorReports.identified_in_stock) / SUM(slStoresRemainsVendorReports.find_in_stock) * 100), 2) as percent_identified,
+                            (SUM(slStoresRemainsVendorReports.find_in_stock) - SUM(slStoresRemainsVendorReports.identified_in_stock)) as no_identified,
+                            SUM(slStoresRemainsVendorReports.summ) as vendor_price,
+                            ROUND((SUM(slStoresRemainsVendorReports.summ_copo) / SUM(slStoresRemainsVendorReports.summ) * 100), 2) as percent_summ_identified,
+                            COALESCE(msVendor.id, 0) as vendor_id,
+                            COALESCE(msVendor.name, 'Не найдено') as name,
+                            msVendor.export_file as export_file"
+                        ));
+                        // И сортируем по ID в обратном порядке
+                        if ($properties['sort']) {
+                            $keys = array_keys($properties['sort']);
+                            $query->sortby($keys[0] . '_in_stock', $properties['sort'][$keys[0]]['dir']);
+                        } else {
+                            $query->sortby('find', 'desc');
+                        }
+                    } else {
+                        $query->select(array(
+                            "SUM(slStoresRemainsVendorReports.find) as find,
+                            SUM(slStoresRemainsVendorReports.identified) as identified,
+                            slStoresRemainsVendorReports.cards as cards,
+                            ROUND((SUM(slStoresRemainsVendorReports.identified) / SUM(slStoresRemainsVendorReports.find) * 100), 2) as percent_identified,
+                            (SUM(slStoresRemainsVendorReports.find) - SUM(slStoresRemainsVendorReports.identified)) as no_identified,
+                            SUM(slStoresRemainsVendorReports.summ) as vendor_price,
+                            ROUND((SUM(slStoresRemainsVendorReports.summ_copo) / SUM(slStoresRemainsVendorReports.summ) * 100), 2) as percent_summ_identified,
+                            COALESCE(msVendor.id, 0) as vendor_id,
+                            COALESCE(msVendor.name, 'Не найдено') as name,
+                            msVendor.export_file as export_file"
+                        ));
+                        // И сортируем по ID в обратном порядке
+                        if ($properties['sort']) {
+                            $keys = array_keys($properties['sort']);
+                            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+                        } else {
+                            $query->sortby('find', 'desc');
+                        }
+                    }
+                } else {
+                    $query->select(array(
+                        "SUM(slStoresRemainsVendorReports.find) as find,
+                        SUM(slStoresRemainsVendorReports.identified) as identified,
+                        slStoresRemainsVendorReports.cards as cards,
+                        ROUND((SUM(slStoresRemainsVendorReports.identified) / SUM(slStoresRemainsVendorReports.find) * 100), 2) as percent_identified,
+                        (SUM(slStoresRemainsVendorReports.find) - SUM(slStoresRemainsVendorReports.identified)) as no_identified,
+                        SUM(slStoresRemainsVendorReports.summ) as vendor_price,
+                        ROUND((SUM(slStoresRemainsVendorReports.summ_copo) / SUM(slStoresRemainsVendorReports.summ) * 100), 2) as percent_summ_identified,
+                        COALESCE(msVendor.id, 0) as vendor_id,
+                        COALESCE(msVendor.name, 'Не найдено') as name,
+                        msVendor.export_file as export_file"
+                    ));
+                    // И сортируем по ID в обратном порядке
+                    if ($properties['sort']) {
+                        $keys = array_keys($properties['sort']);
+                        $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+                    } else {
+                        $query->sortby('find', 'desc');
+                    }
+                }
+                $query->groupby("slStoresRemainsVendorReports.vendor_id");
+                $query->prepare();
+                $this->modx->log(1, $query->toSQL());
+                $total_sql = "SELECT COUNT(*) as count FROM ( {$query->toSQL()} ) AS SQ";
+                $this->modx->log(1, print_r($total_sql, 1));
+                $statement = $this->modx->query($total_sql);
+                if ($statement) {
+                    $ress = $statement->fetch(PDO::FETCH_ASSOC);
+                    $result['total'] = intval($ress["count"]);
+                }
+                $xlsx_query = $query;
+
+                // Устанавливаем лимит 1/10 от общего количества записей
+                // со сдвигом 1/20 (offset)
+                if ($properties['page'] && $properties['perpage']) {
+                    $limit = $properties['perpage'];
+                    $offset = ($properties['page'] - 1) * $properties['perpage'];
+                    $query->limit($limit, $offset);
+                }
+                // $this->modx->log(1, $query->toSQL());
+                if ($query->prepare() && $query->stmt->execute()) {
+                    // $result['total'] = $query->stmt->rowCount();;
+                    $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($result['items'] as $key => $item) {
+                        if (!$item['vendor_id']) {
+                            $result['items'][$key]["name"] = "Не найдено";
+                        }
+                        if ($item['vendor_price']) {
+                            $result['items'][$key]["vendor_price"] = number_format($item['vendor_price'], 2, '.', ' ');
+                        }
+                    }
+                    // $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $result['items'], "copo_file_".$properties["id"]."_".$properties['brand_id']);
+
+                    $limit = 1000;
+                    for ($i = 0; $i <= $result['total']; $i += $limit) {
+                        $query = $xlsx_query;
+                        $query->limit($limit, $i);
+                        if ($query->prepare() && $query->stmt->execute()) {
+                            $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($data as $key => $item) {
+                                if (!$item['vendor_id']) {
+                                    $data[$key]["name"] = "Не найдено";
+                                }
+                                if ($item['vendor_price']) {
+                                    $data[$key]["vendor_price"] = number_format($item['vendor_price'], 2, '.', ' ');
+                                }
+                            }
+                            $xlsx = $this->sl->xslx->generateXLSXFile($properties["tabledata"], $data, "copo_file_details_" . $properties["id"], 0, $xlsx["config"]);
+                        }
+                    }
+                    $result["file"] = $xlsx["filename"];
+
+                    return $result;
+                }
             }
-            return $result;
         }
+
+        return array(
+            "items" => array(),
+            "total" => 0
+        );
     }
 
     public function getBalance($properties){
         $query = $this->modx->newQuery("slStoreBalance");
-        $query->where(array("store_id:=" => $properties["id"]));
+        $query->where(array("org_id:=" => $properties["id"]));
         // $query->leftJoin("slExportFileStatus", "slExportFileStatus", "slExportFileStatus.id = slExportFiles.status");
         $query->select(array("slStoreBalance.*"));
         $result['total'] = $this->modx->getCount('slStoreBalance', $query);
@@ -2709,7 +2705,16 @@ class objectsHandler
                         $namefile = uniqid() . "." . $typefile;
 
                         $target = $tmp_path . $namefile;
-                        if (move_uploaded_file($file['tmp_name'], $target)) {
+                        if(is_array($file['tmp_name'])){
+                            if (move_uploaded_file($file['tmp_name'][0], $target)) {
+                                $output['files'][] = array(
+                                    "name" => $namefile,
+                                    "original" => $tmp_url . $namefile,
+                                    "original_href" => str_replace("//assets", "/assets", $this->modx->getOption('site_url') . $tmp_url . $namefile),
+                                    "type" => $properties['upload_org_avatar'],
+                                );
+                            }
+                        } elseif (move_uploaded_file($file['tmp_name'], $target)) {
                             $output['files'][] = array(
                                 "name" => $namefile,
                                 "original" => $tmp_url . $namefile,
@@ -2776,13 +2781,13 @@ class objectsHandler
             $response = $this->setBalanceRequest($properties);
         }
         if($properties['type'] == 'opts') {
-            $response = $this->checkOpts($properties);
+            $response = $this->sl->orgHandler->checkOpts($properties);
         }
         if($properties['type'] == 'toggleOpts') {
-            $response = $this->toggleOpts($properties);
+            $response = $this->sl->orgHandler->toggleOpts($properties);
         }
         if($properties['type'] == 'toggleOptsVisible') {
-            $response = $this->toggleOptsVisible($properties);
+            $response = $this->sl->orgHandler->toggleOptsVisible($properties);
         }
         if($properties['type'] == 'work_week' && $properties['action'] == 'set'){
             $response = $this->sl->store->setWork($properties);
@@ -2900,102 +2905,18 @@ class objectsHandler
         return $output;
     }
 
-    /**
-     * Чекаем оптовиков
-     *
-     * @param $properties
-     * @return void
-     */
-    public function checkOpts($properties){
-        $outputs = array();
-        if($properties['action'] == 'set'){
-            if(count($properties['vendors'])){
-                foreach($properties['vendors'] as $key => $v){
-                    if($v){
-                        if($object = $this->modx->getObject("slWarehouseStores", array("store_id" => $properties["id"], "warehouse_id" => $key))){
-                            $object->set("visible", 1);
-                            $object->save();
-                            $outputs[] = $object->toArray();
-                        }
-                    }
-                }
-            }
-        }
-        return $this->sl->success("Объекты создан", $outputs);
-    }
-
-    /**
-     * Чекаем оптовиков (видимость)
-     *
-     * @param $properties
-     * @return mixed
-     */
-    public function toggleOptsVisible($properties)
-    {
-        // $this->modx->log(1, print_r($properties, 1));
-        if($properties['action']){
-            // установить
-            if($object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["id"], "warehouse_id" => $properties["store"]))){
-                $object->set("visible", 1);
-                $object->save();
-                return $this->sl->success("Объект создан", $object->toArray());
-            }
-        }else{
-            // удалить
-            $object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]));
-            if($object){
-                $object->set("visible", 0);
-                $object->save();
-                return $this->sl->success("Объект удален", $object->toArray());
-            }
-        }
-        return $this->sl->tools->error("Объект не найден", $properties);
-    }
-
-    /**
-     * Чекаем оптовиков
-     *
-     * @param $properties
-     * @return mixed
-     */
-    public function toggleOpts($properties)
-    {
-        // $this->modx->log(1, print_r($properties, 1));
-        if($properties['action']){
-            // установить
-            if(!$object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["id"], "warehouse_id" => $properties["store"]))){
-                $object = $this->modx->newObject("slWarehouseStores");
-            }
-            $object->set("org_id", $properties["store"]);
-            $object->set("warehouse_id", $properties["id"]);
-            $object->set("description", "Установлено через ЛК магазина");
-            $object->set("sync", 0);
-            $object->set("date", time());
-            $object->save();
-            return $this->sl->success("Объект создан", $object->toArray());
-        }else{
-            // удалить
-            $object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]));
-            if($object){
-                $data = $object->toArray();
-                $object->remove();
-            }
-            return $this->sl->success("Объект удален", $data);
-        }
-
-    }
-
     public function setBalanceRequest($properties){
-        if($properties['id']){
+        if($properties['id'] && $properties["value"]){
             $store = $this->sl->getObject($properties['id']);
             $user_id = $_SESSION['analytics_user']['profile']['id'];
             $object = $this->modx->newObject("slStoreBalancePayRequest");
-            $object->set("name", $properties["form"]["name"]);
-            $object->set("phone", $properties["form"]["phone"]);
-            $object->set("description", $properties["form"]["description"]);
+            //$object->set("name", $properties["form"]["name"]);
+            //$object->set("phone", $properties["form"]["phone"]);
+            //$object->set("description", $properties["form"]["description"]);
+            $object->set("value", $properties["value"]);
             $object->set("store_id", $properties["id"]);
             $object->set("status", 1);
-            $object->set("value", $store['balance']);
+            //$object->set("value", $store['balance']);
             $object->set("date", time());
             $object->set("createdon", time());
             $object->set("createdby", $user_id);
@@ -3482,202 +3403,16 @@ class objectsHandler
         return array();
     }
 
-//    public function getAllProducts($store_id, $properties = array(), $include = 1){
-//        $results = array();
-//
-//        $q = $this->modx->newQuery("slStoresRemains");
-//        $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
-//        $q->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
-//        $q->where(array(
-//            "slStoresRemains.store_id:=" => $properties['id'],
-//            "slStoresRemains.price:>" => 0,
-////            "slStoresRemains.remains:>" => 0
-//        ));
-//
-//        $q->select(array(
-//            'slStoresRemains.price as price',
-//            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
-//            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
-//            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
-//            "`slStoresRemains`.`id` as id"
-//        ));
-//
-//        $urlMain = $this->modx->getOption("site_url");
-//
-//        $idsProducts = array();
-//        //Если нет выбранных, выдаём весь список
-//        if($properties['selected']){
-//
-//            foreach ($properties['selected'] as $key => $value) {
-//                array_push($idsProducts, $value['id']);
-//            }
-//
-//            $q->where(array(
-//                "slStoresRemains.id:NOT IN" => $idsProducts
-//            ));
-//        }
-//
-//        $q_selected = $this->modx->newQuery("slStoresRemains");
-//        $q_selected->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
-//        $q_selected->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
-//        $q_selected->where(array(
-//            "slStoresRemains.store_id:=" => $properties['id'],
-//            "slStoresRemains.price:>" => 0,
-////            "slStoresRemains.remains:>" => 0
-//        ));
-//
-//        $q_selected->select(array(
-//            'slStoresRemains.price as price',
-//            'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
-//            'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
-//            'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
-//            "`slStoresRemains`.`id` as id",
-//            "`slStoresRemains`.`category_id` as category_id"
-//        ));
-//
-//        if(!$properties['isallproducts']){
-//            $q_selected->where(array(
-//                "slStoresRemains.id:IN" => $idsProducts
-//            ));
-//        }
-//
-//
-//        if($properties['filterselected']) {
-//            if ($properties['filterselected']['name']) {
-//                $q_selected->where(array(
-//                    "modResource.pagetitle:LIKE" => "%{$properties['filterselected']['name']}%",
-//                    "OR:slStoresRemains.name:LIKE" => "%{$properties['filterselected']['name']}%",
-//                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filterselected']['name']}%",
-//                    "OR:slStoresRemains.article:LIKE" => "%{$properties['filterselected']['name']}%"
-//                ));
-//            }
-//
-//            if($properties['filterselected']['category']){
-//
-//                $idsProductsCategory = [];
-//
-//                foreach ($properties['filterselected']['category'] as $key => $value) {
-//                    if($value['checked']){
-//                        array_push($idsProductsCategory, $key);
-//                    }
-//                }
-//
-//                $q_selected->where(array(
-//                    "slStoresRemains.category_id:IN" => $idsProductsCategory
-//                ));
-//            }
-//        }
-//
-//        $q_selected->prepare();
-//        $this->modx->log(1, $q_selected->toSQL());
-//
-//        // Подсчитываем общее число записей
-//        $results['total_selected'] = $this->modx->getCount('slStoresRemains', $q_selected);
-//
-//
-//        $properties_selected = $properties['selected'];
-//
-//        if($q_selected->prepare() && $q_selected->stmt->execute()) {
-//            $qselected = $q_selected->stmt->fetchAll(PDO::FETCH_ASSOC);
-//
-//            foreach ($properties_selected as $key => $value){
-//                $properties_selected[$key]['hide'] = false;
-//            }
-//
-//            $index = 0;
-//            foreach ($qselected as $select){
-//                if($index >= ($properties['perpage'] * ($properties['page_selected'] - 1)) && $index < ($properties['perpage'] * $properties['page_selected'])){
-//                    $properties_selected[$select['id']]['hide'] = true;
-//                }
-//                $index++;
-//
-//                if(!$properties_selected[$select['id']]['name']) {
-//                    $properties_selected[$select['id']]['name'] = $select['name'];
-//                    $properties_selected[$select['id']]['article'] = $select['article'];
-//                    $properties_selected[$select['id']]['discountInRubles'] = 0;
-//                    $properties_selected[$select['id']]['discountInterest'] = 0;
-//                    $properties_selected[$select['id']]['finalPrice'] = $select['price'];
-//                    $properties_selected[$select['id']]['id'] = $select['id'];
-//                    $properties_selected[$select['id']]['image'] = $this->sl->config["urlMain"] . $select['image'];
-//                    $properties_selected[$select['id']]['multiplicity'] = 1;
-//                    $properties_selected[$select['id']]['price'] = $select['price'];
-//                    $properties_selected[$select['id']]['prices'] = $this->sl->analyticsOpt->getRemainPrices(array("remain_id" => $select['id']));
-//                }
-//            }
-//        }
-//
-//
-//        if($properties['filter']){
-//            if($properties['filter']['name']) {
-//                $q->where(array(
-//                    "modResource.pagetitle:LIKE" => "%{$properties['filter']['name']}%",
-//                    "OR:slStoresRemains.name:LIKE" => "%{$properties['filter']['name']}%",
-//                    "OR:msProduct.vendor_article:LIKE" => "%{$properties['filter']['name']}%",
-//                    "OR:slStoresRemains.article:LIKE" => "%{$properties['filter']['name']}%"
-//                ));
-//            }
-//
-//
-//            if($properties['filter']['category']){
-//
-//                $idsProductsCategory = [];
-//
-//                foreach ($properties['filter']['category'] as $key => $value) {
-//                    if($value['checked']){
-//                        array_push($idsProductsCategory, $key);
-//                    }
-//                }
-//
-//                $q->where(array(
-//                    "slStoresRemains.category_id:IN" => $idsProductsCategory
-//                ));
-//            }
-//        }
-//
-//        if($properties['page'] && $properties['perpage']){
-//            $limit = $properties['perpage'];
-//            $offset = ($properties['page'] - 1) * $properties['perpage'];
-//            $q->limit($limit, $offset);
-//        }else{
-//            $limit = 50;
-//            $offset = 0;
-//            $q->limit($limit, $offset);
-//        }
-//
-//        // Подсчитываем общее число записей
-//        $results['total'] = $this->modx->getCount('slStoresRemains', $q);
-//
-////        $q->prepare();
-////        $this->modx->log(1, $q->toSQL());
-//        if($q->prepare() && $q->stmt->execute()){
-//            $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
-//
-//            foreach ($out as $key => $product){
-//                $out[$key]['image'] = $urlMain . $product['image'];
-//            }
-//
-//            if(!$properties['selected'] && !$properties['isallproducts']){
-//                $results['products'] = $out;
-//
-//            }else{
-//                $results['products'] = $out;
-//                $results['selected'] = $properties_selected;
-//            }
-//            return $results;
-//        }
-//
-//        return array();
-//    }
-
     public function getAllProducts($store_id, $properties = array(), $include = 1){
         $results = array();
 
         $q = $this->modx->newQuery("slStoresRemains");
         $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
         $q->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+        $q->leftJoin('slStores', 'slStores', 'slStores.id = slStoresRemains.store_id');
         $q->where(array(
-            "slStoresRemains.store_id:=" => $properties['id'],
-            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.store_id:IN" => $properties['id'],
+//            "slStoresRemains.price:>" => 0,
         ));
 
         $q->select(array(
@@ -3685,7 +3420,9 @@ class objectsHandler
             'COALESCE(modResource.pagetitle, slStoresRemains.name) as name',
             'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
             'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
-            "`slStoresRemains`.`id` as id"
+            "`slStoresRemains`.`id` as id",
+            "`slStores`.`name_short` as store",
+            "`slStoresRemains`.`store_id` as store_id"
         ));
 
         $urlMain = $this->modx->getOption("site_url");
@@ -3757,9 +3494,10 @@ class objectsHandler
         $q_selected = $this->modx->newQuery("slStoresRemains");
         $q_selected->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
         $q_selected->leftJoin('modResource', 'modResource', 'modResource.id = slStoresRemains.product_id');
+        $q_selected->leftJoin('slStores', 'slStores', 'slStores.id = slStoresRemains.store_id');
         $q_selected->where(array(
-            "slStoresRemains.store_id:=" => $properties['id'],
-            "slStoresRemains.price:>" => 0,
+            "slStoresRemains.store_id:IN" => $properties['id'],
+//            "slStoresRemains.price:>" => 0,
         ));
 
         $q_selected->select(array(
@@ -3768,7 +3506,9 @@ class objectsHandler
             'COALESCE(msProduct.image, "/assets/files/img/nopic.png") as image',
             'COALESCE(msProduct.vendor_article, slStoresRemains.article) as article',
             "`slStoresRemains`.`id` as id",
-            "`slStoresRemains`.`category_id` as category_id"
+            "`slStoresRemains`.`category_id` as category_id",
+            "`slStores`.`name_short` as store",
+            "`slStoresRemains`.`store_id` as store_id"
         ));
 
         if($properties['isallproducts']){
@@ -3799,7 +3539,6 @@ class objectsHandler
             if($properties['filterselected']['category']){
 
                 $idsProductsCategory = [];
-
                 foreach ($properties['filterselected']['category'] as $key => $value) {
                     if($value['checked']){
                         array_push($idsProductsCategory, $key);
@@ -3815,6 +3554,14 @@ class objectsHandler
         //Подсчитываем общее число записей
         $results['total_selected'] = $this->modx->getCount('slStoresRemains', $q_selected);
 
+        $ids_search = array();
+        if($q_selected->prepare() && $q_selected->stmt->execute()) {
+            $qselected = $q_selected->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($qselected as $key => $product){
+                $ids_search[] = $product['id'];
+            }
+        }
+
         if($properties['page_selected'] && $properties['perpage']){
             $limit = $properties['perpage'];
             $offset = ($properties['page_selected'] - 1) * $properties['perpage'];
@@ -3829,17 +3576,54 @@ class objectsHandler
 
         if($q_selected->prepare() && $q_selected->stmt->execute()) {
             $qselected = $q_selected->stmt->fetchAll(PDO::FETCH_ASSOC);
+            $colors = $this->modx->getOption('shoplogistic_store_colors');
+            $colors = trim($colors);
+            $colorsArray = explode(",", $colors);
             foreach ($qselected as $key => $product){
                 $qselected[$key]['image'] = $urlMain . $product['image'];
+
+                if(($qselected[$key]['store_id'] % 4) == 0){
+                    if($colorsArray[0]){
+                        $qselected[$key]['color'] = $colorsArray[0];
+                    } else{
+                        $qselected[$key]['color'] = "#50C0E6";
+                    }
+                }
+                elseif($qselected[$key]['store_id'] % 3){
+                    if($colorsArray[1]){
+                        $qselected[$key]['color'] = $colorsArray[1];
+                    } else{
+                        $qselected[$key]['color'] = "#6CA632";
+                    }
+                }
+                elseif($qselected[$key]['store_id'] % 2){
+                    if($colorsArray[2]){
+                        $qselected[$key]['color'] = $colorsArray[2];
+                    } else {
+                        $qselected[$key]['color'] = "#3237A6";
+                    }
+                }
+                else{
+                    if($colorsArray[3]){
+                        $qselected[$key]['color'] = $colorsArray[3];
+                    } else {
+                        $qselected[$key]['color'] = "#A63232";
+                    }
+                }
+                //$qselected[$key]['color'] = sprintf('#%02X%02X%02X', rand(0, 255), rand(0, 255), rand(0, 255));
             }
             $results['visible'] = $qselected;
+            $results['ids_selected'] = $ids_search;
         }
 
         if($properties['type']){
             $results['type'] = $properties['type'];
         }
 
-        $results['properties'] = $properties;
+        $q->prepare();
+        $this->modx->log(1, $q->toSQL());
+        $this->modx->log(1, "KENOST TOSQL");
+
 
         if($properties['isallproducts']  == "all"){
             $results['products'] = [];
@@ -3849,9 +3633,38 @@ class objectsHandler
             if($q->prepare() && $q->stmt->execute()){
                 $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
+                $colors = $this->modx->getOption('shoplogistic_store_colors');
+                $colors = trim($colors);
+                $colorsArray = explode(",", $colors);
                 foreach ($out as $key => $product){
                     $out[$key]['image'] = $urlMain . $product['image'];
+
+
+                    if(($out[$key]['store_id'] % 4) == 0){
+                        if($colorsArray[0]){
+                            $out[$key]['color'] = $colorsArray[0];
+                        } else{
+                            $out[$key]['color'] = "#50C0E6";
+                        }
+                    }elseif($out[$key]['store_id'] % 3){
+                        if($colorsArray[1]){
+                            $out[$key]['color'] = $colorsArray[1];
+                        }else{
+                            $out[$key]['color'] = "#6CA632";
+                        }
+                    }elseif($out[$key]['store_id'] % 2){
+                        if($colorsArray[2]){
+                            $out[$key]['color'] = $colorsArray[2];
+                        }else{
+                            $out[$key]['color'] = "#3237A6";
+                        }
+                    }else{
+                        if($colorsArray[3]){
+                            $out[$key]['color'] = $colorsArray[3];
+                        }else{
+                            $out[$key]['color'] = "#A63232";
+                        }
+                    }
                 }
 
                 if(!$properties['selected'] && !$properties['isallproducts']){
@@ -4338,12 +4151,12 @@ class objectsHandler
      * @return
      */
     public function getAllOrganizations($properties = array()){
-        $query = $this->modx->newQuery("slStores");
+        $query = $this->modx->newQuery("slOrg");
         $query->select(array(
-            "`slStores`.*"
+            "`slOrg`.*"
         ));
         $query->where(array(
-            "`slStores`.`active`:=" => true
+            "`slOrg`.`active`:=" => true
         ));
 
         $idsProducts = array();
@@ -4359,23 +4172,23 @@ class objectsHandler
 
 
             $query->where(array(
-                "slStores.id:NOT IN" => $idsProducts
+                "slOrg.id:NOT IN" => $idsProducts
             ));
         }
 
         if($properties){
             if($properties['filter']['name']){
                 $query->where(array(
-                    "slStores.name:LIKE" => "%{$properties['filter']['name']}%",
+                    "slOrg.name:LIKE" => "%{$properties['filter']['name']}%",
                 ));
             }
 
             //Тип магазина
-            if($properties['filter']['type']){
-                $query->where(array(
-                    "slStores.type:IN" => $properties['filter']['type']
-                ));
-            }
+//            if($properties['filter']['type']){
+//                $query->where(array(
+//                    "slOrg.type:IN" => $properties['filter']['type']
+//                ));
+//            }
         }
 
         if ($query->prepare() && $query->stmt->execute()) {

@@ -58,7 +58,7 @@ class slOrgRequisitesGetListProcessor extends modObjectGetListProcessor
         $array['actions'][] = [
             'cls' => '',
             'icon' => 'icon icon-edit',
-            'title' => $this->modx->lexicon('shoplogistic_store_update'),
+            'title' => $this->modx->lexicon('shoplogistic_update'),
             'action' => 'updateOrg',
             'button' => true,
             'menu' => true,
@@ -68,8 +68,8 @@ class slOrgRequisitesGetListProcessor extends modObjectGetListProcessor
             $array['actions'][] = [
                 'cls' => '',
                 'icon' => 'icon icon-power-off action-green',
-                'title' => $this->modx->lexicon('shoplogistic_delivery_enable'),
-                'multiple' => $this->modx->lexicon('shoplogistic_deliveries_enable'),
+                'title' => $this->modx->lexicon('shoplogistic_enable'),
+                'multiple' => $this->modx->lexicon('shoplogistic_enable'),
                 'action' => 'enableOrg',
                 'button' => true,
                 'menu' => true,
@@ -78,8 +78,8 @@ class slOrgRequisitesGetListProcessor extends modObjectGetListProcessor
             $array['actions'][] = [
                 'cls' => '',
                 'icon' => 'icon icon-power-off action-gray',
-                'title' => $this->modx->lexicon('shoplogistic_delivery_disable'),
-                'multiple' => $this->modx->lexicon('shoplogistic_deliveries_disable'),
+                'title' => $this->modx->lexicon('shoplogistic_disable'),
+                'multiple' => $this->modx->lexicon('shoplogistic_disable'),
                 'action' => 'disableOrg',
                 'button' => true,
                 'menu' => true,
@@ -90,8 +90,8 @@ class slOrgRequisitesGetListProcessor extends modObjectGetListProcessor
         $array['actions'][] = [
             'cls' => '',
             'icon' => 'icon icon-trash-o action-red',
-            'title' => $this->modx->lexicon('shoplogistic_delivery_remove'),
-            'multiple' => $this->modx->lexicon('shoplogistic_deliveries_remove'),
+            'title' => $this->modx->lexicon('shoplogistic_remove'),
+            'multiple' => $this->modx->lexicon('shoplogistic_remove'),
             'action' => 'removeOrg',
             'button' => true,
             'menu' => true,

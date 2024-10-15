@@ -19,6 +19,7 @@ $xpdo_meta_map['slStoresRemains']= array (
     'guid' => '',
     'base_guid' => '',
     'catalog_guid' => '',
+    'tags' => '',
     'name' => '',
     'article' => '',
     'barcode' => '',
@@ -116,6 +117,14 @@ $xpdo_meta_map['slStoresRemains']= array (
       'default' => '',
     ),
     'catalog_guid' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'tags' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',
@@ -642,9 +651,33 @@ $xpdo_meta_map['slStoresRemains']= array (
         ),
       ),
     ),
+    'tags' => 
+    array (
+      'alias' => 'tags',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'tags' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
   ),
   'composites' => 
   array (
+    'History' => 
+    array (
+      'class' => 'slStoresRemainsHistory',
+      'local' => 'id',
+      'foreign' => 'remain_id',
+      'cardinality' => 'many',
+      'owner' => 'local',
+    ),
     'Prices' => 
     array (
       'class' => 'slStoresRemainsPrices',

@@ -19,12 +19,14 @@ $xpdo_meta_map['slActions']= array (
     'rules_file' => '',
     'conditions' => '',
     'award' => '',
-    'store_id' => 0,
+    'store_id' => '',
     'counter' => 0,
     'description' => '',
     'resource' => 0,
     'regions' => '',
     'cities' => '',
+    'big_sale_actions' => '',
+    'big_post_actions' => '',
     'content' => NULL,
     'date_from' => NULL,
     'type' => 0,
@@ -38,6 +40,8 @@ $xpdo_meta_map['slActions']= array (
     'properties' => NULL,
     'compatibility_discount' => 0,
     'compatibility_postponement' => 0,
+    'compatibility_discount_mode' => 0,
+    'compatibility_postponement_mode' => 0,
     'status' => 0,
     'shipment_type' => 0,
     'shipment_date' => NULL,
@@ -64,6 +68,13 @@ $xpdo_meta_map['slActions']= array (
     'page_geo' => 0,
     'page_place_position' => 0,
     'page_create' => 0,
+    'org_id' => 0,
+    'client_id' => 0,
+    'comment' => '',
+    'type_all_sale' => NULL,
+    'all_sale_value' => NULL,
+    'type_all_sale_symbol' => NULL,
+    'type_price' => NULL,
   ),
   'fieldMeta' => 
   array (
@@ -141,12 +152,11 @@ $xpdo_meta_map['slActions']= array (
     ),
     'store_id' => 
     array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
+      'dbtype' => 'varchar',
+      'precision' => '1024',
+      'phptype' => 'string',
       'null' => true,
-      'default' => 0,
+      'default' => '',
     ),
     'counter' => 
     array (
@@ -184,7 +194,23 @@ $xpdo_meta_map['slActions']= array (
     ),
     'cities' => 
     array (
-      'dbtype' => 'text',
+      'dbtype' => 'varchar',
+      'precision' => '1024',
+      'phptype' => 'json',
+      'null' => true,
+      'default' => '',
+    ),
+    'big_sale_actions' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '1024',
+      'phptype' => 'json',
+      'null' => true,
+      'default' => '',
+    ),
+    'big_post_actions' => 
+    array (
+      'dbtype' => 'varchar',
       'precision' => '1024',
       'phptype' => 'json',
       'null' => true,
@@ -279,6 +305,24 @@ $xpdo_meta_map['slActions']= array (
       'default' => 0,
     ),
     'compatibility_postponement' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'compatibility_discount_mode' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'compatibility_postponement_mode' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -505,6 +549,63 @@ $xpdo_meta_map['slActions']= array (
       'null' => true,
       'default' => 0,
     ),
+    'org_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'client_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'comment' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '1024',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'type_all_sale' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+    ),
+    'all_sale_value' => 
+    array (
+      'dbtype' => 'decimal',
+      'precision' => '12,2',
+      'phptype' => 'float',
+      'null' => true,
+    ),
+    'type_all_sale_symbol' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+    ),
+    'type_price' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+    ),
   ),
   'indexes' => 
   array (
@@ -517,6 +618,38 @@ $xpdo_meta_map['slActions']= array (
       'columns' => 
       array (
         'store_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'org_id' => 
+    array (
+      'alias' => 'org_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'org_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'client_id' => 
+    array (
+      'alias' => 'client_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'client_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -726,6 +859,14 @@ $xpdo_meta_map['slActions']= array (
     array (
       'class' => 'slActionsStatus',
       'local' => 'status',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'Org' => 
+    array (
+      'class' => 'slOrg',
+      'local' => 'client_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

@@ -10,6 +10,7 @@ $xpdo_meta_map['slOrderOpt']= array (
   ),
   'fields' => 
   array (
+    'org_id' => 0,
     'warehouse_id' => 0,
     'store_id' => 0,
     'crm_id' => 0,
@@ -33,9 +34,21 @@ $xpdo_meta_map['slOrderOpt']= array (
     'tk' => '',
     'tk_id' => '',
     'properties' => NULL,
+    'delay' => 0.0,
+    'delivery_payer' => NULL,
+    'day_delivery' => NULL,
   ),
   'fieldMeta' => 
   array (
+    'org_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
     'warehouse_id' => 
     array (
       'dbtype' => 'int',
@@ -211,25 +224,33 @@ $xpdo_meta_map['slOrderOpt']= array (
       'phptype' => 'json',
       'null' => true,
     ),
+    'delay' => 
+    array (
+      'dbtype' => 'decimal',
+      'precision' => '12,2',
+      'phptype' => 'float',
+      'null' => true,
+      'default' => 0.0,
+    ),
+    'delivery_payer' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+    ),
+    'day_delivery' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+    ),
   ),
   'indexes' => 
   array (
-    'warehouse_id' => 
-    array (
-      'alias' => 'warehouse_id',
-      'primary' => false,
-      'unique' => false,
-      'type' => 'BTREE',
-      'columns' => 
-      array (
-        'warehouse_id' => 
-        array (
-          'length' => '',
-          'collation' => 'A',
-          'null' => false,
-        ),
-      ),
-    ),
     'store_id' => 
     array (
       'alias' => 'store_id',
@@ -239,6 +260,22 @@ $xpdo_meta_map['slOrderOpt']= array (
       'columns' => 
       array (
         'store_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'org_id' => 
+    array (
+      'alias' => 'org_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'org_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -324,9 +361,25 @@ $xpdo_meta_map['slOrderOpt']= array (
   ),
   'aggregates' => 
   array (
+    'slOrderOptStatus' => 
+    array (
+      'class' => 'slOrderOptStatus',
+      'local' => 'status',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'Org' => 
+    array (
+      'class' => 'slOrg',
+      'local' => 'org_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
     'Warehouse' => 
     array (
-      'class' => 'slWarehouse',
+      'class' => 'slStores',
       'local' => 'warehouse_id',
       'foreign' => 'id',
       'cardinality' => 'one',
@@ -336,14 +389,6 @@ $xpdo_meta_map['slOrderOpt']= array (
     array (
       'class' => 'slStores',
       'local' => 'store_id',
-      'foreign' => 'id',
-      'cardinality' => 'one',
-      'owner' => 'foreign',
-    ),
-    'Status' => 
-    array (
-      'class' => 'slCRMStage',
-      'local' => 'status',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

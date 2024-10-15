@@ -14,7 +14,8 @@ $xpdo_meta_map['slWarehouseShipment']= array (
     'date' => NULL,
     'date_order_end' => NULL,
     'store_id' => 0,
-    'city_id' => 0,
+    'city' => '',
+    'city_fias' => '',
     'status' => 1,
     'properties' => NULL,
   ),
@@ -50,14 +51,21 @@ $xpdo_meta_map['slWarehouseShipment']= array (
       'null' => true,
       'default' => 0,
     ),
-    'city_id' => 
+    'city' => 
     array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
       'null' => true,
-      'default' => 0,
+      'default' => '',
+    ),
+    'city_fias' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
     ),
     'status' => 
     array (
@@ -95,13 +103,29 @@ $xpdo_meta_map['slWarehouseShipment']= array (
     ),
     'store_id' => 
     array (
-      'alias' => 'city_id',
+      'alias' => 'store_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'city_id' => 
+        'store_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'city' => 
+    array (
+      'alias' => 'city',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'city' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -140,14 +164,6 @@ $xpdo_meta_map['slWarehouseShipment']= array (
     array (
       'class' => 'slStores',
       'local' => 'store_id',
-      'foreign' => 'id',
-      'cardinality' => 'one',
-      'owner' => 'foreign',
-    ),
-    'dartLocationCity' => 
-    array (
-      'class' => 'dartLocationCity',
-      'local' => 'city_id',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

@@ -11,6 +11,8 @@ $xpdo_meta_map['slOrder']= array (
   'fields' => 
   array (
     'org_id' => 0,
+    'store_id' => 0,
+    'warehouse_id' => 0,
     'order_id' => 0,
     'crm_id' => 0,
     'ship_id' => 0,
@@ -35,6 +37,24 @@ $xpdo_meta_map['slOrder']= array (
   'fieldMeta' => 
   array (
     'org_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'store_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'warehouse_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '10',
@@ -338,6 +358,22 @@ $xpdo_meta_map['slOrder']= array (
   ),
   'aggregates' => 
   array (
+    'Warehouse' => 
+    array (
+      'class' => 'slStores',
+      'local' => 'warehouse_id',
+      'foreign' => 'id',
+      'cardinality' => 'many',
+      'owner' => 'foreign',
+    ),
+    'slStores' => 
+    array (
+      'class' => 'slStores',
+      'local' => 'store_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
     'slOrg' => 
     array (
       'class' => 'slOrg',

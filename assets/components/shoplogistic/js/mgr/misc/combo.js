@@ -891,6 +891,7 @@ MODx.panel.myImageField = function(config) {
             ,browserEl: config.id + '-browser'
             //,name: 'browser'+config.id
             ,name: config.name
+            ,description: config.description
             ,id: config.id + '-browser'
             //,id: 'browser'+config.id
             ,triggerClass: 'x-form-image-trigger'
@@ -1642,6 +1643,9 @@ shopLogistic.combo.settingType = function(config) {
                 ,['2', 'Выбор цены']
                 ,['3', 'Да/Нет']
                 ,['4', 'Число']
+                ,['5', 'Переключатели (radio)']
+                ,['6', 'Выбор региона']
+                ,['7', 'Выбор организации']
             ]
         })
         ,mode: 'local'

@@ -99,163 +99,6 @@ class storeHandler
     }
 
     /**
-     * Установка отгрузки
-     *
-     * @param $properties
-     * @return void
-     * @throws Exception
-     */
-    public function setShipping ($properties) {
-        $warehouse_id = $properties['data']['store_id'];
-        $org_id = $properties['id'];
-        $timing = $properties['data']['timeSelected'];
-        $stores = array();
-        $cities = array();
-
-        // dates
-        $date_start = new DateTime($properties['data']['dateStart']);
-        $date_order_end = new DateTime($properties['data']['dateEnd']);
-        $diff_for_repeat = $date_order_end->getTimestamp() - $date_start->getTimestamp();
-
-        // магазины пока не учитываем
-        foreach ($properties['data']['selectedStores'] as $store){
-            $stores[] = $store['value'];
-        }
-        foreach ($properties['data']['selectedCities'] as $key => $city){
-            $tmp = $city;
-            if($properties['data']['citiesDates'][$key]){
-                $tmp['date'] = new DateTime($properties['data']['citiesDates'][$key]);
-                $tmp['date_diff'] = $tmp['date']->getTimestamp() - $date_start->getTimestamp();
-            }else{
-                $tmp['date'] = $date_start;
-                $tmp['date_diff'] = 0;
-            }
-            $cities[] = $tmp;
-        }
-
-        // Range for repeat
-        $start = new DateTime($timing['range']['start']);
-        $start->setTime(00,00);
-        if($timing['repeater'] == '0'){
-            $end = new DateTime($timing['range']['start']);
-        }else{
-            $end = new DateTime($timing['range']['end']);
-        }
-        $interval = new DateInterval('P1D');
-        $end->setTime(23,59);
-
-        $period = new DatePeriod($start, $interval, $end);
-
-        // Создаем объект отгрузки
-        $ship = $this->modx->newObject('slWarehouseShip');
-        $ship->set("warehouse_id", $warehouse_id);
-        $ship->set("org_id", $org_id);
-        $ship->set("timing", json_encode($timing, JSON_UNESCAPED_UNICODE));
-        $ship->set("date_from", $date_start->format('Y-m-d H:i:s'));
-        $ship->set("date_order_end", $date_order_end->format('Y-m-d H:i:s'));
-        // если повторений нет используем первую дату
-        if($timing['repeater'] == '0'){
-            $ship->set("date_to", $date_start->format('Y-m-d H:i:s'));
-        }else{
-            $ship->set("date_to", $end->format('Y-m-d H:i:s'));
-        }
-        $ship->set("createdon", time());
-        $ship->set("active", 1);
-        $ship->save();
-
-        if($ship->get('id')) {
-            if ($timing['repeater'] === 0) {
-                // $this->modx->log(1, print_r($ship->toArray(), 1));
-                // если не повторяем, дата одна создаем отдельные отгрузки на каждый город
-                $start->modify('+1 day');
-                foreach ($cities as $city) {
-                    $shipping = $this->modx->newObject("slWarehouseShipment");
-                    $shipping->set("ship_id", $ship->get('id'));
-                    $shipping->set("city_id", $city['value']);
-                    $shipping->set("date", $city['date']->format('Y-m-d H:i:s'));
-                    $shipping->set("date_order_end", $date_order_end->format('Y-m-d H:i:s'));
-                    if ($shipping->save()) {
-                        // $this->modx->log(1, print_r($shipping->toArray(), 1));
-                    } else {
-                        // $this->modx->log(1, 'ошибка');
-                    }
-                }
-            }
-            if ($timing['repeater'] === 'day') {
-                // если повторяем ежедневно, то каждый день наш
-                foreach ($period as $date) {
-                    foreach ($cities as $city) {
-                        $timestamp = $date->getTimestamp() + $diff_for_repeat;
-                        $date_order_off = new DateTime();
-                        $date_order_off->setTimestamp($timestamp);
-
-                        $timestamp_to = $date->getTimestamp() + $city['date_diff'];
-                        $date_to = new DateTime();
-                        $date_to->setTimestamp($timestamp_to);
-
-                        $shipping = $this->modx->newObject("slWarehouseShipment");
-                        $shipping->set("ship_id", $ship->get('id'));
-                        $shipping->set("city_id", $city['value']);
-                        $shipping->set("date", $date_to->format('Y-m-d H:i:s'));
-                        $shipping->set("date_order_end", $date_order_off->format('Y-m-d H:i:s'));
-                        if ($shipping->save()) {
-                            $this->modx->log(1, print_r($shipping->toArray(), 1));
-                        } else {
-                            $this->modx->log(1, 'ошибка');
-                        }
-                    }
-                }
-            }
-            // $this->modx->log(1, print_r($timing, 1));
-            if ($timing['repeater'] === 'week') {
-                $weekInterval = $timing['weeks'];
-                if ($weekInterval) {
-                    $fakeWeek = 0;
-                    $currentWeek = $start->format('W');
-                    foreach ($period as $date) {
-                        if ($date->format('W') !== $currentWeek) {
-                            $currentWeek = $date->format('W');
-                            $fakeWeek++;
-                        }
-                        if ($fakeWeek % $weekInterval !== 0) {
-                            continue;
-                        }
-                        $dayOfWeek = $date->format('N');
-                        // $this->sl->tools->log($dayOfWeek. ' IN ' .print_r($timing['days'], 1), "test_shipping");
-                        if (in_array($dayOfWeek, $timing['days'])) {
-                            foreach ($cities as $city) {
-                                $timestamp = $date->getTimestamp() + $diff_for_repeat;
-                                $date_order_off = new DateTime();
-                                $date_order_off->setTimestamp($timestamp);
-
-                                $timestamp_to = $date->getTimestamp() + $city['date_diff'];
-                                $date_to = new DateTime();
-                                $date_to->setTimestamp($timestamp_to);
-
-                                $shipping = $this->modx->newObject("slWarehouseShipment");
-                                $shipping->set("ship_id", $ship->get('id'));
-                                $shipping->set("city_id", $city['value']);
-                                $shipping->set("date", $date_to->format('Y-m-d H:i:s'));
-                                $shipping->set("date_order_end", $date_order_off->format('Y-m-d H:i:s'));
-                                if ($shipping->save()) {
-                                    $this->modx->log(1, print_r($shipping->toArray(), 1));
-                                } else {
-                                    $this->modx->log(1, 'ошибка');
-                                }
-                                if ($shipping->save()) {
-                                    // $this->modx->log(1, print_r($shipping->toArray(), 1));
-                                } else {
-                                    // $this->modx->log(1, 'ошибка');
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Установка настроек системы
      *
      * @param $properties
@@ -405,7 +248,7 @@ class storeHandler
         $query->leftJoin("slStores", "slStores", "slStores.id = slWarehouseStores.warehouse_id");
         $query->select(array("slStores.*"));
         $query->where(array(
-            "slWarehouseStores.store_id:=" => $id,
+            "slWarehouseStores.org_id:=" => $id,
             "AND:slStores.active:=" => 1
         ));
         if($visible){
@@ -447,6 +290,9 @@ class storeHandler
         }
         if($data["store_id"]) {
             $request->set("store_id", $data["store_id"]);
+        }
+        if($data['version']){
+            $request->set("version", $data["version"]);
         }
         if($data["status"]) {
             $request->set("status", $data["status"]);
@@ -502,15 +348,32 @@ class storeHandler
         }
     }
 
-    public function getStore($store_id){
+    /**
+     * Информация о магазине + город и регион
+     *
+     * @param $store_id
+     * @param $active_check
+     * @return array
+     */
+    public function getStore($store_id, $active_check = 1){
         $query = $this->modx->newQuery("slStores");
-        $query->where(array("id:=" => $store_id, "AND:active:=" => 1));
-        $query->select(array("slStores.*"));
-        if($query->prepare() && $query->stmt->execute()){
-            $store = $query->stmt->fetch(PDO::FETCH_ASSOC);
-            return $store;
+        $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+        $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
+        $criteria = array("id:=" => $store_id);
+        if($active_check){
+            $criteria["AND:active:="] = 1;
         }
-        return false;
+        $query->where($criteria);
+        $query->select(array(
+            "slStores.*",
+            "dartLocationCity.id as city_id",
+            "dartLocationRegion.id as region_id",
+        ));
+        if($query->prepare() && $query->stmt->execute()){
+            $store_data = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            return $store_data;
+        }
+        return array();
     }
 
     public function setWork($properties){
@@ -589,15 +452,15 @@ class storeHandler
             $start->setTimestamp($date);
             $query = $this->modx->newQuery("slOrderOpt");
             $query->where(array(
-                "warehouse_id:=" => $data["warehouse"]["id"],
+                "store_id:=" => $data["store"]["id"],
                 "date:>=" => $start->format('Y-m-d H:i:s')
             ));
             $query->select(array("slOrderOpt.*"));
             if($query->prepare() && $query->stmt->execute()){
                 $orders = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach($orders as $key => $order){
-                    if(!in_array($order["store_id"], $customers)){
-                        $customers[] = $order["store_id"];
+                    if(!in_array($order["org_id"], $customers)){
+                        $customers[] = $order["org_id"];
                     }
                     $datetime = new DateTime($order['date']);
                     $orders[$key]['date'] = $datetime->format(DateTime::ATOM);
@@ -614,12 +477,26 @@ class storeHandler
                     }
                 }
             }
+            $this->modx->log(1, print_r($customers, 1));
             foreach($customers as $customer){
-                $query = $this->modx->newQuery("slStores");
+                $query = $this->modx->newQuery("slOrg");
                 $query->where(array("id:=" => $customer));
-                $query->select(array("slStores.*"));
+                $query->select(array("slOrg.*"));
                 if($query->prepare() && $query->stmt->execute()){
                     $store = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                    // slOrgRequisites
+                    $query = $this->modx->newQuery("slOrgRequisites");
+                    $query->where(array(
+                        "slOrgRequisites.org_id:=" => $customer
+                    ));
+                    $query->select(array("slOrgRequisites.*"));
+                    $query->prepare();
+                    $this->modx->log(1, $query->toSQL());
+                    if($query->prepare() && $query->stmt->execute()){
+                        $store["requisites"] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        $store['inn'] = $store["requisites"]['inn'];
+                        $store['kpp'] = $store["requisites"]['kpp'];
+                    }
                 }
                 // $store = $this->getStore($customer);
                 unset($store["apikey"]);
@@ -628,8 +505,8 @@ class storeHandler
             }
             foreach($orders as $key => $order){
                 foreach($output["customers"] as $customer){
-                    if($order["store_id"] == $customer["id"]){
-                        $order["customer"] = $customer["inn"];
+                    if($order["org_id"] == $customer["id"]){
+                        $order["customer"] = $customer["requisites"]["inn"];
                     }
                 }
                 $orders[$key] = $order;
@@ -961,6 +838,23 @@ class storeHandler
             $this->modx->log(modX::LOG_LEVEL_ERROR, 'STORE/Enable Error, Message: '.$response->getMessage());
             return false;
         }else{
+            //Узнаём организацию продавца
+            $q_o = $this->modx->newQuery("slOrgStores");
+            $q_o->where(array(
+                "slOrgStores.store_id:=" => $store_id,
+            ));
+            $q_o->select(array("slOrgStores.org_id"));
+            if($q_o->prepare() && $q_o->stmt->execute()) {
+                $org = $q_o->stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            //уведомление
+            $notification = array(
+                "org_id" => $org['org_id'],
+                "namespace" => 10,
+                "store_id" => $store_id
+            );
+            $this->sl->notification->setNotification(array("data" => $notification));
             return true;
         }
     }
@@ -983,6 +877,23 @@ class storeHandler
             $this->modx->log(modX::LOG_LEVEL_ERROR, 'STORE/Disable Error, Message: '.$response->getMessage());
             return false;
         }else{
+            //Узнаём организацию продавца
+            $q_o = $this->modx->newQuery("slOrgStores");
+            $q_o->where(array(
+                "slOrgStores.store_id:=" => $store_id,
+            ));
+            $q_o->select(array("slOrgStores.org_id"));
+            if($q_o->prepare() && $q_o->stmt->execute()) {
+                $org = $q_o->stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            //уведомление
+            $notification = array(
+                "org_id" => $org['org_id'],
+                "namespace" => 9,
+                "store_id" => $store_id
+            );
+            $this->sl->notification->setNotification(array("data" => $notification));
             return true;
         }
     }
@@ -1168,5 +1079,187 @@ class storeHandler
             }
         }
         return null;
+    }
+
+    /**
+     * Обработка YML склада
+     *
+     * @param $store_id
+     * @return void
+     */
+    public function parseYML($store_id)
+    {
+        $query = $this->modx->newQuery("slStores");
+        $query->where(array(
+            "slStores.id:=" => $store_id
+        ));
+        $query->select(array("slStores.*"));
+        if ($query->prepare() && $query->stmt->execute()) {
+            $store = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            if ($store["type_integration"] == 2) {
+                if ($store["yml_file"]) {
+                    $xml = simplexml_load_file($store["yml_file"]);
+                    if ($xml === false) {
+                        $data = array(
+                            "org_id" => 0,
+                            "store_id" => $store_id,
+                            "user_id" => 0,
+                            "namespace" => "store/integration",
+                            "date" => time(),
+                            "description" => "Файл недоступен."
+                        );
+                        $this->sl->tools->saveLog($data);
+                        // отключаем склад
+                        $this->disable($store_id);
+                    } else {
+                        $today = time();
+                        $date = strtotime(strval($xml["date"]));
+                        $diff_etalon = 60 * 60 * 24;
+                        $diff = $date - $today;
+                        if ($diff < $diff_etalon) {
+                            $categories = array();
+                            // запоминаем категории
+                            foreach ($xml->shop->categories->category as $row) {
+                                $cat_id = strval($row['id']);
+                                $cat_parent = strval($row['parentId']);
+                                $name = strval($row);
+                                $categories[$cat_id] = $name;
+                                if (!$cat_parent) {
+                                    $cat_parent = '00000000-0000-0000-0000-000000000000';
+                                }
+                                $criteria = array(
+                                    "guid" => $cat_id,
+                                    "store_id" => $store_id
+                                );
+                                $cat = $this->modx->getObject("slStoresRemainsCategories", $criteria);
+                                if ($cat) {
+                                    $cat->set("updatedon", time());
+                                } else {
+                                    $cat = $this->modx->newObject("slStoresRemainsCategories");
+                                    $cat->set("createdon", time());
+                                    $cat->set("guid", $cat_id);
+                                    $cat->set("store_id", $store_id);
+                                }
+                                $cat->set("parent_guid", $cat_parent);
+                                $cat->set("name", $name);
+                                $cat->save();
+                            }
+                            // запоминаем остатки
+                            foreach ($xml->shop->offers->offer as $row) {
+                                $remain_data = array(
+                                    "base_GUID" => "",
+                                    "tags" => "",
+                                    "GUID" => strval($row["id"]),
+                                    "article" => strval($row->vendorCode),
+                                    "price" => floatval($row->price),
+                                    "catalog_id" => strval($row->categoryId),
+                                    "name" => strval($row->name),
+                                    "description" => strval($row->description)
+                                );
+                                if(isset($row->categoryId)){
+                                    $remain_data["catalog"] = strval($row->vendor)." || ".$categories[strval($row->categoryId)];
+                                }else{
+                                    $remain_data["catalog"] = strval($row->vendor);
+                                }
+                                // чекаем розничную (Foxweld)
+                                if(floatval($row->price_ROZN)){
+                                    $remain_data["price"] = floatval($row->price_ROZN);
+                                }
+                                // чекаем наименование (Foxweld)
+                                if(strval($row->model)){
+                                    $remain_data["name"] = strval($row->model);
+                                }
+                                // если бренд не указан и он точно один чекаем бренд
+                                if($store["base_vendor"]){
+                                    $vendor = $this->modx->getObject("msVendor", $store["base_vendor"]);
+                                    if($vendor){
+                                        $vendor_name = $vendor->get("name");
+                                        if($vendor_name){
+                                            $remain_data["catalog"] = $vendor_name." || ".$remain_data["catalog"];
+                                        }
+                                    }
+                                }
+                                if (boolval($row['available'])) {
+                                    // смотрим по складам
+                                    if ($row->outlets) {
+                                        $remain_data["count_free"] = intval($row->outlets->outlet["instock"]);
+                                        $remain_data["count_current"] = intval($row->outlets->outlet["instock"]);
+                                        $remain_data["published"] = 1;
+                                    } else {
+                                        // смотрим упрощенный вариант (Foxweld)
+                                        $count = intval($row->count);
+                                        if($count){
+                                            $remain_data["count_free"] = $count;
+                                            $remain_data["count_current"] = $count;
+                                            $remain_data["published"] = 1;
+                                        }else{
+                                            $remain_data["count_free"] = 0;
+                                            $remain_data["count_current"] = 0;
+                                            $remain_data["published"] = 0;
+                                        }
+                                    }
+                                } else {
+                                    $remain_data["count_current"] = 0;
+                                    $remain_data["count_free"] = 0;
+                                    $remain_data["published"] = 0;
+                                }
+                                if(strval($row->barcode)){
+                                    $remain_data["barcode"] = strval($row->barcode);
+                                }else{
+                                    $remain_data["barcode"] = "";
+                                }
+                                if($remain_data){
+                                    $remain_id = $this->sl->product->importRemainSingle($store_id, $remain_data);
+                                }
+                            }
+                            $this->sl->product->getStore($store['apikey']);
+                            $this->sl->product->getStore($store['apikey'], "date_remains_update");
+                        }else{
+                            $data = array(
+                                "org_id" => 0,
+                                "store_id" => $store_id,
+                                "user_id" => 0,
+                                "namespace" => "store/integration",
+                                "date" => time(),
+                                "description" => "Со времени генерации файла прошло более 24 часов."
+                            );
+                            $this->sl->tools->saveLog($data);
+                            // отключаем склад
+                            $this->disable($store_id);
+                        }
+                    }
+                } else {
+                    $data = array(
+                        "org_id" => 0,
+                        "store_id" => $store_id,
+                        "user_id" => 0,
+                        "namespace" => "store/integration",
+                        "date" => time(),
+                        "description" => "У склада не указана ссылка на YML файл."
+                    );
+                    $this->sl->tools->saveLog($data);
+                    // отключаем склад
+                    $this->disable($store_id);
+                }
+            }
+        }
+    }
+
+    /**
+     * Обработка фидов складов
+     *
+     * @return void
+     */
+    public function handleFeeds(){
+        $query = $this->modx->newQuery("slStores");
+        $query->where(array("slStores.type_integration:=" => 2));
+        $query->select(array("slStores.id"));
+        if($query->prepare() && $query->stmt->execute()){
+            $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($stores as $store){
+                $this->parseYML($store["id"]);
+            }
+            return $stores;
+        }
     }
 }

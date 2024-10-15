@@ -40,11 +40,218 @@ class slOrganization
             case 'set/org/profile':
                 $response = $this->setOrgProfile($properties);
                 break;
+            case 'set/org/virtual_profile':
+                $response = $this->setOrgVirtualProfile($properties);
+                break;
+            case 'delete/org/virtual_profile':
+                $response = $this->deleteOrgVirtualProfile($properties);
+                break;
             case 'set/request/profile':
                 $response = $this->requestChangeRequisite($properties);
                 break;
+            case 'get/individual/discount':
+                $response = $this->getIndividualDiscount($properties);
+                break;
         }
         return $response;
+    }
+
+    /**
+     * Розничные заказы
+     *
+     * @param $properties
+     * @return array
+     */
+    public function getOrders($properties){
+        // берем доступные склады
+        $stores = $this->getStoresOrg($properties, 0);
+        foreach($stores["items"] as $store){
+            $warehouses[] = $store["id"];
+        }
+        // берем заказы
+        $q = $this->modx->newQuery('slOrder');
+        $q->leftJoin('msOrder', 'msOrder', 'msOrder.id = slOrder.order_id');
+        $q->leftJoin('msOrderAddress', 'msOrderAddress', 'msOrderAddress.id = slOrder.order_id');
+        $q->leftJoin('modUser', 'User', 'User.id = msOrder.user_id');
+        $q->leftJoin('modUserProfile', 'UserProfile', 'UserProfile.id = msOrder.user_id');
+        $q->leftJoin('slCRMStage', 'slCRMStage', 'slCRMStage.id = slOrder.status');
+        $q->leftJoin('msDelivery', 'Delivery', 'Delivery.id = msOrder.delivery');
+        $q->leftJoin('msPayment', 'Payment', 'Payment.id = msOrder.payment');
+        if($properties['order_id']){
+            $q->where(array(
+                'slOrder.id' => $properties['order_id']
+            ));
+        }
+        if($properties['order_id']){
+            $q->limit(1);
+            $result['total'] = 1;
+        }else{
+            $criteria = array(
+                'slOrder.store_id:IN' => $warehouses,
+                'OR:slOrder.warehouse_id:IN' => $warehouses
+            );
+            $q->where(array('slCRMStage.show_in_analytics' => true));
+            $q->where($criteria);
+            if($properties['filter']){
+                $criteria = array();
+                $criteria['comment:LIKE'] = '%'.$properties['filter'].'%';
+                $criteria['OR:User.username:LIKE'] = '%'.$properties['filter'].'%';
+                $criteria['OR:UserProfile.fullname:LIKE'] = '%'.$properties['filter'].'%';
+                $criteria['OR:UserProfile.email:LIKE'] = '%'.$properties['filter'].'%';
+                $q->where($criteria);
+            }
+
+            $result['total'] = $this->modx->getCount('slOrder', $q);
+
+            if($properties['page'] && $properties['perpage']){
+                $limit = $properties['perpage'];
+                $offset = ($properties['page'] - 1) * $properties['perpage'];
+                $q->limit($limit, $offset);
+            }
+
+            $q->groupby('slOrder.id');
+
+            if($properties['sort']){
+                $keys = array_keys($properties['sort']);
+                $q->sortby('slOrder.'.$keys[0], $properties['sort'][$keys[0]]['dir']);
+            }else{
+                $q->sortby('slOrder.createdon', "DESC");
+            }
+        }
+        $q->select(
+            $this->modx->getSelectColumns('slOrder', 'slOrder', '', array('status', 'delivery', 'payment'), true) . ', ' . $this->modx->getSelectColumns('msOrder', 'msOrder', '', array('id', 'status', 'delivery', 'payment'), true) . ',
+            msOrder.id as order_id, msOrder.status as status_id, msOrder.delivery as delivery_id, msOrder.payment as payment_id,
+            UserProfile.fullname as customer, User.username as customer_username, msOrderAddress.phone as customer_phone, 
+            msOrderAddress.email as customer_email, slCRMStage.name as status_name, slCRMStage.color as status_color, slCRMStage.transition_anchor, 
+            slCRMStage.description as stage_description, slCRMStage.check_code as stage_check_code, slCRMStage.stores_available,
+            Delivery.name as delivery, Payment.name as payment, slOrder.id as id'
+        );
+        // $q->prepare();
+        // $this->modx->log(1, $q->toSQL());
+        if($q->prepare() && $q->stmt->execute()){
+            $result['orders'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach($result['orders'] as $index => $order){
+                $result['orders'][$index]['createdon'] = date('d.m.Y H:i', strtotime($order['createdon']));
+                $result['orders'][$index]['cost'] = number_format($order['cost'], 2, ',', ' ');
+                $result['orders'][$index]['stage_check_code'] = (bool) $result['orders'][$index]['stage_check_code'];
+                $result['orders'][$index]['properties'] = json_decode($order['properties'], 1);
+                $store = $this->modx->getObject("slStores", array('id' => $order["store_id"]));
+                if($store){
+                    $result['orders'][$index]['store'] = $store->get("name_short");
+                }
+                if($properties['order_id']){
+                    $q = $this->modx->newQuery('slOrderProduct');
+                    $q->leftJoin('msProductData', 'msProductData', 'msProductData.id = slOrderProduct.product_id');
+                    $q->select(array(
+                        'msProductData.*',
+                        'slOrderProduct.*'
+                    ));
+                    $q->where(array(
+                        'order_id' => $properties['order_id']
+                    ));
+                    if($q->prepare() && $q->stmt->execute()){
+                        $products = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $result['products'] = $products;
+                        foreach($result['products'] as $key => $v){
+                            if($v['image']){
+                                $images = $this->sl->tools->prepareImage($v['image'], "", 0);
+                                $result['products'][$key]["image"] = $images["image"];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        $q = $this->modx->newQuery('slCRMStage');
+        $q->select(array(
+            'slCRMStage.*'
+        ));
+        if($q->prepare() && $q->stmt->execute()) {
+            $result['statuses'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return $result;
+    }
+
+    /**
+     * Берем доп. свойства организации
+     *
+     * @param $key
+     * @param $org_id
+     * @return false
+     */
+    public function getProperties($key, $org_id){
+        $org = $this->modx->getObject("slOrg", $org_id);
+        if($org){
+            $result = $org->get("properties");
+            if(isset($result[$key])){
+                return $result[$key];
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * Выставляем доп. свойства организации
+     *
+     * @param $key
+     * @param $org_id
+     * @return false
+     */
+    public function setProperties($key, $org_id, $val){
+        $org = $this->modx->getObject("slOrg", $org_id);
+        if($org){
+            $props = $org->get("properties");
+            if(isset($props[$key])){
+                $props[$key] = array_merge($props[$key], $val);
+            }else{
+                $props[$key] = $val;
+            }
+            $props[$key] = array_unique($props[$key]);
+            $org->set("properties", json_encode($props));
+            if($org->save()){
+                return $props;
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * Удаляем элементы доп. свойства организации
+     *
+     * @param $key
+     * @param $org_id
+     * @return false
+     */
+    public function removePropertiesValue($key, $org_id, $val){
+        $org = $this->modx->getObject("slOrg", $org_id);
+        if($org){
+            $props = $org->get("properties");
+            if(isset($props[$key])){
+                foreach($val as $v){
+                    if (($k = array_search($v, $props[$key])) !== false) {
+                        unset($props[$key][$k]);
+                    }
+                }
+                $props[$key] = array_unique($props[$key]);
+                $org->set("properties", json_encode($props));
+                if($org->save()){
+                    return $props;
+                }else{
+                    return false;
+                }
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
     }
 
     /**
@@ -233,15 +440,21 @@ class slOrganization
             $organization = $this->modx->getObject('slOrg', $id);
             if($organization) {
                 $out = $organization->toArray();
+                // берем товары организации
+                $ids = array();
+                $stores = $this->getStoresOrg(array("id" => $id));
+                foreach($stores["items"] as $store){
+                    $ids[] = $store["id"];
+                }
                 // чекаем роль для меню
-                if($out["store"]){
+                if(count($stores['items'])){
+                    if($out['warehouse']){
+                        $out["type"] = 3;
+                    }else{
+                        $out["type"] = 2;
+                    }
+                }else{
                     $out["type"] = 1;
-                }
-                if($out["warehouse"]){
-                    $out["type"] = 2;
-                }
-                if($out["vendor"]){
-                    $out["type"] = 3;
                 }
                 // заказы за 7 дней
                 $newDate = new DateTime('7 days ago');
@@ -264,17 +477,10 @@ class slOrganization
                     $out["images"] = $this->sl->tools->prepareImage($out['image']);
                     $out["image"] = $out["images"]["image"];
                 }
-                // берем товары организации
-                $ids = array();
-                $stores = $this->getStoresOrg(array("id" => $id));
-                foreach($stores["items"] as $store){
-                    $ids[] = $store["id"];
-                }
+
                 $query = $this->modx->newQuery("slStoresRemains");
                 $query->where(array("slStoresRemains.store_id:IN" => $ids));
                 $query->select(array("slStoresRemains.*"));
-                $query->prepare();
-                $this->modx->log(1, $query->toSQL());
                 $out["products"]["count"] = $this->modx->getCount("slStoresRemains", $query);
                 $query->where(array("slStoresRemains.product_id:>" => 0));
                 $out["products"]["copo_count"] = $this->modx->getCount("slStoresRemains", $query);
@@ -371,22 +577,38 @@ class slOrganization
      *
      * @param $id
      * @return array
-     */
+     * */
     public function getDilers($id, $properties){
+        $urlMain = $this->sl->config["urlMain"];
         $results = array();
-        $stores = $this->getStoresOrg(array("id" => $id));
-        foreach($stores["items"] as $store){
-            $ids[] = $store["id"];
-        }
-        $query = $this->modx->newQuery("slWarehouseStores");
-        $query->leftJoin("slOrg", "slOrg", "slOrg.id = slWarehouseStores.org_id");
-        $query->leftJoin("slStores", "slStores", "slStores.id = slWarehouseStores.warehouse_id");
-        $query->select(array("slOrg.*,slStores.id as warehouse_id,slStores.name_short as warehouse,slWarehouseStores.base_sale as base_sale,slWarehouseStores.id as obj_id"));
+        $query = $this->modx->newQuery("slOrg");
+        $query->leftJoin("slWarehouseStores", "slWarehouseStores", "slWarehouseStores.org_id = slOrg.id");
+        $query->select(array(
+            "slOrg.*,
+            slWarehouseStores.warehouse_id,
+            slOrg.name as warehouse,
+            slWarehouseStores.id as obj_id"
+        ));
         $query->where(array(
-            "slWarehouseStores.warehouse_id:IN" => $ids,
+            "slWarehouseStores.warehouse_id:=" => $id,
             "AND:slOrg.active:=" => 1
         ));
-        $results['total'] = $this->modx->getCount('slWarehouseStores', $query);
+
+        if($properties['filter']){
+            $query->where(array(
+                "slOrg.name:LIKE" => "%{$properties['filter']}%"
+            ));
+        }
+
+        if($properties["filtersdata"]){
+            if($properties['filtersdata']['our']){
+                $query->where(array(
+                    "slOrg.owner_id:=" => $properties['id']
+                ));
+            }
+        }
+
+        $results['total'] = $this->modx->getCount('slOrg', $query);
         if($properties['page'] && $properties['perpage']){
             $limit = $properties['perpage'];
             $offset = ($properties['page'] - 1) * $properties['perpage'];
@@ -398,8 +620,464 @@ class slOrganization
         }
         if($query->prepare() && $query->stmt->execute()) {
             $results['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($results['items'] as $k => $item){
+                $req = $this->modx->getObject("slOrgRequisites", array("org_id:=" => $item["id"]));
+                if($req){
+                    $results['items'][$k]['req'] = $req->toArray();
+                }
+                if($item['image']){
+                    $images = $this->sl->tools->prepareImage($item['image']);
+                    $results['items'][$k]['image'] = $images['image'];
+                }else{
+                    $results['items'][$k]['image'] = $urlMain . $this->modx->getPlaceholder("+conf_noimage");
+                }
+                $results['items'][$k]['image'] = str_replace("//assets", "/assets", $results['items'][$k]['image']);
+            }
             return $results;
         }
+    }
+
+    /**
+     * Берем индивидуальные скидки
+     *
+     * @param $id
+     * @return array
+     * */
+    public function getIndividualDiscount($properties){
+        $results = array();
+        $query = $this->modx->newQuery("slOrg");
+        $query->leftJoin("slWarehouseStores", "slWarehouseStores", "slWarehouseStores.org_id = slOrg.id");
+        $query->leftJoin("slOrgStores", "slOrgStores", "slOrgStores.org_id = slWarehouseStores.warehouse_id");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slOrgStores.store_id");
+        $query->select(array(
+            "`slOrg`.name as warehouse",
+            "`slOrg`.image",
+            "`slOrg`.address",
+            "`slStores`.id as store_id",
+            "`slOrg`.id as client_id",
+            "`slStores`.name as store_name"
+        ));
+        $query->where(array(
+            "slWarehouseStores.warehouse_id:=" => $properties['id']
+        ));
+
+        if($properties['filter']){
+            $criteria = array();
+            $criteria['slOrg.name:LIKE'] = '%'.$properties['filter']['filter'].'%';
+            $criteria['OR:slOrg.address:LIKE'] = '%'.$properties['filter']['filter'].'%';
+            $criteria['OR:slStores.name:LIKE'] = '%'.$properties['filter']['filter'].'%';
+            $query->where($criteria);
+        }
+        
+        $results['total'] = $this->modx->getCount('slStores', $query);
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby("`slOrg`.name");
+        }
+        if($query->prepare() && $query->stmt->execute()) {
+            $results['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($results['items'] as $k => $item){
+                $results['items'][$k]['image'] = $this->sl->tools->prepareImage($item['image'])['image'];
+
+                $q = $this->modx->newQuery("slActions");
+                $q->select(array(
+                    "slActions.*"
+                ));
+                $q->where(array(
+                    "type" => 3,
+                    "org_id" => $properties['id'],
+                    "client_id" => $item['client_id'],
+                    "store_id" => $item['store_id']
+                ));
+
+                if($q->prepare() && $q->stmt->execute()) {
+                    $action = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                    if($action){
+
+                        $q_p = $this->modx->newQuery("slActionsProducts");
+                        $q_p->select(array(
+                            "slActionsProducts.*"
+                        ));
+                        $q_p->where(array(
+                            'action_id' => $action['id'],
+                        ));
+
+                        $count = $this->modx->getCount('slActionsProducts', $q_p);
+
+
+                        if($action['payer'] == 0){
+                            $results['items'][$k]['payer'] = "Покупатель";
+                        }else {
+                            $results['items'][$k]['payer'] = "Бесплатная доставка";
+                        }
+
+                        if($action['condition_min_sum'] > 0){
+                            $results['items'][$k]['condition_min_sum'] = $action['condition_min_sum'];
+                        }else {
+                            $results['items'][$k]['condition_min_sum'] = "";
+                        }
+
+                        if($action['delay'] > 0){
+                            $results['items'][$k]['delay'] = $action['delay'];
+                        } else {
+                            $results['items'][$k]['delay'] = "Предоплата";
+                        }
+
+                        if($action['type_all_sale'] !== null){
+                            if($action['type_all_sale'] == 0){
+                                if($action['type_all_sale_symbol'] == 0){
+                                    $results['items'][$k]['sale'] = $action['all_sale_value'] . " ₽";
+
+                                    if($count > 0){
+                                        $results['items'][$k]['sale'] = $results['items'][$k]['sale'] . " / Скидка на группы товаров";
+                                    }
+                                } else{
+                                    $results['items'][$k]['sale'] = $action['all_sale_value'] . " %";
+                                    if($count > 0){
+                                        $results['items'][$k]['sale'] = $results['items'][$k]['sale'] . " / Скидка на группы товаров";
+                                    }
+                                }
+                            }
+                        } else {
+                            if($count > 0){
+                                $results['items'][$k]['sale'] = $results['items'][$k]['sale'] . "Скидка на группы товаров";
+                            }
+                        }
+
+
+                    } else{
+                        $results['items'][$k]['payer'] = "";
+                        $results['items'][$k]['condition_min_sum'] = "";
+                        $results['items'][$k]['delay'] = "";
+                        $results['items'][$k]['sale'] = "";
+                    }
+                }
+
+
+
+//                if($action){
+//                    $results['items'][$k]['action'] = $action->toArray();
+//                } else{
+//                    $results['items'][$k]['action'] = array("type" => "discounts", "org_id" => $properties['id'], "client_id" => $item['client_id'], "store_id" => $item['store_id']);
+//                }
+
+//                $results['items'][$k]['stores'] = $this->getStoresOrg($properties);
+            }
+
+            return $results;
+        }
+    }
+
+    /**
+     * Чекаем оптовиков
+     *
+     * @param $properties
+     * @return mixed
+     */
+    public function toggleOpts($properties)
+    {
+        if($properties['action']){
+            // установить
+            if(!$object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]))){
+                $object = $this->modx->newObject("slWarehouseStores");
+            }
+            $object->set("org_id", $properties["store"]);
+            $object->set("warehouse_id", $properties["id"]);
+            $object->set("description", "Установлено через ЛК магазина");
+            $object->set("date", time());
+            $object->save();
+
+            //уведомление продавцу
+            $notification = array(
+                "org_id" => $properties["id"],
+                "namespace" => 7,
+                "store_id" => $properties["store"]
+            );
+            $this->sl->notification->setNotification(array("data" => $notification));
+
+            return $this->sl->success("Объект создан", $object->toArray());
+        }else{
+            // удалить
+            $object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]));
+            if($object){
+                $data = $object->toArray();
+                $object->remove();
+            }
+
+            //уведомление продавцу
+            $notification = array(
+                "org_id" => $properties["id"],
+                "namespace" => 8,
+                "store_id" => $properties["store"]
+            );
+            $this->sl->notification->setNotification(array("data" => $notification));
+
+            return $this->sl->success("Объект удален", $data);
+        }
+
+    }
+
+    /**
+     * Управляем подключением к Оптовикам
+     *
+     * @param $properties
+     * @return array|void
+     */
+    public function getOpts($properties){
+        $query = $this->modx->newQuery("slOrg");
+        $query->leftJoin("slWarehouseStores", "slWarehouseStores", "slWarehouseStores.org_id = {$properties["id"]} AND slWarehouseStores.warehouse_id = slOrg.id");
+        // $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+        // $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
+        // фильтруем по флагу Активности и Оптового склада
+        $query->where(array(
+            "slOrg.active:=" => 1,
+            "slOrg.warehouse:=" => 1
+        ));
+        /*
+        if($properties['filtersdata']['region']){
+            $geo_data = $this->parseRegions($properties['filtersdata']['region']);
+            $criteria = array();
+            if ($geo_data["cities"]) {
+                $criteria["dartLocationCity.id:IN"] = $geo_data["cities"];
+            }
+            if ($geo_data["regions"]) {
+                $criteria["dartLocationRegion.id:IN"] = $geo_data["regions"];
+            }
+            if($criteria){
+                $query->where($criteria);
+            }
+        }
+        */
+        if ($properties['filtersdata']['our']) {
+            $query->where(array("slWarehouseStores.org_id:=" => $properties["id"]));
+        }
+
+        if ($properties['filter']) {
+            $words = explode(" ", $properties['filter']);
+            foreach ($words as $word) {
+                $criteria = array();
+                $criteria['slOrg.name:LIKE'] = '%' . trim($word) . '%';
+                $criteria['OR:slOrg.address:LIKE'] = '%' . trim($word) . '%';
+                $query->where($criteria);
+            }
+        }
+
+        $query->select(array("slOrg.*,IF(slWarehouseStores.warehouse_id = slOrg.id, 1, 0) as connection, slWarehouseStores.date as connection_date"));
+        $result['total'] = $this->modx->getCount('slOrg', $query);
+
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']){
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $query->limit($limit, $offset);
+        }
+
+        // И сортируем по ID в обратном порядке
+        if($properties['sort']){
+            $keys = array_keys($properties['sort']);
+            $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+        }else{
+            $query->sortby('connection', 'desc');
+        }
+
+        $query->prepare();
+        $this->modx->log(1, "MOT9I :: ".print_r($query->toSQL(), 1));
+
+        if ($query->prepare() && $query->stmt->execute()) {
+            $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($result['items'] as $key => $val){
+                if($val["image"]){
+                    $result['items'][$key]['image'] = $this->modx->getOption("site_url")."assets/content/".$val["image"];
+                }else{
+                    $result['items'][$key]['image'] = $this->modx->getOption("site_url").$this->modx->getOption("shoplogistic_blank_image");
+                }
+
+                $result['items'][$key]['connection_date'] = date('d.m.Y H:i', strtotime($val['connection_date']));
+            }
+            return $result;
+        }
+    }
+
+    /**
+     * Чекаем оптовиков
+     *
+     * @param $properties
+     * @return void
+     */
+    public function checkOpts($properties){
+        $outputs = array();
+        if($properties['action'] == 'set'){
+            if(count($properties['vendors'])){
+                $vendors = array();
+                foreach($properties['vendors'] as $key => $v){
+                    if($v){
+                        $vendors[] = $key;
+                    }
+                }
+                if(count($vendors)){
+                    $this->setProperties("opt_selected_stores", $properties["id"], $vendors);
+                }
+            }
+        }
+        return $this->sl->success("Объекты создан", $outputs);
+    }
+
+    /**
+     * Чекаем оптовиков (видимость)
+     *
+     * @param $properties
+     * @return mixed
+     */
+    public function toggleOptsVisible($properties)
+    {
+        $vendors = array($properties["id"]);
+        if ($properties['action']) {
+            if(count($vendors)){
+                $props = $this->setProperties("opt_selected_stores", $properties["store"], $vendors);
+                return $this->sl->success("Объект создан", $props);
+            }
+        } else {
+            if(count($vendors)){
+                $props = $this->removePropertiesValue("opt_selected_stores", $properties["store"], $vendors);
+                return $this->sl->success("Объект удален", $props);
+            }
+        }
+        return $this->sl->tools->error("Объект не найден", $properties);
+    }
+
+    /**
+     * Поставщики для отображения закупок
+     *
+     * @param $properties
+     * @return array|void
+     */
+    public function getVendorsStores($properties){
+        $data = array(
+            'selected_count' => 0,
+            'selected' => array(),
+            "available_count" => 0,
+            "available" => array()
+        );
+        $iids = array();
+        $count = 0;
+        $urlMain = $this->modx->getOption("site_url");
+
+        // Берем подключенных оптовиков
+        $warehouses = array();
+        $query = $this->modx->newQuery("slWarehouseStores");
+        $query->where(array(
+            "`slWarehouseStores`.`org_id`:=" => $properties['id']
+        ));
+        $query->select(array("slWarehouseStores.warehouse_id"));
+        if($query->prepare() && $query->stmt->execute()){
+            $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($results as $warehouse){
+                $warehouses[] = $warehouse["warehouse_id"];
+            }
+        }
+
+        $selected_stores = $this->getProperties("opt_selected_stores", $properties['id']);
+        if($selected_stores){
+            // get selected
+            $query = $this->modx->newQuery("slStores");
+            $query->leftJoin("slOrgStores", "slOrgStores", "slOrgStores.store_id = slStores.id");
+            $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgStores.org_id");
+            $query->where(array(
+                "slOrgStores.org_id:IN" => $warehouses,
+                "`slStores`.`id`:IN" => $selected_stores,
+                "`slStores`.`opt_marketplace`:=" => 1,
+                "`slStores`.`active`:=" => 1,
+                "`slOrg`.`active`:=" => 1,
+                "`slOrg`.`warehouse`:=" => 1
+            ));
+            $query->select(array("slStores.*"));
+            $query->groupby("slStores.id");
+            if ($query->prepare() && $query->stmt->execute()) {
+                $selected = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($selected as $key => $value) {
+                    $iids[] = $value['id'];
+                    $selected[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+                    if($selected[$key]['coordinats']){
+                        $selected[$key]['mapcoordinates'] = explode(",", $selected[$key]['coordinats']);
+                        foreach($selected[$key]['mapcoordinates'] as $k => $coord){
+                            $selected[$key]['mapcoordinates'][$k] = floatval(trim($coord));
+                        }
+                        $selected[$key]['mapcoordinates'] = array_reverse($selected[$key]['mapcoordinates']);
+                    }
+                    unset($selected[$key]['apikey']);
+                    $count++;
+                }
+
+                $data['selected_count'] = $count;
+                $data['selected'] = $selected;
+            }
+        }else{
+            $data['selected_count'] = 0;
+            $data['selected'] = array();
+        }
+
+        // берем доступные для выбора склады
+        $query = $this->modx->newQuery("slStores");
+        $query->leftJoin("slOrgStores", "slOrgStores", "slOrgStores.store_id = slStores.id");
+        $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgStores.org_id");
+        $query->where(array(
+            "slOrgStores.org_id:IN" => $warehouses,
+            "`slStores`.`active`:=" => 1,
+            "`slStores`.`opt_marketplace`:=" => 1,
+            "`slOrg`.`warehouse`:=" => 1,
+            "`slOrg`.`active`:=" => 1
+        ));
+        if($selected_stores){
+            $query->where(array(
+                "`slStores`.`id`:NOT IN" => $selected_stores,
+            ));
+        }
+        if($properties['filter']){
+            $query->where(array(
+                "`slStores`.`name`:LIKE" => "%".$properties['filter']."%",
+                "OR:`slStores`.`address`:LIKE" => "%".$properties['filter']."%"
+            ));
+        }
+        $query->select(array("slStores.*"));
+        $query->groupby("slStores.id");
+        if($query->prepare() && $query->stmt->execute()){
+            $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            $count = 0;
+            if($vendors) {
+                foreach ($vendors as $key => $value) {
+                    if (!in_array($value['id'], $iids)) {
+                        $vendors[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+                        if ($vendors[$key]['coordinats']) {
+                            $vendors[$key]['mapcoordinates'] = explode(",", $vendors[$key]['coordinats']);
+                            foreach ($vendors[$key]['mapcoordinates'] as $k => $coord) {
+                                $vendors[$key]['mapcoordinates'][$k] = floatval(trim($coord));
+                            }
+                            $vendors[$key]['mapcoordinates'] = array_reverse($vendors[$key]['mapcoordinates']);
+                        }
+                        unset($vendors[$key]['apikey']);
+                    } else {
+                        unset($vendors[$key]);
+                    }
+                    $count++;
+                }
+                $data["available_count"] = count($vendors) + $data['selected_count'];
+                $data['available'] = $vendors;
+            }else{
+                $data["available_count"] = 0;
+                $data['available'] = array();
+            }
+        }
+        return $data;
     }
 
     /**
@@ -409,22 +1087,39 @@ class slOrganization
      * @return array
      */
     public function getWarehouses($id, $visible = 0){
+        // Берем подключенных оптовиков
         $warehouses = array();
         $query = $this->modx->newQuery("slWarehouseStores");
-        $query->leftJoin("slStores", "slStores", "slStores.id = slWarehouseStores.warehouse_id");
-        $query->select(array("slStores.*"));
         $query->where(array(
-            "slWarehouseStores.org_id:=" => $id,
-            "AND:slStores.active:=" => 1
+            "`slWarehouseStores`.`org_id`:=" => $id
         ));
-        if($visible){
-            $query->where(array(
-                "slWarehouseStores.visible:=" => 1
-            ));
+        $query->select(array("slWarehouseStores.warehouse_id"));
+        if($query->prepare() && $query->stmt->execute()){
+            $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach($results as $warehouse){
+                $warehouses[] = $warehouse["warehouse_id"];
+            }
         }
-        if($query->prepare() && $query->stmt->execute()) {
-            $warehouses = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
-            return $warehouses;
+
+        $selected_stores = $this->getProperties("opt_selected_stores", $id);
+        if($selected_stores){
+            // get selected
+            $query = $this->modx->newQuery("slStores");
+            $query->leftJoin("slOrgStores", "slOrgStores", "slOrgStores.store_id = slStores.id");
+            $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgStores.org_id");
+            $query->where(array(
+                "slOrgStores.org_id:IN" => $warehouses,
+                "`slStores`.`id`:IN" => $selected_stores,
+                "`slStores`.`opt_marketplace`:=" => 1,
+                "`slStores`.`active`:=" => 1,
+                "`slOrg`.`active`:=" => 1,
+                "`slOrg`.`warehouse`:=" => 1
+            ));
+            $query->select(array("slStores.*"));
+            if ($query->prepare() && $query->stmt->execute()) {
+                $warehouses = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                return $warehouses;
+            }
         }
     }
 
@@ -439,6 +1134,7 @@ class slOrganization
             $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgUsers.org_id");
             $query->where(array(
                 "slOrgUsers.user_id:=" => $user_id,
+                "slOrg.active:=" => 1
             ));
             $query->select(array(
                 "slOrg.*"
@@ -454,7 +1150,7 @@ class slOrganization
                     $query->select(array("SUM(slOrder.cart_cost) as summ, COUNT(*) as count"));
                     $query->where(array(
                         "org_id:=" => $org['id']
-                    ),
+                        )
                     );
                     $query->where(array(
                         "createdon:>=" => $date
@@ -468,6 +1164,20 @@ class slOrganization
                         $out["images"] = $this->sl->tools->prepareImage($org['image']);
                         $orgs[$key]['image'] = $out["images"]["image"];
                     }
+                    // Берем адрес
+                    $query = $this->modx->newQuery("slOrgRequisites");
+                    $query->where(array(
+                        array(
+                            "org_id:=" => $org['id']
+                        )
+                    ));
+                    $query->select(array("slOrgRequisites.*"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $req = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        if($req){
+                            $orgs[$key]['description'] = $req["fact_address"];
+                        }
+                    }
                 }
                 return $orgs;
             }
@@ -479,8 +1189,8 @@ class slOrganization
      * Получаем все склады пользователя
      * @return
      */
-    public function getStoresOrg($properties){
-        if($properties['id']){
+    public function getStoresOrg($properties, $pagination = 1){
+        if($properties['id']) {
             $query = $this->modx->newQuery("slOrgStores");
             $query->leftJoin("slStores", "slStores", "slStores.id = slOrgStores.store_id");
             $query->where(array(
@@ -488,16 +1198,37 @@ class slOrganization
             ));
             $query->select(array(
                 "slStores.*",
+                "COALESCE(slStores.name_short, slStores.name) as name_short",
+                "COALESCE(slStores.address_short, slStores.address) as address_short"
             ));
+            $result['total'] = $this->modx->getCount('slOrgStores', $query);
+
+            if ($pagination) {
+                // Устанавливаем лимит 1/10 от общего количества записей
+                // со сдвигом 1/20 (offset)
+                if ($properties['page'] && $properties['perpage']) {
+                    $limit = $properties['perpage'];
+                    $offset = ($properties['page'] - 1) * $properties['perpage'];
+                    $query->limit($limit, $offset);
+                }
+                // И сортируем по ID в обратном порядке
+                if($properties['sort']){
+                    $keys = array_keys($properties['sort']);
+                    $query->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
+                }
+            }
+
             if($query->prepare() && $query->stmt->execute()) {
                 $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($result['items'] as $key => $store){
+                    $query = $this->modx->newQuery("slStoresRemains");
+                    $query->where(array("slStoresRemains.store_id:=" => $store["id"]));
+                    $result['items'][$key]["remains"] = number_format($this->modx->getCount("slStoresRemains", $query), 0, "", " ");
                     if($store["image"]) {
                         $out["images"] = $this->sl->tools->prepareImage($store['image']);
                         $result['items'][$key]['image'] = $out["images"]["image"];
                     }
                 }
-                $result['total'] = count($result['items']);
                 return $result;
             }
         }
@@ -509,52 +1240,341 @@ class slOrganization
      * @return
      */
     public function getOrgProfile($properties){
+        $user_id = $this->sl->userHandler->getUserId();
         if($properties['id']){
-            $urlMain = $this->modx->getOption("site_url");
-            $query = $this->modx->newQuery("slOrg");
-            $query->where(array(
-                "`slOrg`.id:=" => $properties['id'],
-            ));
-            $query->select(array(
-                "`slOrg`.*"
-            ));
-            if($query->prepare() && $query->stmt->execute()){
-                $org = $query->stmt->fetch(PDO::FETCH_ASSOC);
-
-                if($org['image']){
-                    $org['image'] = $urlMain . "assets/content/" .  $org['image'];
+            // проверяем связь юзера и организации
+            $criteria = array(
+                "org_id:=" => $properties['id'],
+                "user_id:=" => $user_id
+            );
+            $ulink = $this->modx->getObject("slOrgUsers", $criteria);
+            if($ulink){
+                $urlMain = $this->modx->getOption("site_url");
+                $query = $this->modx->newQuery("slOrg");
+                $query->where(array(
+                    "`slOrg`.id:=" => $properties['id'],
+                ));
+                $query->select(array(
+                    "`slOrg`.*"
+                ));
+                if($query->prepare() && $query->stmt->execute()){
+                    $org = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                    if($org['image']){
+                        $org['image'] = $urlMain . "assets/content/" .  $org['image'];
+                    }
+                    $q = $this->modx->newQuery("slOrgRequisites");
+                    $q->where(array(
+                        "`slOrgRequisites`.`org_id`:=" => $org['id'],
+                    ));
+                    $q->select(array(
+                        "`slOrgRequisites`.*"
+                    ));
+                    if($q->prepare() && $q->stmt->execute()){
+                        $orgRequisites = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $org['requisites'] = $orgRequisites;
+                        foreach ($org['requisites'] as $key => $requisite){
+                            $queryBank = $this->modx->newQuery("slOrgBankRequisites");
+                            $queryBank->where(array(
+                                "`slOrgBankRequisites`.`org_requisite_id`:=" => $requisite['id'],
+                            ));
+                            $queryBank->select(array(
+                                "`slOrgBankRequisites`.*"
+                            ));
+                            if($queryBank->prepare() && $queryBank->stmt->execute()) {
+                                $bankRequisites = $queryBank->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                $org['requisites'][$key]['banks'] = $bankRequisites;
+                            }
+                        }
+                    }
+                    $q = $this->modx->newQuery("slOrgStores");
+                    $q->leftJoin("slStores", "slStores", "slStores.id = slOrgStores.store_id");
+                    $q->where(array(
+                        "`slOrgStores`.`org_id`:=" => $org['id'],
+                    ));
+                    $q->select(array(
+                        "`slStores`.*"
+                    ));
+                    if($q->prepare() && $q->stmt->execute()){
+                        $stores = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $org['warehouses'] = $stores;
+                    }
+                    $org["success"] = true;
+                    return $org;
                 }
+            }else{
+                return $this->sl->tools->error("У вас нет доступа к этой организации");
+            }
+        }
+    }
 
-                $q = $this->modx->newQuery("slOrgRequisites");
-                $q->where(array(
-                    "`slOrgRequisites`.`org_id`:=" => $org['id'],
+    /**
+     * Берем приватные организации по ИНН
+     *
+     * @param $inn
+     * @return array
+     */
+    public function getPrivateClients($inn){
+        $clients = array();
+        $query = $this->modx->newQuery("slOrgRequisites");
+        $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgRequisites.org_id");
+        $query->where(array(
+            'slOrgRequisites.inn:=' => $inn,
+            "slOrg.owner_id:>" => 0
+        ));
+        $query->select(array("slOrgRequisites.*"));
+        if($query->prepare() && $query->stmt->execute()){
+            $clients = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $clients;
+        }
+    }
+
+    /**
+     * Удаление организации
+     *
+     * @param $properties
+     * @return mixed
+     */
+    public function deleteOrgVirtualProfile($properties){
+        $user_id = $this->sl->userHandler->getUserId();
+        if($properties["client_id"]){
+            $org = $this->modx->getObject("slOrg", $properties["client_id"]);
+            if($org){
+                $owner_id = $org->get("owner_id");
+                if($owner_id != $properties["id"]){
+                    return $this->sl->tools->error("У вас нет доступа к этой организации");
+                }
+            }else{
+                return $this->sl->tools->error("Организация не найдена");
+            }
+            $org_id = $org->get("id");
+            // удаляем связь родительской организации и виртуальной
+            $criteria = array(
+                "org_id:=" => $org_id,
+                "warehouse_id:=" => $properties["id"]
+            );
+            $uslink = $this->modx->getObject("slWarehouseStores", $criteria);
+            if($uslink){
+                $uslink->remove();
+            }
+            // удаляем связь юзера и организации
+            $criteria = array(
+                "org_id:=" => $org_id,
+                "user_id:=" => $user_id
+            );
+            $ulink = $this->modx->getObject("slOrgUsers", $criteria);
+            if($ulink){
+                $ulink->remove();
+            }
+            // удаляем склады
+            $query = $this->modx->newQuery("slOrgStores");
+            $query->where(array(
+                "org_id:=" => $org_id
+            ));
+            $query->select(array("slOrgStores.*"));
+            if($query->prepare() && $query->stmt->execute()){
+                $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach($stores as $store){
+                    $store_id = $store["store_id"];
+                    // удаляем связь склада и организации
+                    $criteria = array(
+                        "org_id:=" => $org_id,
+                        "store_id:=" => $store_id
+                    );
+                    $link = $this->modx->getObject("slOrgStores", $criteria);
+                    if($link){
+                        $link->remove();
+                    }
+                    // удаляем связь юзера и склада
+                    $criteria = array(
+                        "user_id:=" => $user_id,
+                        "store_id:=" => $store_id
+                    );
+                    $uslink = $this->modx->getObject("slStoreUsers", $criteria);
+                    if($uslink){
+                        $uslink->remove();
+                    }
+                    // удаляем склад
+                    $store = $this->modx->getObject("slStores", $store_id);
+                    if($store){
+                        $store->remove();
+                    }
+                }
+            }
+            // удаляем реквизиты
+            $org_reqs = $this->modx->getCollection('slOrgRequisites', array("org_id:=" => $org_id));
+            foreach($org_reqs as $reqs){
+                $reqs->remove();
+            }
+            // удаляем организацию
+            $org = $this->modx->getObject("slOrg", $org_id);
+            if($org){
+                $org->remove();
+            }
+            return $this->sl->tools->success("Организация успешно удалена", array("org_id" => $org_id));
+        }else{
+            return $this->sl->tools->error("Организация не найдена");
+        }
+    }
+
+    /**
+     * Создание виртуальной организации
+     *
+     * @param $properties
+     * @return mixed
+     */
+    public function setOrgVirtualProfile($properties){
+        $user_id = $this->sl->userHandler->getUserId();
+        if($properties["id"] && $user_id){
+            if($properties["client_id"]){
+                // проверяем доступ
+                $org = $this->modx->getObject("slOrg", $properties["client_id"]);
+                if($org){
+                    $owner_id = $org->get("owner_id");
+                    if($owner_id != $properties["id"]){
+                        return $this->sl->tools->error("У вас нет доступа к этой организации");
+                    }
+                }else{
+                    return $this->sl->tools->error("Организация не найдена");
+                }
+            }else{
+                $query = $this->modx->newQuery("slOrgRequisites");
+                $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgRequisites.org_id");
+                $query->where(array(
+                    'slOrgRequisites.inn:=' => $properties['data']['org']['inn'],
+                    "slOrg.owner_id:=" => 0
                 ));
-                $q->select(array(
-                    "`slOrgRequisites`.*"
+                $count = $this->modx->getCount('slOrgRequisites', $query);
+                if($count > 0){
+                    return $this->sl->tools->error("Организация с ИНН {$properties['org']['inn']} уже прошла процедуру интеграции!");
+                }
+                $query = $this->modx->newQuery("slOrgRequisites");
+                $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgRequisites.org_id");
+                $query->where(array(
+                    'slOrgRequisites.inn:=' => $properties['data']['org']['inn'],
+                    "slOrg.owner_id:=" => $properties["id"]
                 ));
+                $count = $this->modx->getCount('slOrgRequisites', $query);
+                if($count > 0){
+                    return $this->sl->tools->error("Организация с ИНН {$properties['org']['inn']} уже существует!");
+                }
+                $org = $this->modx->newObject("slOrg");
+                $org->set("owner_id", $properties["id"]);
+            }
+            // Получили все объекты
+            $userdata = array();
+            if($properties['data']['upload_image']){
+                if ($properties['data']['image']) {
+                    $avatar = $this->modx->getOption('base_path') . "assets/content/avatars/" . $properties['data']['image']['name'];
 
-                if($q->prepare() && $q->stmt->execute()){
-                    $orgRequisites = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    if (rename($this->modx->getOption('base_path') . $properties['data']['image']['original'], $avatar)) {
+                        $org->set("image", "avatars/" . $properties['data']['image']['name']);
+                    }
+                }
+            }
+            if($properties['data']['contact']){
+                $org->set('contact', $properties['data']['contact']);
+            }
+            if($properties['data']['email']){
+                $org->set('email', $properties['data']['email']);
+            }
+            if($properties['data']['phone']){
+                $org->set('phone', $properties['data']['phone']);
+            }
+            $org->set("name", $properties['data']['org']['name']["value"]);
+            $org->set("store", 0);
+            if($org->save()) {
+                $userdata["organization"] = $org->toArray();
+                // Создаем реквизиты
+                $org_id = $org->get("id");
+                if($properties["client_id"]){
+                    $org_req = $this->modx->getObject('slOrgRequisites', array("org_id:=" => $org_id));
+                }else{
+                    $org_req = $this->modx->newObject('slOrgRequisites');
+                    $org_req->set("org_id", $org_id);
+                }
+                if($org_req){
+                    $org_req->set("name", $properties['data']['org']['name']["value"]);
+                    $org_req->set("inn", $properties['data']['org']['inn']);
+                    $org_req->save();
+                    $userdata["organization"]['requizites'] = $org_req->toArray();
+                }
+                foreach($properties['data']['org']["warehouses"] as $index => $address){
+                    if($address['address']["value"]){
+                        if(!isset($address['address']["data"])){
+                            if (!class_exists('Dadata')) {
+                                require_once dirname(__FILE__) . '/dadata.class.php';
+                            }
+                            $token = $this->modx->getOption('shoplogistic_api_key_dadata');
+                            $secret = $this->modx->getOption('shoplogistic_secret_key_dadata');
+                            $dadata = new Dadata($token, $secret);
+                            $dadata->init();
+                            $res = $dadata->clean('address', $address["address"]["value"]);
+                            $address['address']["data"] = $res[0];
+                        }
+                        if($index == 0) {
+                            $org_req->set("fact_address", $address["value"]);
+                            $org_req->save();
+                        }
+                        if($address["id"]){
+                            $store = $this->modx->getObject("slStores", $address["id"]);
+                        }else{
+                            $store = $this->modx->newObject("slStores");
+                        }
+                        $store->set("name", $properties['data']['org']['name']["value"].' || '.$address["address"]["value"]);
+                        $city = $this->sl->tools->getCity($address["address"]);
+                        $store->set("city", $city);
+                        $store->set("address", $address["address"]["value"]);
+                        $store->set("contact", $properties['data']['contact']);
+                        $store->set("email", $properties['data']['email']);
+                        $store->set("phone", $properties['data']['phone']);
+                        $store->set("integration", 0);
+                        $store->set("marketplace", 0);
+                        $store->set("opt_marketplace", 0);
+                        $store->set("check_remains", 0);
+                        $store->set("check_docs", 0);
+                        $store->set("active", 0);
+                        $store->set("coordinats", $address["address"]["data"]["geo_lat"].','.$address["address"]["data"]["geo_lon"]);
+                        $store->set("lat", $address["address"]["data"]["geo_lat"]);
+                        $store->set("lng", $address["address"]["data"]["geo_lon"]);
+                        if($store->save()){
+                            $userdata["organization"]['stores'][] = $store->toArray();
+                            if($address["id"]){
 
-                    $org['requisites'] = $orgRequisites;
+                            }else{
+                                // связь склада и организации
+                                $store_id = $store->get("id");
+                                $link = $this->modx->newObject("slOrgStores");
+                                $link->set("org_id", $org_id);
+                                $link->set("store_id", $store_id);
+                                $link->save();
 
-                    foreach ($org['requisites'] as $key => $requisite){
-                        $queryBank = $this->modx->newQuery("slOrgBankRequisites");
-                        $queryBank->where(array(
-                            "`slOrgBankRequisites`.`org_requisite_id`:=" => $requisite['id'],
-                        ));
-                        $queryBank->select(array(
-                            "`slOrgBankRequisites`.*"
-                        ));
-                        if($queryBank->prepare() && $queryBank->stmt->execute()) {
-                            $bankRequisites = $queryBank->stmt->fetchAll(PDO::FETCH_ASSOC);
-                            $org['requisites'][$key]['banks'] = $bankRequisites;
+                                // связь юзера и склада
+                                $uslink = $this->modx->newObject("slStoreUsers");
+                                $uslink->set("store_id", $store_id);
+                                $uslink->set("user_id", $user_id);
+                                $uslink->save();
+                            }
                         }
                     }
                 }
-
-                return $org;
+                if(!$properties["client_id"]) {
+                    // связь родительской организации и виртуальной
+                    $uslink = $this->modx->newObject("slWarehouseStores");
+                    $uslink->set("org_id", $org_id); 
+                    $uslink->set("warehouse_id", $properties["id"]);
+                    $uslink->save();
+                    // связь юзера и организации
+                    $ulink = $this->modx->newObject("slOrgUsers");
+                    $ulink->set("org_id", $org_id);
+                    $ulink->set("user_id", $user_id);
+                    $ulink->save();
+                }
+                return $this->sl->tools->success("Организация успешно создана", $userdata);
+            }else{
+                return $this->sl->tools->error("Ошибка при создании/редактировании организации");
             }
+        }else{
+            return $this->sl->tools->error("У вас нет прав на создание/редактирование организаций");
         }
     }
 

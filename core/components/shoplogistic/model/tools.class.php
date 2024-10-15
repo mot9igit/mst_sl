@@ -34,11 +34,86 @@ class slTools
     }
 
     /**
-     * Информация о магазине + город и регион
+     * Все города и регионы организации
      *
-     * @param $store_id
+     * @param $id
      * @return array
      */
+
+    public function getOrgCityAndRegions($id){
+        $query = $this->modx->newQuery("slOrgStores");
+        $query->leftJoin("slStores", "slStores", "slStores.id = slOrgStores.store_id");
+        $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
+        $query->leftJoin("dartLocationRegion", "dartLocationRegion", "dartLocationRegion.id = dartLocationCity.region");
+        $query->where(array(
+            "slOrgStores.org_id:=" => $id
+        ));
+        $query->select(array(
+            "slOrgStores.*",
+            "dartLocationCity.id as city_id",
+            "dartLocationRegion.id as region_id",
+        ));
+        if($query->prepare() && $query->stmt->execute()){
+            $store_data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $result = array();
+
+            foreach($store_data as $store){
+                if($result['city_id']){
+                    if($result['city'] == ""){
+                        $result['city'] = $result['city'] . $store['city_id'];
+                    }else{
+                        $result['city'] = $result['city'] . ',' . $store['city_id'];
+                    }
+                }
+                if($store['region_id']){
+                    if($result['region'] == ""){
+                        $result['region'] = $result['region'] . $store['region_id'];
+                    }else{
+                        $result['region'] = $result['region'] . ',' . $store['region_id'];
+                    }
+                }
+            }
+
+            return $result;
+        }
+        return array();
+    }
+
+    /**
+     * Берем город. Параметр массив из DaData
+     *
+     * @param $address
+     * @return int
+     */
+    public function getCity($address){
+        $criteria = array(
+            "fias_id:=" => $address["data"]["city_fias_id"] ? $address["data"]["city_fias_id"] : $address["data"]["settlement_fias_id"]
+        );
+        $city = $this->modx->getObject("dartLocationCity", $criteria);
+        if($city){
+            return $city->get("id");
+        }else{
+            $criteria = array(
+                "fias_id:=" => $address["data"]["region_fias_id"]
+            );
+            $region = $this->modx->getObject("dartLocationRegion", $criteria);
+            if($region){
+                $resource = $this->modx->newObject("modResource");
+                $city = $this->modx->newObject("dartLocationCity");
+                $city->set("city", $address["data"]["city"] ? $address["data"]["city"] : $address["data"]["settlement"]);
+                $city->set("key", $resource->cleanAlias($address["data"]["city"] ? $address["data"]["city"] : $address["data"]["settlement"]));
+                $city->set("postal_code", $address["postal_code"]);
+                $city->set("region", $region->get("id"));
+                if($city->save()){
+                    return $city->get("id");
+                }
+            }
+        }
+        return 0;
+    }
+
+
     public function getStoreInfo($store_id){
         $query = $this->modx->newQuery("slStores");
         $query->leftJoin("dartLocationCity", "dartLocationCity", "dartLocationCity.id = slStores.city");
@@ -229,41 +304,43 @@ class slTools
         $output = array();
         foreach ($backtrace as $bt) {
             $args = '';
-            foreach ($bt['args'] as $a) {
-                if (!empty($args)) {
-                    $args .= ', ';
+            if(isset($bt['args'])){
+                foreach ($bt['args'] as $a) {
+                    if (!empty($args)) {
+                        $args .= ', ';
+                    }
+                    switch (gettype($a)) {
+                        case 'integer':
+                        case 'double':
+                            $args .= $a;
+                            break;
+                        case 'string':
+                            //$a = htmlspecialchars(substr(, 0, 64)).((strlen($a) > 64) ? '...' : '');
+                            $args .= "\"$a\"";
+                            break;
+                        case 'array':
+                            $args .= 'Array('.count($a).')';
+                            break;
+                        case 'object':
+                            $args .= 'Object('.get_class($a).')';
+                            break;
+                        case 'resource':
+                            $args .= 'Resource('.strstr($a, '#').')';
+                            break;
+                        case 'boolean':
+                            $args .= $a ? 'TRUE' : 'FALSE';
+                            break;
+                        case 'NULL':
+                            $args .= 'Null';
+                            break;
+                        default:
+                            $args .= 'Unknown';
+                    }
                 }
-                switch (gettype($a)) {
-                    case 'integer':
-                    case 'double':
-                        $args .= $a;
-                        break;
-                    case 'string':
-                        //$a = htmlspecialchars(substr(, 0, 64)).((strlen($a) > 64) ? '...' : '');
-                        $args .= "\"$a\"";
-                        break;
-                    case 'array':
-                        $args .= 'Array('.count($a).')';
-                        break;
-                    case 'object':
-                        $args .= 'Object('.get_class($a).')';
-                        break;
-                    case 'resource':
-                        $args .= 'Resource('.strstr($a, '#').')';
-                        break;
-                    case 'boolean':
-                        $args .= $a ? 'TRUE' : 'FALSE';
-                        break;
-                    case 'NULL':
-                        $args .= 'Null';
-                        break;
-                    default:
-                        $args .= 'Unknown';
-                }
+                $tmp["file"] = @$bt['file'].' - line '.@$bt['line'];
+                $tmp["call"] = @$bt['class'].@$bt['type'].@$bt['function'].'('.$args.')';
+                $output[] = $tmp;
             }
-            $tmp["file"] = @$bt['file'].' - line '.@$bt['line'];
-            $tmp["call"] = @$bt['class'].@$bt['type'].@$bt['function'].'('.$args.')';
-            $output[] = $tmp;
         }
         return $output;
     }
@@ -303,11 +380,13 @@ class slTools
      * @param $options
      * @return array
      */
-    public function prepareImage($url, $options = ""){
+    public function prepareImage($url, $options = "", $prefix = 1){
         $out = array();
-        $pos = strpos($url, 'assets/content/');
-        if ($pos === false) {
-            $url = 'assets/content/'.$url;
+        if($prefix) {
+            $pos = strpos($url, 'assets/content/');
+            if ($pos === false) {
+                $url = 'assets/content/' . $url;
+            }
         }
         $image = $this->modx->getOption("base_path") . $url;
         $out['image'] = $this->modx->getOption("site_url") . $url;
@@ -318,7 +397,6 @@ class slTools
             ));
             $out['thumb_big'] = $this->modx->getOption("site_url") . $big_file;
             $out['files'][] = array(
-                "thumb" => str_replace("//a", "/a", $this->modx->getOption("site_url") . $small_file),
                 "thumb_big" => str_replace("//a", "/a", $this->modx->getOption("site_url") . $big_file),
                 "url" => str_replace("//a", "/a", $this->modx->getOption("site_url") . $url)
             );
@@ -342,6 +420,50 @@ class slTools
         }
 
         return $value;
+    }
+
+    /**
+     * Отправить письмо
+     *
+     * @param $chunk
+     * @param $data
+     * @param $mails (array or string)
+     * @return void
+     */
+    public function sendMail($chunk, $data, $mails, $subject){
+        $pdo = $this->modx->getParser()->pdoTools;
+        $message = $pdo->getChunk($chunk, $data);
+
+        $this->modx->getService('mail', 'mail.modPHPMailer');
+        $this->modx->mail->set(modMail::MAIL_BODY, $message);
+        $this->modx->mail->set(modMail::MAIL_FROM, $this->modx->getOption("emailsender"));
+        $this->modx->mail->set(modMail::MAIL_FROM_NAME, $this->modx->getOption("site_name"));
+        $this->modx->mail->set(modMail::MAIL_SUBJECT, $subject);
+        if(is_array($mails)){
+            foreach($mails as $mail){
+                $this->modx->mail->address('to',$mail);
+            }
+        }else{
+            $this->modx->mail->address('to', $mails);
+        }
+        $this->modx->mail->address('reply-to', 'client.ms@yandex.ru');
+        $this->modx->mail->setHTML(true);
+        if (!$this->modx->mail->send()) {
+            $this->modx->log(modX::LOG_LEVEL_ERROR,'An error occurred while trying to send the email: '.$this->modx->mail->mailer->ErrorInfo);
+        }
+        $this->modx->mail->reset();
+    }
+
+    /**
+     * Сохраняем лог
+     *
+     * @param $data
+     * @return mixed
+     */
+    public function saveLog($data){
+        $log = $this->modx->newObject('slLog', $data);
+        $log->save();
+        return $log->toArray();
     }
 
     /**
@@ -381,7 +503,7 @@ class slTools
     {
         $response = array(
             'success' => true,
-            'message' => $this->modx->lexicon($message, $placeholders),
+            'message' => $message,
             'data' => $data,
         );
 

@@ -63,13 +63,13 @@ class slStoresRemainsGetListProcessor extends modObjectGetListProcessor
             ]);
         }
 
-        if($published == 0 || $published == 1){
+        if(($published == 0 || $published == 1) && $published != ''){
             $c->where([
                 'published:=' => $published,
             ]);
         }
 
-        if($copo == 0 || $copo == 1){
+        if(($copo == 0 || $copo == 1) && $copo != ''){
             if($copo == 0){
                 $c->where([
                     'product_id:=' => 0,

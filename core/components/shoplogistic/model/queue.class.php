@@ -125,7 +125,7 @@ class queueHandler
                             if($properties['store']){
                                 $q->where(array("slStoresRemains.store_id:=" => $properties['store']));
                             }else{
-                                $q->where(array("slStores.active:=" => 1));
+                                // $q->where(array("slStores.active:=" => 1));
                             }
                             $all_data = $this->modx->getCount("slStoresRemains", $q);
                             $response['all'] = $all_data;
@@ -184,19 +184,35 @@ class queueHandler
                             if($data['key']) {
                                 $store = $this->sl->product->getStore($data['key'], "date_remains_update");
                                 if ($store['id']) {
+                                    $clear = 1;
+                                    if($data['version']){
+                                        $this->sl->product->setVersion($store['id'], $data['version']);
+                                        $ver = $this->sl->product->splitVersion($data['version']);
+                                        if($ver[0] >= 6){
+                                            if($data['isFull']){
+                                                $clear = 1;
+                                            }else{
+                                                $clear = 0;
+                                            }
+                                        }else{
+                                            $clear = 1;
+                                        }
+                                    }
                                     if ($data['catalog_list']) {
                                         $response['catalog_list'] = $this->sl->product->importCatalogs($data);
                                     }
                                     // обнуляем остатки
-                                    $table = $this->modx->getTableName("slStoresRemains");
-                                    if ($table) {
-                                        $sql = "UPDATE {$table} SET `price` = 0, `remains` = 0, `reserved` = 0, `available` = 0 WHERE `store_id` = {$store['id']};";
-                                        $stmt = $this->modx->prepare($sql);
-                                        if (!$stmt) {
-                                            $this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
-                                        }
-                                        if (!$stmt->execute($data)) {
-                                            $this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                                    if($clear) {
+                                        $table = $this->modx->getTableName("slStoresRemains");
+                                        if ($table) {
+                                            $sql = "UPDATE {$table} SET `price` = 0, `remains` = 0, `reserved` = 0, `available` = 0 WHERE `store_id` = {$store['id']};";
+                                            $stmt = $this->modx->prepare($sql);
+                                            if (!$stmt) {
+                                                $this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                                            }
+                                            if (!$stmt->execute($data)) {
+                                                $this->modx->log(1, print_r($stmt->errorInfo, true) . ' SQL: ' . $sql);
+                                            }
                                         }
                                     }
                                     $this->toLog($queue['id'], "Всего остатков: " . count($data['product_archive']));

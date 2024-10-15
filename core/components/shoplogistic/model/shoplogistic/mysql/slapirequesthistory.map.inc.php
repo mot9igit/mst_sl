@@ -12,6 +12,7 @@ $xpdo_meta_map['slAPIRequestHistory']= array (
   array (
     'store_id' => 0,
     'method' => '',
+    'version' => '',
     'api_key' => '',
     'ip' => '',
     'file' => '',
@@ -35,6 +36,14 @@ $xpdo_meta_map['slAPIRequestHistory']= array (
       'default' => 0,
     ),
     'method' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
+    'version' => 
     array (
       'dbtype' => 'varchar',
       'precision' => '255',

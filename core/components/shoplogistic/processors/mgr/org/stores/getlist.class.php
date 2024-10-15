@@ -70,7 +70,7 @@ class slOrgStoresGetListProcessor extends modObjectGetListProcessor
         $array['actions'][] = [
             'cls' => '',
             'icon' => 'icon icon-edit',
-            'title' => $this->modx->lexicon('shoplogistic_store_update'),
+            'title' => $this->modx->lexicon('shoplogistic_update'),
             'action' => 'updateOrgStores',
             'button' => true,
             'menu' => true,
@@ -80,8 +80,8 @@ class slOrgStoresGetListProcessor extends modObjectGetListProcessor
         $array['actions'][] = [
             'cls' => '',
             'icon' => 'icon icon-trash-o action-red',
-            'title' => $this->modx->lexicon('shoplogistic_delivery_remove'),
-            'multiple' => $this->modx->lexicon('shoplogistic_deliveries_remove'),
+            'title' => $this->modx->lexicon('shoplogistic_remove'),
+            'multiple' => $this->modx->lexicon('shoplogistic_remove'),
             'action' => 'removeOrgStores',
             'button' => true,
             'menu' => true,

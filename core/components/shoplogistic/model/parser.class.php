@@ -166,7 +166,8 @@ class parser
             if(count($pages)){
                 foreach($pages as $page){
                     if(isset($this->config["products"]["pagination"]['filters']['add_base_url'])){
-                        $link = $this->config["base_url"] . $page->href;
+                        // FIX double slashes
+                        $link = str_replace($this->config["base_url"].'/', $this->config["base_url"], $this->config["base_url"] . $page->href);
                     }else{
                         $link = $page->href;
                     }

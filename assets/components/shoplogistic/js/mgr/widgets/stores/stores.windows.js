@@ -57,23 +57,16 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
             id: config.id + '-name_short',
             anchor: '99%',
             allowBlank: false,
-        },
-        // {
-        //     xtype: 'shoplogistic-store-org',
-        //     fieldLabel: _('shoplogistic_store_org'),
-        //     name: 'org_id',
-        //     id: config.id + '-org_id',
-        //     anchor: '99%',
-        //     allowBlank: false,
-        // },
-            {
-            xtype: 'modx-combo-browser',
+        }, {
+            xtype: 'dart-image-field',
             fieldLabel: _('shoplogistic_store_image'),
+            description: "Отображается в списке складов. Необходимо для кастомизации.",
             name: 'image',
             id: config.id + '-image',
             anchor: '99%',
             allowBlank: true,
         },{
+            cls: 'def-panel-group',
             layout: 'column',
             style: {marginTop: '10px', marginRight: '5px', background: '#eeeeee', padding: '10px 10px'},
             items: [{
@@ -112,11 +105,11 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                         }
                     }
                 }],
-            }
-            ]},{
+            }]
+        },{
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_store_apikey'),
-            emptyText: _('shoplogistic_apikey_placeholder'),
+            description: "Можно сгенерировать воспользовавшись инструментом выше.",
             name: 'apikey',
             id: config.id + '-apikey',
             anchor: '99%',
@@ -124,7 +117,7 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
         },{
             xtype: 'textfield',
             fieldLabel: _('shoplogistic_store_btx24_id'),
-            emptyText: _('shoplogistic_btx24_id_placeholder'),
+            description: "Поле для идентификации организации в Bitrix24. Если не будет заполнено, то не придет поле Организации, при совершении заказа в маркетплейсе.",
             name: 'btx24_id',
             id: config.id + '-btx24_id',
             anchor: '99%',
@@ -132,22 +125,38 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
         },{
             xtype: 'shoplogistic-store-integration',
             fieldLabel: _('shoplogistic_store_type_integration'),
+            description: "От типа интеграции зависит каким образом будет осуществляться контроль за Складом и критерии его отключения.",
             name: 'type_integration',
+            hiddenName: 'type_integration',
             id: config.id + '-type_integration',
             anchor: '99%',
+        },{
+            xtype: 'textfield',
+            fieldLabel: _('shoplogistic_store_yml_file'),
+            emptyText: _('shoplogistic_store_yml_file'),
+            name: 'yml_file',
+            id: config.id + '-yml_file',
+            anchor: '99%',
+            allowBlank: true,
+        }, {
+            xtype: 'shoplogistic-combo-vendor',
+            fieldLabel: "Базовый бренд",
+            description: "Если у склада представлен один бренд, то для четкости сопоставления Вы можете указать его как базовый для всех карточек товара этого склада.",
+            name: 'base_vendor',
+            anchor: '99%',
+            id: config.id + '-base_vendor',
+            allowBlank: true
         }, {
             xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_store_active'),
+            description: "Флаг активности склада",
             name: 'active',
             id: config.id + '-active',
             checked: true,
         },{
-            xtype: 'xcheckbox',
-            boxLabel: _('shoplogistic_store_integration'),
-            name: 'integration',
-            id: config.id + '-integration',
-            checked: false,
-        },{
+            title: 'Флаги слежки за API',
+            html: "<div class='dart-alert dart-alert-info'>На основании этих параметров осуществляется контроль обмена информации и отключение Склада при потери связи.</div>",
+            cls: 'def-panel-group',
             layout: 'column',
             items: [{
                 columnWidth: .5,
@@ -156,19 +165,31 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 items: [{
                     xtype: 'xcheckbox',
                     boxLabel: _('shoplogistic_store_check_remains'),
+                    description: "Флаг слежки за обменом остатков. Если отмечен, то осуществляется контроль обмена и отключение Склада при потери связи.",
                     name: 'check_remains',
                     id: config.id + '-check_remains',
                     anchor: '99%',
                     checked: true
-                },{
+                }]
+            },{
+                columnWidth: .5,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
                     xtype: 'xcheckbox',
                     boxLabel: _('shoplogistic_store_check_docs'),
+                    description: "Флаг слежки за обменом остатков. Если отмечен, то осуществляется контроль обмена и отключение Склада при потери связи.",
                     name: 'check_docs',
                     id: config.id + '-check_docs',
                     anchor: '99%',
                     checked: true,
                 }]
-            },{
+            }]
+        }, {
+            title: 'Даты обращения по API',
+            cls: 'def-panel-group',
+            layout: 'column',
+            items: [{
                 columnWidth: .5,
                 layout: 'form',
                 defaults: {msgTarget: 'under'},
@@ -186,16 +207,32 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                     id: config.id + '-date_remains_update',
                     anchor: '99%',
                     allowBlank: true
-                },{
+                }]
+            },{
+                columnWidth: .5,
+                layout: 'form',
+                defaults: {msgTarget: 'under'},
+                items: [{
                     xtype: 'xdatetime',
                     fieldLabel: _('shoplogistic_store_date_docs_update'),
                     name: 'date_docs_update',
                     id: config.id + '-date_docs_update',
                     anchor: '99%',
                     allowBlank: true
+                },{
+                    xtype: 'textfield',
+                    fieldLabel: "Версия модуля обмена",
+                    description: "Версия модуля обмена в 1С",
+                    name: 'version',
+                    id: config.id + '-version',
+                    anchor: '99%',
+                    allowBlank: true
                 }]
             }]
         },{
+            title: 'Местоположение',
+            html: "<div class='dart-alert dart-alert-info'>Параметры местоположения склада. Координаты пока указываем во все поля. Позже будет оптимизация.</div>",
+            cls: 'def-panel-group',
             layout: 'column',
             items: [{
                 columnWidth: .5,
@@ -204,10 +241,25 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 items: [{
                     xtype: 'textfield',
                     fieldLabel: _('shoplogistic_store_website'),
+                    description: "Можно указать для уточнения возможности парсинга номенклатуры.",
                     name: 'website',
                     id: config.id + '-website',
                     anchor: '99%'
-                },]
+                },{
+                    xtype: 'textfield',
+                    fieldLabel: _('shoplogistic_store_lat'),
+                    description: "Широта",
+                    name: 'lat',
+                    id: config.id + '-lat',
+                    anchor: '99%'
+                },{
+                    xtype: 'textfield',
+                    fieldLabel: _('shoplogistic_store_coordinats'),
+                    description: "Координаты через запятую",
+                    name: 'coordinats',
+                    id: config.id + '-coordinats',
+                    anchor: '99%'
+                }]
             },{
                 columnWidth: .5,
                 layout: 'form',
@@ -215,14 +267,23 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 items: [{
                     xtype: 'shoplogistic-combo-city',
                     fieldLabel: _('shoplogistic_store_city'),
+                    description: "На базе данного параметра происходит расчет доставки в модулях 'Закупки' и 'Маркеплейс'",
                     name: 'city',
                     id: config.id + '-city',
+                    anchor: '99%'
+                },{
+                    xtype: 'textfield',
+                    fieldLabel: _('shoplogistic_store_lng'),
+                    description: "Долгота",
+                    name: 'lng',
+                    id: config.id + '-lng',
                     anchor: '99%'
                 }]
             }]
         },{
             title: 'Участие в пространствах',
-            cls: 'def-panel',
+            html: "<div class='dart-alert dart-alert-info'>Обязательно указывайте, где склад должен быть доступен. В противном случае, даже при условии, что Склад включен, он не будет отображаться в пространствах.</div>",
+            cls: 'def-panel-group',
             layout: 'column',
             items: [{
                 columnWidth: .5,
@@ -230,7 +291,8 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 defaults: {msgTarget: 'under'},
                 items: [{
                     xtype: 'xcheckbox',
-                    fieldLabel: _('shoplogistic_store_marketplace'),
+                    boxLabel: _('shoplogistic_store_marketplace'),
+                    description: "Розничный склад для модуля 'Маркетплейс'",
                     name: 'marketplace',
                     id: config.id + '-marketplace',
                     anchor: '99%',
@@ -242,7 +304,8 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 defaults: {msgTarget: 'under'},
                 items: [{
                     xtype: 'xcheckbox',
-                    fieldLabel: _('shoplogistic_store_opt_marketplace'),
+                    boxLabel: _('shoplogistic_store_opt_marketplace'),
+                    description: "Оптовый склад для модуля 'Закупки'",
                     name: 'opt_marketplace',
                     id: config.id + '-opt_marketplace',
                     anchor: '99%',
@@ -250,135 +313,33 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                 }]
             }]
         },{
-            title: 'Реквизиты',
-            cls: 'def-panel',
-            layout: 'column',
-            items: [{
-                columnWidth: .3,
-                layout: 'form',
-                defaults: {msgTarget: 'under'},
-                items: [{
-                    xtype: 'combo-company_type',
-                    fieldLabel: _('shoplogistic_store_company_type'),
-                    name: 'company_type',
-                    id: config.id + '-company_type',
-                    anchor: '99%'
-                }]
-            },{
-                columnWidth: .7,
-                layout: 'form',
-                defaults: {msgTarget: 'under'},
-                items: [{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_ur_name'),
-                    name: 'ur_name',
-                    id: config.id + '-ur_name',
-                    anchor: '99%',
-                    allowBlank: false,
-                }]
-            },{
-                columnWidth: .5,
-                layout: 'form',
-                cls: 'no-margin',
-                defaults: {msgTarget: 'under'},
-                items: [{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_ogrn'),
-                    name: 'ogrn',
-                    id: config.id + '-ogrn',
-                    anchor: '99%'
-                },{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_inn'),
-                    name: 'inn',
-                    id: config.id + '-inn',
-                    anchor: '99%'
-                },{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_bank_knumber'),
-                    name: 'bank_knumber',
-                    id: config.id + '-bank_knumber',
-                    anchor: '99%'
-                },{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_bank_name'),
-                    name: 'bank_name',
-                    id: config.id + '-bank_name',
-                    anchor: '99%'
-                }]
-            },{
-                columnWidth: .5,
-                layout: 'form',
-                defaults: {msgTarget: 'under'},
-                items: [{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_kpp'),
-                    name: 'kpp',
-                    id: config.id + '-kpp',
-                    anchor: '99%'
-                },{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_bank_number'),
-                    name: 'bank_number',
-                    id: config.id + '-bank_number',
-                    anchor: '99%'
-                },{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_bank_bik'),
-                    name: 'bank_bik',
-                    id: config.id + '-bank_bik',
-                    anchor: '99%'
-                },{
-                    xtype: 'textfield',
-                    fieldLabel: _('shoplogistic_store_unique_id'),
-                    name: 'unique_id',
-                    id: config.id + '-unique_id',
-                    anchor: '99%'
-                }]
-            },{
-                columnWidth: 1,
-                cls: 'no-margin',
-                layout: 'form',
-                defaults: {msgTarget: 'under'},
-                items: [{
-                    xtype: 'textarea',
-                    fieldLabel: _('shoplogistic_store_address'),
-                    name: 'address',
-                    id: config.id + '-address',
-                    anchor: '99%'
-                },{
-                    xtype: 'textarea',
-                    fieldLabel: _('shoplogistic_store_address_short'),
-                    name: 'address_short',
-                    id: config.id + '-address_short',
-                    anchor: '99%'
-                }]
-            },{
-                columnWidth: 1,
-                cls: 'no-margin',
-                layout: 'form',
-                defaults: {msgTarget: 'under'},
-                items: [{
-                    xtype: 'textarea',
-                    fieldLabel: _('shoplogistic_store_ur_address'),
-                    name: 'ur_address',
-                    id: config.id + '-ur_address',
-                    anchor: '99%'
-                }]
-            }]
-        },{
-            xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_contact'),
-            name: 'contact',
-            id: config.id + '-contact',
+            xtype: 'textarea',
+            fieldLabel: _('shoplogistic_store_address'),
+            name: 'address',
+            id: config.id + '-address',
             anchor: '99%'
         },{
+            xtype: 'textarea',
+            fieldLabel: _('shoplogistic_store_address_short'),
+            name: 'address_short',
+            id: config.id + '-address_short',
+            anchor: '99%'
+        }, {
+            title: 'Контактное лицо',
+            html: "<div class='dart-alert dart-alert-info'>Указывайте контакты ответственного за отгрузки с данного Склада.</div>",
+            cls: 'def-panel-group',
             layout: 'column',
             items: [{
                 columnWidth: .5,
                 layout: 'form',
                 defaults: {msgTarget: 'under'},
                 items: [{
+                    xtype: 'textfield',
+                    fieldLabel: _('shoplogistic_store_contact'),
+                    name: 'contact',
+                    id: config.id + '-contact',
+                    anchor: '99%'
+                }, {
                     xtype: 'textfield',
                     fieldLabel: _('shoplogistic_store_email'),
                     name: 'email',
@@ -397,33 +358,10 @@ Ext.extend(shopLogistic.window.CreateStore, shopLogistic.window.Default, {
                     anchor: '99%'
                 }]
             }]
-        },{
-            xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_file'),
-            name: 'file',
-            id: config.id + '-file',
-            anchor: '99%'
-        },{
-            xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_coordinats'),
-            name: 'coordinats',
-            id: config.id + '-coordinats',
-            anchor: '99%'
-        },{
-            xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_lat'),
-            name: 'lat',
-            id: config.id + '-lat',
-            anchor: '99%'
-        },{
-            xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_lng'),
-            name: 'lng',
-            id: config.id + '-lng',
-            anchor: '99%'
         }, {
             xtype: 'textarea',
             fieldLabel: _('shoplogistic_store_description'),
+            description: "Описание для команды подключения",
             name: 'description',
             id: config.id + '-description',
             height: 150,
@@ -488,6 +426,12 @@ Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
             title: _('shoplogistic_store_apirequest'),
             items: [{
                 xtype: 'shoplogistic-store-apirequest-grid',
+                record: config.record,
+            }]
+        }, {
+            title: "Каталоги остатков",
+            items: [{
+                xtype: 'shoplogistic-grid-storeremains-cats',
                 record: config.record,
             }]
         }, {

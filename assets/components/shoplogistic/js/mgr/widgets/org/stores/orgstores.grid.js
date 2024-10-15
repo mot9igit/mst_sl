@@ -101,11 +101,11 @@ Ext.extend(shopLogistic.grid.OrgStores, shopLogistic.grid.Default, {
         }
         MODx.msg.confirm({
             title: ids.length > 1
-                ? _('shoplogistic_actions_remove')
-                : _('shoplogistic_action_remove'),
+                ? _('shoplogistic_confirm')
+                : _('shoplogistic_confirm'),
             text: ids.length > 1
-                ? _('shoplogistic_actions_remove_confirm')
-                : _('shoplogistic_action_remove_confirm'),
+                ? _('shoplogistic_confirm_remove')
+                : _('shoplogistic_confirm_remove'),
             url: this.config.url,
             params: {
                 action: 'mgr/org/stores/remove',

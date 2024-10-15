@@ -77,15 +77,15 @@ $xpdo_meta_map['slWarehouseStores']= array (
   ),
   'indexes' => 
   array (
-    'store_id' => 
+    'org_id' => 
     array (
-      'alias' => 'store_id',
+      'alias' => 'org_id',
       'primary' => false,
       'unique' => false,
       'type' => 'BTREE',
       'columns' => 
       array (
-        'store_id' => 
+        'org_id' => 
         array (
           'length' => '',
           'collation' => 'A',
@@ -146,7 +146,7 @@ $xpdo_meta_map['slWarehouseStores']= array (
   array (
     'Warehouse' => 
     array (
-      'class' => 'slStores',
+      'class' => 'slOrg',
       'local' => 'warehouse_id',
       'foreign' => 'id',
       'cardinality' => 'many',

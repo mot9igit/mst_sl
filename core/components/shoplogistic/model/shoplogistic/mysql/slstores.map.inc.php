@@ -39,6 +39,7 @@ $xpdo_meta_map['slStores']= array (
     'phone' => '',
     'file' => '',
     'yml_file' => '',
+    'base_vendor' => '',
     'image' => '',
     'coordinats' => '',
     'lat' => 0.0,
@@ -54,6 +55,7 @@ $xpdo_meta_map['slStores']= array (
     'date_api_ping' => NULL,
     'date_remains_update' => NULL,
     'date_docs_update' => NULL,
+    'version' => '',
     'check_remains' => 1,
     'check_docs' => 1,
     'properties' => NULL,
@@ -292,6 +294,14 @@ $xpdo_meta_map['slStores']= array (
       'null' => false,
       'default' => '',
     ),
+    'base_vendor' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
     'image' => 
     array (
       'dbtype' => 'varchar',
@@ -405,6 +415,14 @@ $xpdo_meta_map['slStores']= array (
       'dbtype' => 'datetime',
       'phptype' => 'datetime',
       'null' => true,
+    ),
+    'version' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '100',
+      'phptype' => 'string',
+      'null' => false,
+      'default' => '',
     ),
     'check_remains' => 
     array (
@@ -646,6 +664,14 @@ $xpdo_meta_map['slStores']= array (
     array (
       'class' => 'dartLocationCity',
       'local' => 'city',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
+    ),
+    'Vendor' => 
+    array (
+      'class' => 'msVendor',
+      'local' => 'base_vendor',
       'foreign' => 'id',
       'cardinality' => 'one',
       'owner' => 'foreign',

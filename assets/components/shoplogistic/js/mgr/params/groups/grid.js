@@ -19,7 +19,7 @@ shopLogistic.grid.SettingGroup = function (config) {
 Ext.extend(shopLogistic.grid.SettingGroup, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'label', 'name', 'profile_hidden', 'active', 'description', 'actions'];
+        return ['id', 'label', 'name', 'profile_hidden', 'active', 'rank', 'description', 'actions'];
     },
 
     getTopBar: function () {

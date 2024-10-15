@@ -114,9 +114,9 @@
                 ),
                 'packages' => $products_data
             );
-            $this->log($data);
+            // $this->log($data);
             $response = $this->request("calculator/tarifflist", $data, 'POST', 'json');
-            $this->log($response);
+            // $this->log($response);
             foreach($response['tariff_codes'] as $code){
                 // Приоритет Дверь - Склад и Дверь - Дверь https://api-docs.cdek.ru/63345519.html -> Приложение 2
                 $available_codes = array(139, 138);
@@ -137,6 +137,7 @@
             }
             $trmnls = array();
             $terminals = $this->getOffices($to);
+            // $terminals = array();
             $codes['terminals_source'] = $terminals;
             foreach($terminals as $terminal){
                 $phs = array();
@@ -223,8 +224,8 @@
                 curl_close($curl);
             }
             $response_data = json_decode($out, 1);
-            $this->log($url.': '.print_r($response_data, 1));
-            $backtrace = $this->sl->tools->backtrace();
+            // $this->log($url.': '.print_r($response_data, 1));
+            // $backtrace = $this->sl->tools->backtrace();
             // $this->sl->tools->log(print_r($backtrace, 1), "cdek_backtrace");
             return $response_data;
         }

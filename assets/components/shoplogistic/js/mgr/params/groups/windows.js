@@ -42,6 +42,12 @@ Ext.extend(shopLogistic.window.CreateSettingGroup, shopLogistic.window.Default, 
             id: config.id + '-active',
             checked: true,
         }, {
+            xtype: 'numberfield',
+            fieldLabel: _('shoplogistic_settings_group_rank'),
+            name: 'rank',
+            id: config.id + '-rank',
+            anchor: '99%'
+        },{
             xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_settings_group_profile_hidden'),
             name: 'profile_hidden',

@@ -4,6 +4,12 @@
 .def-panel{
     padding: 15px 0;
 }
+.def-panel-group{
+    padding: 15px 15px;
+    border: 1px solid #cccccc;
+    margin-top: 15px;
+    border-radius: 6px;
+}
 .no-margin{
     margin: 0 !important;
 }
@@ -138,3 +144,15 @@ a.shoplogistic-btn.disabled, fieldset[disabled] a.shoplogistic-btn { pointer-eve
 .shoplogistic-btn-xs { padding: 1px 5px; font-size: 12px; line-height: 1.5; border-radius: 3px }
 .shoplogistic-btn-block { display: block; width: 100% }
 .shoplogistic-btn-block + .shoplogistic-btn-block { margin-top: 5px }
+
+.dart-alert{
+    display: block;
+    border-radius: 6px;
+    padding: 10px 10px;
+}
+
+.dart-alert.dart-alert-info{
+    color: rgb(5, 44, 101);
+    background: rgb(207, 226, 255);
+    border: 1px solid rgb(158, 197, 254);
+}

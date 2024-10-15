@@ -219,6 +219,14 @@ class shopLogistic
             require_once dirname(__FILE__) . '/analytics/opt.class.php';
             $this->analyticsOpt = new optAnalyticsHandler($this, $this->modx);
         }
+        if (!class_exists('notificationHandler')) {
+            require_once dirname(__FILE__) . '/analytics/notification.class.php';
+            $this->notification = new notificationHandler($this, $this->modx);
+        }
+        if (!class_exists('shippingHandler')) {
+            require_once dirname(__FILE__) . '/analytics/shipping.class.php';
+            $this->shipping = new shippingHandler($this, $this->modx);
+        }
         if (!class_exists('bonusAnalyticsHandler')) {
             require_once dirname(__FILE__) . '/analytics/bonus.class.php';
             $this->analyticsBonus = new bonusAnalyticsHandler($this, $this->modx);

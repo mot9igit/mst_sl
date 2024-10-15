@@ -23,27 +23,27 @@ Ext.extend(shopLogistic.window.CreateStoresRemainsPrices, shopLogistic.window.De
             id: config.id + '-remain_id'
         }, {
             xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_remains_prices_name'),
+            fieldLabel: "Наименование",
             name: 'name',
             id: config.id + '-name',
             anchor: '99%'
         }, {
             xtype: 'textfield',
-            fieldLabel: _('shoplogistic_store_remains_prices_key'),
+            fieldLabel: "GUID",
             name: 'key',
             id: config.id + '-key',
             anchor: '99%'
         }, {
             xtype: 'numberfield',
             decimalPrecision: 2,
-            fieldLabel: _('shoplogistic_store_remains_prices_price'),
+            fieldLabel: "Цена",
             name: 'price',
             anchor: '99%',
             id: config.id + '-price',
             allowBlank: true
         },{
             xtype: 'xcheckbox',
-            boxLabel: _('shoplogistic_store_remains_status_active'),
+            boxLabel: "Активна",
             name: 'active',
             id: config.id + '-active',
             checked: true,

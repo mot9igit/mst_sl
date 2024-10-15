@@ -13,6 +13,7 @@ $xpdo_meta_map['slSettingsGroup']= array (
     'name' => '',
     'description' => '',
     'label' => '',
+    'rank' => 0,
     'active' => 1,
     'profile_hidden' => 0,
   ),
@@ -41,6 +42,15 @@ $xpdo_meta_map['slSettingsGroup']= array (
       'phptype' => 'string',
       'null' => true,
       'default' => '',
+    ),
+    'rank' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '10',
+      'attributes' => 'unsigned',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
     ),
     'active' => 
     array (
@@ -86,6 +96,22 @@ $xpdo_meta_map['slSettingsGroup']= array (
       'columns' => 
       array (
         'active' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'rank' => 
+    array (
+      'alias' => 'rank',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'rank' => 
         array (
           'length' => '',
           'collation' => 'A',

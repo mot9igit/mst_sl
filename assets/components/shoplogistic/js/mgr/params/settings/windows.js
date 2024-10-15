@@ -66,11 +66,23 @@ Ext.extend(shopLogistic.window.CreateSetting, shopLogistic.window.Default, {
             id: config.id + '-profile_hidden',
             checked: false,
         }, {
+            xtype: 'numberfield',
+            fieldLabel: _('shoplogistic_setting_rank'),
+            name: 'rank',
+            id: config.id + '-rank',
+            anchor: '99%'
+        }, {
             xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_setting_active'),
             name: 'active',
             id: config.id + '-active',
             checked: true,
+        }, {
+            xtype: 'textarea',
+            fieldLabel: _('shoplogistic_setting_properties'),
+            name: 'properties',
+            id: config.id + '-properties',
+            anchor: '99%'
         }];
     },
 });

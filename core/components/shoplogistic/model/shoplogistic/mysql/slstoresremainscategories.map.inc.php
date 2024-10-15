@@ -15,8 +15,10 @@ $xpdo_meta_map['slStoresRemainsCategories']= array (
     'guid' => '',
     'base_guid' => '',
     'name' => '',
+    'name_alt' => '',
     'description' => '',
     'active' => 1,
+    'published' => 1,
     'createdon' => NULL,
     'updatedon' => NULL,
     'properties' => NULL,
@@ -64,6 +66,14 @@ $xpdo_meta_map['slStoresRemainsCategories']= array (
       'null' => true,
       'default' => '',
     ),
+    'name_alt' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
+      'default' => '',
+    ),
     'description' => 
     array (
       'dbtype' => 'varchar',
@@ -73,6 +83,14 @@ $xpdo_meta_map['slStoresRemainsCategories']= array (
       'default' => '',
     ),
     'active' => 
+    array (
+      'dbtype' => 'tinyint',
+      'precision' => '1',
+      'phptype' => 'boolean',
+      'null' => true,
+      'default' => 1,
+    ),
+    'published' => 
     array (
       'dbtype' => 'tinyint',
       'precision' => '1',
@@ -101,6 +119,22 @@ $xpdo_meta_map['slStoresRemainsCategories']= array (
   ),
   'indexes' => 
   array (
+    'name_alt' => 
+    array (
+      'alias' => 'name_alt',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'name_alt' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'name' => 
     array (
       'alias' => 'name',
@@ -174,6 +208,22 @@ $xpdo_meta_map['slStoresRemainsCategories']= array (
       'columns' => 
       array (
         'active' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
+    'published' => 
+    array (
+      'alias' => 'published',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'published' => 
         array (
           'length' => '',
           'collation' => 'A',

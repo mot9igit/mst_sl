@@ -235,15 +235,30 @@ class slSearch
         return $result;
     }
 
-    public function getOptBigResults($string, $filters = array(),$limit = 12, $offset = 0){
+    /**
+     * Результаты поиска по опту
+     *
+     * @param $string
+     * @param $filters
+     * @param $limit
+     * @param $offset
+     * @return array|false|mixed|void
+     */
+    public function getOptBigResults($string, $filters = array(), $limit = 12, $offset = 0){
+        $string = str_replace(" ", "+", $string);
         if (!class_exists('SphinxClient')) {
             require_once dirname(__FILE__) . '/sphinx.class.php';
         }
         $sphinx = new SphinxClient();
         $sphinx->SetServer('localhost', 9312);
         $sphinx->SetMatchMode(SPH_MATCH_ALL);
+        if($filters){
+            foreach($filters as $k => $filter){
+                $sphinx->setFilter($k, $filter);
+            }
+        }
         $sphinx->SetSortMode(SPH_SORT_EXTENDED, "@relevance DESC");
-        $sphinx->SetFieldWeights(array('article' => 20, 'name' => 10));
+        $sphinx->SetFieldWeights(array('article' => 20, 'name' => 19, 'pagetitle' => 18, 'remain_name' => 17));
         $sphinx->SetLimits($offset, $limit, 1000);
         $result = $sphinx->Query($string, 'mst_opt');
         if ($result && isset($result['matches'])){

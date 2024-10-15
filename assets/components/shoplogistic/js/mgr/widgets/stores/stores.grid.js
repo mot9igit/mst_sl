@@ -224,11 +224,14 @@ Ext.extend(shopLogistic.grid.Stores, MODx.grid.Grid, {
             'warehouse',
             'vendor',
             'store',
+            'yml_file',
+            'base_vendor',
             'marketplace',
             'opt_marketplace',
             'active',
             'check_remains',
             'check_docs',
+            'version',
             'actions'
         ];
     },

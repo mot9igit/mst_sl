@@ -13,6 +13,7 @@ $xpdo_meta_map['slOrg']= array (
     'name' => '',
     'balance' => 0.0,
     'image' => '',
+    'address' => '',
     'description' => '',
     'contact' => '',
     'email' => '',
@@ -20,6 +21,7 @@ $xpdo_meta_map['slOrg']= array (
     'store' => 1,
     'warehouse' => 0,
     'vendor' => 0,
+    'owner_id' => 0,
     'active' => 1,
     'properties' => NULL,
   ),
@@ -47,6 +49,14 @@ $xpdo_meta_map['slOrg']= array (
       'precision' => '255',
       'phptype' => 'string',
       'null' => false,
+      'default' => '',
+    ),
+    'address' => 
+    array (
+      'dbtype' => 'varchar',
+      'precision' => '255',
+      'phptype' => 'string',
+      'null' => true,
       'default' => '',
     ),
     'description' => 
@@ -102,6 +112,14 @@ $xpdo_meta_map['slOrg']= array (
       'dbtype' => 'tinyint',
       'precision' => '1',
       'phptype' => 'boolean',
+      'null' => true,
+      'default' => 0,
+    ),
+    'owner_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '11',
+      'phptype' => 'integer',
       'null' => true,
       'default' => 0,
     ),
@@ -170,6 +188,22 @@ $xpdo_meta_map['slOrg']= array (
         ),
       ),
     ),
+    'owner_id' => 
+    array (
+      'alias' => 'owner_id',
+      'primary' => false,
+      'unique' => false,
+      'type' => 'BTREE',
+      'columns' => 
+      array (
+        'owner_id' => 
+        array (
+          'length' => '',
+          'collation' => 'A',
+          'null' => false,
+        ),
+      ),
+    ),
     'active' => 
     array (
       'alias' => 'active',
@@ -185,6 +219,17 @@ $xpdo_meta_map['slOrg']= array (
           'null' => false,
         ),
       ),
+    ),
+  ),
+  'aggregates' => 
+  array (
+    'Owner' => 
+    array (
+      'class' => 'slOrg',
+      'local' => 'owner_id',
+      'foreign' => 'id',
+      'cardinality' => 'one',
+      'owner' => 'foreign',
     ),
   ),
 );

@@ -19,7 +19,7 @@ shopLogistic.grid.OrgRequisites = function (config) {
 Ext.extend(shopLogistic.grid.OrgRequisites, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'name', 'ogrn', 'inn', 'kpp', 'ur_address', 'fact_address', 'marketplace', 'send_request', 'actions'];
+        return ['id', 'name', 'org_id', 'ogrn', 'inn', 'kpp', 'ur_address', 'fact_address', 'marketplace', 'send_request', 'actions'];
     },
 
     getTopBar: function () {
@@ -112,7 +112,9 @@ Ext.extend(shopLogistic.grid.OrgRequisites, shopLogistic.grid.Default, {
             }
         });
         w.fp.getForm().reset();
-        w.fp.getForm().setValues({});
+        w.fp.getForm().setValues({
+            org_id: this.config.record.id
+        });
         w.show(e.target);
     },
 

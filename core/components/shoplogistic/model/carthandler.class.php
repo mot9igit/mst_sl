@@ -777,21 +777,59 @@ class cartDifficultHandler
 	 * @return bool|int|string
 	 * @throws Exception
 	 */
-	public function getNearShipment($product_id, $store_id, $count = 1){
-		$links = $this->modx->getCollection('slWarehouseStores', array("store_id" => $store_id));
-		$offset = 999;
-		if(count($links)){
-			foreach($links as $link){
-				$off = $this->getNearShipWh($product_id, $count, $link->get('warehouse_id'), $store_id);
-				if($off < $offset){
-					$offset = $off;
-				}
-			}
-			return $offset;
-		}else{
-			// $this->modx->log(xPDO::LOG_LEVEL_ERROR, '[shopLogistic] Store link with warehouse not found.');
-			return 10;
-		}
+	public function getNearShipment($store_from, $store_to){
+        $offset = 10;
+        $from = $this->sl->store->getStore($store_from);
+        $city = $this->modx->getObject("dartLocationCity", $from["city_id"]);
+        if($city){
+            $postal_code_from = $city->get("postal_code");
+        }
+        $to = $this->sl->store->getStore($store_to);
+        $city = $this->modx->getObject("dartLocationCity", $to["city_id"]);
+        if($city){
+            $fias = $city->get("fias_id");
+            $postal_code_to = $city->get("postal_code");
+            // Сначала чекаем отгрузки
+            $newDate = new DateTime();
+            $key_date = $newDate->format('Y-m-d');
+            $interval = 'P1D';
+            $newDate->add(new DateInterval($interval));
+            $newDate->setTime(0, 0, 0);
+            $date = $newDate->format('Y-m-d H:i:s');
+            $query = $this->modx->newQuery("slWarehouseShipment");
+            $query->leftJoin('slWarehouseShip', 'slWarehouseShip', '`slWarehouseShipment`.`ship_id` = `slWarehouseShip`.`id`');
+            $query->where(array(
+                "slWarehouseShip.date_order_end:>=" => $date,
+                "slWarehouseShip.warehouse_id:=" => $store_from,
+                "slWarehouseShipment.city_fias:=" => $fias
+            ));
+            $query->select(array("slWarehouseShipment.date"));
+            if($query->prepare() && $query->stmt->execute()){
+                $ship = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                if($ship['date']){
+                    $nowDate = new DateTime();
+                    $newDate = new DateTime($ship['date']);
+                    $newDate->add(new DateInterval('P1D'));
+                    $interval = $nowDate->diff($newDate);
+                    $offset = $interval->format('%a');
+                }else{
+                    // ищем СДЭК
+                    $cache = $this->modx->getCacheManager();
+                    $options = array( xPDO::OPT_CACHE_KEY => 'default/delivery/cdek' );
+                    $key = md5($key_date.' '.$postal_code_from.'_'.$postal_code_to);
+                    if($cache_data = $cache->get($key, $options)) {
+                        $offset = $cache_data["terminal"]["time"];
+                    }else{
+                        $data = $this->sl->cdek->getCalcPrice($postal_code_from,$postal_code_to,array(502));
+                        if($data["terminal"]){
+                            $offset = $data["terminal"]["time"];
+                        }
+                        $cache->set($key, $data, 86400, $options);
+                    }
+                }
+            }
+        }
+        return $offset;
 	}
 
     /**

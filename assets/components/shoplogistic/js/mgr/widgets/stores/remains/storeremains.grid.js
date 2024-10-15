@@ -11,6 +11,7 @@ shopLogistic.grid.StoreRemains = function (config) {
                 dir: 'asc',
                 store_id: config.record.object.id
             },
+            multi_select: true,
             stateful: true,
             stateId: config.record.object.id,
             topbar: 1
@@ -126,13 +127,23 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'published', 'checked', 'status', 'status_name', 'color', 'guid', 'catalog', 'article', 'barcode', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
+        return ['id', 'name', 'tags', 'catalog_guid', 'base_guid', 'catalog_id','published', 'checked', 'status', 'status_name', 'color', 'guid', 'catalog', 'article', 'barcode', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
         return [{
+            header: _('shoplogistic_id'),
+            dataIndex: 'id',
+            sortable: true,
+            width: 200
+        },{
             header: _('shoplogistic_storeremains_guid'),
             dataIndex: 'guid',
+            sortable: true,
+            width: 200
+        },{
+            header: _('shoplogistic_storeremains_base_guid'),
+            dataIndex: 'base_guid',
             sortable: true,
             width: 200
         },{

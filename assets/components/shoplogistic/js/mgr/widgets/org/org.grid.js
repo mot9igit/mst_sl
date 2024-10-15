@@ -70,13 +70,6 @@ Ext.extend(shopLogistic.grid.Org, shopLogistic.grid.Default, {
                 width: 100,
             },
             {
-                header: _('shoplogistic_store_vendor'),
-                dataIndex: 'vendor',
-                renderer: shopLogistic.utils.renderBoolean,
-                sortable: true,
-                width: 100,
-            },
-            {
                 header: _('shoplogistic_grid_org'),
                 dataIndex: 'actions',
                 renderer: shopLogistic.utils.renderActions,
@@ -86,7 +79,6 @@ Ext.extend(shopLogistic.grid.Org, shopLogistic.grid.Default, {
             }
         ];
     },
-
 
     getListeners: function () {
         return {
@@ -116,7 +108,9 @@ Ext.extend(shopLogistic.grid.Org, shopLogistic.grid.Default, {
             }
         });
         w.fp.getForm().reset();
-        w.fp.getForm().setValues({});
+        w.fp.getForm().setValues({
+            active: true
+        });
         w.show(e.target);
     },
 

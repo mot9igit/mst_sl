@@ -29,17 +29,17 @@ class productHandler
         if(!$properties['store_id']){
             //Берём все магазины
             $ids = array();
-            $stores = $this->sl->orgHandler->getStoresOrg(array("id" => $properties['id']));
+            $stores = $this->sl->orgHandler->getStoresOrg(array("id" => $properties['id']), 0);
             foreach($stores["items"] as $store){
                 $ids[] = $store["id"];
             }
             $criteria = array(
-                "store_id:IN" => $ids
+                "slStoresRemains.store_id:IN" => $ids
             );
         }else{
             //Берём только 1 магазин
             $criteria = array(
-                "store_id:=" => $properties['store_id']
+                "slStoresRemains.store_id:=" => $properties['store_id']
             );
         }
         // Если передан остаток
@@ -51,12 +51,14 @@ class productHandler
             $q = $this->modx->newQuery("slStoresRemains");
             $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
             $q->leftJoin('modResource', 'modResource', 'modResource.id = msProduct.id');
+            $q->leftJoin('slStores', 'slStores', 'slStores.id = slStoresRemains.store_id');
             $q->select(array(
                 'slStoresRemains.*',
                 'msProduct.image',
                 'msProduct.article as product_article',
                 'msProduct.vendor_article',
-                'modResource.pagetitle'
+                'modResource.pagetitle',
+                'slStores.name_short as store_name'
             ));
             $q->where($criteria);
 
@@ -116,6 +118,7 @@ class productHandler
             $q = $this->modx->newQuery("slStoresRemains");
             $q->leftJoin('msProductData', 'msProduct', 'msProduct.id = slStoresRemains.product_id');
             $q->leftJoin('modResource', 'modResource', 'modResource.id = msProduct.id');
+            $q->leftJoin('slStores', 'slStores', 'slStores.id = slStoresRemains.store_id');
             $q->where($criteria);
             if($properties['filter']){
                 $words = explode(" ", $properties['filter']);
@@ -180,6 +183,7 @@ class productHandler
             $select_array = array(
                 'slStoresRemains.*',
                 'msProduct.image',
+                'slStores.name_short as store_name',
                 'COALESCE(msProduct.price_rrc, 0) as price_rrc',
                 'COALESCE((slStoresRemains.price * slStoresRemains.remains), 0) as summ',
                 'IF(price_rrc > 0, (slStoresRemains.price - price_rrc), 0) as price_rrc_delta',
@@ -221,14 +225,19 @@ class productHandler
                 // нужно проверить какому объекту принадлежит поле
                 $q->sortby($keys[0], $properties['sort'][$keys[0]]['dir']);
             }
-//            $q->prepare();
-//            $this->modx->log(1, $q->toSQL());
-//            $this->modx->log(1, "_kenost_");
+            $q->prepare();
+            $this->modx->log(1, $q->toSQL());
+            $this->modx->log(1, "_MOT9I_");
             if($q->prepare() && $q->stmt->execute()){
                 $result['products'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
-                foreach($result['products'] as $key => $product){
+                foreach($result['products'] as $key => $product) {
+                    if ($product["image"]){
+                        $outimg = $this->sl->tools->prepareImage($product["image"], array(), 0);
+                        $result['products'][$key]["image"] = $outimg['image'];
+                    }
                     $result['products'][$key]["summ"] = $this->sl->tools->numberFormat($product["summ"]);
                     $result['products'][$key]["price"] = $this->sl->tools->numberFormat($product["price"]);
+                    $result['products'][$key]["no_money"] = $this->sl->tools->numberFormat($product["no_money"]);
                     $remains_data = array(
                         'labels' => array(),
                         'datasets' => array(
@@ -556,7 +565,7 @@ class productHandler
                                             "action_id" => 3,
                                             "date" => time(),
                                             "message" => "Цена товара отличается от минимальной цены по категории.",
-                                            "actions" => "Поставьте флаг принулительного выставления цены, если Вы в ней уверены или скорректируйте стоимость товара"
+                                            "actions" => "Поставьте флаг принудительного выставления цены, если Вы в ней уверены или скорректируйте стоимость товара"
                                         );
                                         $obj->set("status", 6);
                                         $obj->set("published", 0);
@@ -568,7 +577,7 @@ class productHandler
                                                 "actions" => array()
                                             );
                                         }
-                                        if ($properties["actions"]) {
+                                        if (isset($properties["actions"])) {
                                             array_unshift($properties["actions"], $message);
                                         } else {
                                             $properties["actions"][] = $message;
@@ -594,7 +603,7 @@ class productHandler
                                                     "actions" => array()
                                                 );
                                             }
-                                            if ($properties["actions"]) {
+                                            if (isset($properties["actions"])) {
                                                 array_unshift($properties["actions"], $message);
                                             } else {
                                                 $properties["actions"][] = $message;
@@ -750,6 +759,33 @@ class productHandler
     }
 
     /**
+     * Установка версии модуля обмена
+     *
+     * @param $store_id
+     * @param $version
+     * @return void
+     */
+    public function setVersion($store_id, $version){
+        $store = $this->modx0>getObject("slStores", $store_id);
+        if($store){
+            $store->set("version", $version);
+            $store->save();
+        }
+    }
+
+    /**
+     * Установка версии модуля обмена
+     *
+     * @param $store_id
+     * @param $version
+     * @return void
+     */
+    public function splitVersion($version){
+        $v = explode(",", $version);
+        return $v;
+    }
+
+    /**
      * Импорт остатка
      *
      * @param $data
@@ -759,7 +795,9 @@ class productHandler
         if($data['key']) {
             $store = $this->getStore($data['key'], "date_remains_update");
             if ($store['id']) {
-                $this->tolog('store_' . $store['id'], $data);
+                if($data['version']){
+                    $this->setVersion($store['id'], $data['version']);
+                }
                 $response = array();
                 $response['success_info'] = array();
                 $response['failed_info'] = array();
@@ -784,7 +822,7 @@ class productHandler
 				// массив цен
 				$prices = array();
                 if ($data['catalog_list']) {
-                    $response['catalog_list'] = $this->sl->product->importCatalogs($data);
+                    $response['catalog_list'] = $this->importCatalogs($data);
                 }
 				if($data['promo_prices_list']){
 					foreach($data['promo_prices_list'] as $price){
@@ -835,7 +873,9 @@ class productHandler
                             $message = 'WARN! Не указана категория товара';
                         }
                     }
+
                     if(isset($product['catalog_id'])){
+                        $product["catalog_guid"] = $product['catalog_id'];
                         $product['category_id'] = $this->getProductCategory($store['id'], $product['catalog_id']);
                     }else{
                         $product['category_id'] = 0;
@@ -845,6 +885,11 @@ class productHandler
                         $guid = $product['GUID'];
                     }else{
                         $guid = $key;
+                    }
+                    if(isset($data['base_GUID'])){
+                        $product['base_GUID'] = $data['base_GUID'];
+                    }else{
+                        $product['base_GUID'] = '';
                     }
                     if ($error) {
                         $response['failed_info'][] = array(
@@ -905,10 +950,16 @@ class productHandler
             $o->set("base_guid", $data['base_GUID']);
         }
         if($data['catalog_id']){
-            $o->set("category_id", $data['category_id']);
+            $o->set("catalog_id", $data['catalog_id']);
+        }
+        if(isset($data['catalog_guid'])){
+            $o->set("catalog_guid", $data['catalog_guid']);
         }
         if($data['barcode']){
             $o->set("barcode", implode(",", $data['barcode']));
+        }
+        if($data['tags']){
+            $o->set("tags", implode(",", str_replace(",", "", $data['tags'])));
         }
         $o->set("article", $data['article']);
         if((int) $data['count_current'] < 0){
@@ -927,6 +978,14 @@ class productHandler
             $o->set("available", 0);
         } else {
             $o->set("available", $available);
+        }
+        // $this->modx->log(1, var_export($data['published'], true));
+        if (isset($data['published'])) {
+            if((bool) $data['published'] === false){
+                $o->set("published", 0);
+            }else{
+                $o->set("published", 1);
+            }
         }
         $o->set("price", $data['price']);
         $o->set('store_id', $store_id);
@@ -1024,6 +1083,9 @@ class productHandler
         if($data['key']) {
             $store = $this->getStore($data['key'], "date_remains_update");
             if ($store['id']) {
+                if($data['version']){
+                    $this->setVersion($store['id'], $data['version']);
+                }
                 if ($data["catalog_list"]) {
                     $updated_ids = array();
                     foreach ($data["catalog_list"] as $k => $item) {
@@ -1060,11 +1122,11 @@ class productHandler
                         "base_guid:=" => $data["base_GUID"],
                         "id:NOT IN" => $updated_ids,
                     );
-                    $disabled = $this->modx->getCollection("slStoresRemainsCategories", $criteria);
-                    foreach($disabled as $d){
-                        $d->set("active", 0);
-                        $d->save();
-                    }
+                    //$disabled = $this->modx->getCollection("slStoresRemainsCategories", $criteria);
+                    //foreach($disabled as $d){
+                        // $d->set("active", 0);
+                        // $d->save();
+                    //}
                     return $updated_ids;
                 }
             }
@@ -1229,7 +1291,7 @@ class productHandler
         $query = $this->modx->newQuery("slBrandAssociation");
         $query->select(array("slBrandAssociation.*, LENGTH(association) as lenght_name"));
         $query->where($crit_assoc, xPDOQuery::SQL_OR);
-        $query->sortby('LENGTH(association)', 'DESC');
+        $query->sortby('LENGTH(association)', 'ASC');
         $query->prepare();
         if ($query->prepare() && $query->stmt->execute()) {
             $associations = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1245,7 +1307,7 @@ class productHandler
             $query = $this->modx->newQuery("msVendor");
             $query->select(array("msVendor.*, LENGTH(name) as lenght_name"));
             $query->where($crit_name, xPDOQuery::SQL_OR);
-            $query->sortby('LENGTH(name)', 'DESC');
+            $query->sortby('LENGTH(name)', 'ASC');
             $query->prepare();
             if ($query->prepare() && $query->stmt->execute()) {
                 $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1450,6 +1512,12 @@ class productHandler
         return $response;
     }
 
+    /**
+     * Импорт документов
+     *
+     * @param $data
+     * @return array|array[]
+     */
     public function importDocs($data){
         $response = array(
             'success_info' => array(),
@@ -1457,6 +1525,9 @@ class productHandler
             'products_info' => array()
         );
         $store = $this->getStore($data['key'], "date_docs_update");
+        if($data['version']){
+            $this->setVersion($store['id'], $data['version']);
+        }
         foreach ($data['docs'] as $k => $doc) {
             if($doc['GUID']){
                 $key = $doc['GUID'];
@@ -1942,6 +2013,9 @@ class productHandler
                 $today->setTime(23,59,59);
                 $date_to = $today->getTimestamp();
                 foreach($archive['products'] as $product){
+                    if($data["base_GUID"]){
+                        $product["base_GUID"] = $data["base_GUID"];
+                    }
                     $remain_id = $this->getRemain($store['id'], $product['GUID']);
                     if(!$remain_id){
                         $remain_id = $this->importRemainSingle($store['id'], $product);
@@ -1950,7 +2024,7 @@ class productHandler
                         $remain = $this->modx->getObject("slStoresRemains", $remain_id);
                         if($remain){
                             $remain->set("updatedon", time());
-                            $remain->set("catalog_guid", $data['catalog_id']);
+                            $remain->set("catalog_guid", $product['catalog_id']);
                             $remain->save();
                         }
                     }
@@ -2010,7 +2084,7 @@ class productHandler
         $query = $this->modx->newQuery("slStoresRemainsHistory");
         $query->where(array(
             "slStoresRemainsHistory.remain_id" => $remain_id,
-            "slStoresRemainsHistory.date:<=" => date_format($month_ago, 'Y-m-d H:i:s'),
+            "slStoresRemainsHistory.date:>=" => date_format($month_ago, 'Y-m-d H:i:s'),
         ));
         $query->sortby("slStoresRemainsHistory.date", "DESC");
         $query->select(array("slStoresRemainsHistory.*"));
@@ -2082,6 +2156,7 @@ class productHandler
      * @return array
      */
     public function getPurchaseSpeed($remain_id){
+        $this->modx->log(1, "_PURCHASES_");
         $remain = $this->sl->getObject($remain_id, "slStoresRemains");
         $today = date_create();
         $month_ago = date_create("-1 MONTH");
@@ -2095,16 +2170,19 @@ class productHandler
         ));
         $query->select("slStoreDocsProducts.remain_id, SUM(slStoreDocsProducts.count) as sales");
         $query->groupby("slStoreDocsProducts.remain_id");
-        $query->prepare();
         if($query->prepare() && $query->stmt->execute()){
             $result = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            $this->modx->log(1, print_r($result, 1));
             if($result){
                 if($result["sales"]){
                     $all_days = $this->sl->tools->getDiffDates(date_format($month_ago, 'Y-m-d H:i:s'), date_format($today, 'Y-m-d H:i:s'));
+                    $this->modx->log(1, "Все дни: ".$all_days);
                     $outOfStockDays = $this->getOutOfStockDays($remain_id);
+                    $this->modx->log(1, "Out Of Stock дни: ".$outOfStockDays);
                     $times = $all_days - $outOfStockDays;
                     $result["out_of_stock"] = $outOfStockDays;
                     $result["times"] = $times;
+                    $this->modx->log(1, "Times: ".$times);
                     if($times > 0){
                         $result['speed'] = $result['sales'] / $times;
                         $result['speed'] = round($result['speed'], 2);
@@ -2114,6 +2192,7 @@ class productHandler
                 }else{
                     $result['speed'] = 0;
                 }
+                $this->modx->log(1, "Speed: ".$result['speed']);
             }else{
                 $result['remain_id'] = $remain_id;
                 $result['sales'] = 0;
@@ -2270,19 +2349,20 @@ class productHandler
         }
         $query = $this->modx->newQuery("msVendor");
         $query->select(array("msVendor.id as id, msVendor.name as name"));
-        $query->where(array("msVendor.id:=" => 1355));
+        $query->where(array("msVendor.id:IN" => array(1,3)));
         $all_data = $this->modx->getCount("msVendor", $query);
         // ограничение на память
         $limit = 500;
         for($i = 0; $i <= $all_data; $i += $limit) {
             $query = $this->modx->newQuery("msVendor");
             $query->select(array("msVendor.id as id, msVendor.name as name"));
-            $query->where(array("msVendor.id:=" => 1355));
+            $query->where(array("msVendor.id:IN" => array(1,3)));
             $query->limit($limit, $i);
             if ($query->prepare() && $query->stmt->execute()) {
                 $vendors = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                 $output['vendors'] = array_merge($output['vendors'], $vendors);
                 // получили производителей, создаем файл и записываем туда товары
+
                 foreach($vendors as $vendor){
                     $products_data = 0;
                     $query = $this->modx->newQuery("msProductData");
@@ -2350,7 +2430,7 @@ class productHandler
                                         $offer_content = "\r\n" . $this->sl->pdoTools->getChunk("@FILE chunks/catalog_yml_product.tpl", $products[$key]) . "\r\n";
                                         fwrite($fd, $offer_content);
                                     }
-                                    // $output['products'] = array_merge($output['products'], $products);
+                                    $output['products'] = array_merge($output['products'], $products);
                                 }
                             }
                             $end_file = "</offers>\r\n</shop>\r\n</yml_catalog>";

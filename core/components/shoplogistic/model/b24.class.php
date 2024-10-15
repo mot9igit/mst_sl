@@ -352,9 +352,8 @@ class b24Handler
      * @param $data
      * @return array|mixed|string|string[]|void
      */
-    public function checkCompany($data){
+    public function checkCompany($data, $filter = array()){
         $method = "crm.company.list";
-        $filter = array();
         // check by phone default
         if($data['TITLE']){
             $filter["TITLE"] = $data['TITLE'];
@@ -404,6 +403,23 @@ class b24Handler
     }
 
     /**
+     * Поиск реквизитов по ИНН
+     *
+     * @param $inn
+     * @return array
+     */
+    public function checkRequizites($inn){
+        $method = "crm.requisite.list";
+        $criteria = array(
+            "order" => array("DATE_CREATE" => "ASC"),
+            "filter" => array("RQ_INN" => $inn),
+            'select' => array("ENTITY_TYPE_ID", "ENTITY_ID", "ID", "NAME")
+        );
+        $response = $this->request($method, $criteria);
+        return $response;
+    }
+
+    /**
      * Добавляем реквизитов
      *
      * @param $data
@@ -443,6 +459,36 @@ class b24Handler
             $req_id = $response['result'];
         }
         return $req_id;
+    }
+
+    /**
+     * Проверяем карточку смарт процесса
+     *
+     * @param $data
+     * @return array
+     */
+    public function checkCard($data){
+        $method = "crm.item.list";
+        $response = $this->request($method, $data);
+        return $response;
+    }
+
+    /**
+     * Обновление карточки Смарт процесса
+     * @param $entityTypeId
+     * @param $id
+     * @param $data
+     * @return array|mixed|string|string[]
+     */
+    public function updateCard($entityTypeId, $id, $data){
+        $method = 'crm.item.update';
+        $request = array(
+            'entityTypeId' => $entityTypeId,
+            'id' => $id,
+            'fields' => $data
+        );
+        $response = $this->request($method, $request);
+        return $response;
     }
 
     /**

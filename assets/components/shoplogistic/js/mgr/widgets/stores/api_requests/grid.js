@@ -19,7 +19,7 @@ shopLogistic.grid.APIRequest = function (config) {
 Ext.extend(shopLogistic.grid.APIRequest, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'method', 'store_id', 'createdon', 'request', 'ip', 'file','request_content', 'response', 'response_content', 'status', 'status_name', 'color', 'description', 'actions'];
+        return ['id', 'method', 'store_id', 'createdon', 'version','request', 'ip', 'file','request_content', 'response', 'response_content', 'status', 'status_name', 'color', 'description', 'actions'];
     },
 
     getTopBar: function () {
