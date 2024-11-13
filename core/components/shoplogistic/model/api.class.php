@@ -689,9 +689,9 @@ class minishop2_fast_api{
                 $this->modx->log(1, print_r($id, true));
                 $this->modx->log(1, print_r($data, true));
 			}
-            $backtrace = $this->sl->tools->backtrace();
-            $this->sl->tools->log($sql, "available_backtrace");
-            $this->sl->tools->log(print_r($backtrace, 1), "available_backtrace");
+            // $backtrace = $this->sl->tools->backtrace();
+            // $this->sl->tools->log($sql, "available_backtrace");
+            // $this->sl->tools->log(print_r($backtrace, 1), "available_backtrace");
 			return $id;
 		}else{
 			$this->checkprogress("Не могу инициализировать таблицу: ".$table);

@@ -93,7 +93,6 @@ class parser
                     $f[1] = str_replace(array("=>", "[", "]"), array(":", "{", "}"), '[' . $f[1]);
                 }
             }
-            $this->modx->log(1, print_r($f[1], 1));
             $filter_param = json_decode($f[1], 1);
             $out[$filter_name] = $filter_param;
         }
@@ -516,7 +515,11 @@ class parser
                                             $val = $t[1];
                                         }else{
                                             $lab = $row->find($config['title'], 0)->plaintext;
-                                            $val = $row->find($config['value'], 0)->plaintext;
+                                            if ($config['val_source'] == 'attribute') {
+                                                $val = $row->find($config['value'], 0)->{$config['val_source_name']};
+                                            }else{
+                                                $val = $row->find($config['value'], 0)->plaintext;
+                                            }
                                         }
                                     }
                                     if ($lab) {
@@ -551,8 +554,13 @@ class parser
                                         $lab = $t[0];
                                         $val = $t[1];
                                     }else{
+                                        if ($config['val_source'] == 'attribute') {
+                                            $val = $row->find($config['value'], 0)->{$config['val_source_name']};
+                                        }else{
+                                            $val = $row->find($config['value'], 0)->plaintext;
+                                        }
                                         $lab = $row->find($config['title'], 0)->plaintext;
-                                        $val = $row->find($config['value'], 0)->plaintext;
+
                                     }
                                 }
                                 if ($lab) {
@@ -742,6 +750,8 @@ class parser
                 break;
             case "field":
                 $elems = $cat->find($config['selector']);
+                $this->modx->log(1, print_r($config, 1));
+                $this->modx->log(1, count($elems));
                 if($config["index_search"] && isset($elems[$config["index"]])){
                     if(isset($config["sub_element"])){
                         if(isset($config["sub_index"])){
@@ -799,9 +809,6 @@ class parser
         if($config['filters']){
             //$this->modx->log(1, print_r(count($cat), 1));
             foreach($config["filters"] as $key => $val){
-                $this->modx->log(1, print_r($key, 1));
-                $this->modx->log(1, print_r($val, 1));
-                $this->modx->log(1, print_r($field_value, 1));
                 $field_value = $this->filterField($key, $val, $field_value, $cat);
                 //$this->modx->log(1, print_r($field_value, 1));
             }

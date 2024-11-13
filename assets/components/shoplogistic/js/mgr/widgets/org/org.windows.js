@@ -24,6 +24,12 @@ Ext.extend(shopLogistic.window.CreateOrg, shopLogistic.window.Default, {
             id: config.id + '-name',
             anchor: '99%'
         }, {
+            xtype: 'textfield',
+            fieldLabel: "Bitrix 24",
+            name: 'bitrix_id',
+            id: config.id + '-bitrix_id',
+            anchor: '99%'
+        },{
             xtype: 'textarea',
             fieldLabel: _('shoplogistic_org_description'),
             description: "Описание для команды подключения",

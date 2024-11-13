@@ -51,6 +51,11 @@ class slUser
             if($count > 0){
                 return $this->sl->tools->error("Организация с ИНН {$properties['org']['inn']} уже существует!");
             }else{
+                $this->sl->tools->log($properties, "register_try.log");
+                $json = json_encode($properties, JSON_UNESCAPED_UNICODE);
+                if($this->sl->config["alert_mode"] == 1){
+                    $this->sl->darttelegram->sendMessage("INFO", "РЕГИСТРАЦИЯ!!! Или попытка: <pre language=\"json\">".$json."</pre>");
+                }
                 // регистрируем пользователя
                 $user = $this->modx->newObject('modUser');
                 $user->set('username', $properties['login']);
@@ -76,6 +81,16 @@ class slUser
                     $org->set("contact", $properties['name']);
                     if($org->save()){
                         $userdata["organization"] = $org->toArray();
+
+                        //Создаем настройки менеджера
+                        $manager = $this->modx->newObject('slNotificationManagers');
+                        $manager->set('org_id', $org->get("id"));
+                        $manager->set('receiver', $properties['name']);
+                        $manager->set('email', $properties['email']);
+                        $manager->set('phone', $properties['telephone']);
+                        $manager->set('global', 1);
+                        $manager->save();
+
                         // Создаем реквизиты
                         $org_id = $org->get("id");
                         $org_req = $this->modx->newObject('slOrgRequisites');
@@ -86,11 +101,45 @@ class slUser
                         $org_req->save();
                         // связь с приватниками
                         $privats = $this->sl->orgHandler->getPrivateClients($properties['org']['inn']);
-                        foreach($privats as $privat){
-                            // ID организации хранится в privat["org_id"]
-                            // slActions client_id, если type 3
-                            // slActionsStores -> store_id
-                            // slWarehouseStores -> org_id
+                        if(count($privats)) {
+                            foreach ($privats as $privat) {
+                                // ID организации хранится в privat["org_id"]
+                                // 1. Нужно заменить связь с головной организацией и отрубить виртуальную (slWarehouseStores -> org_id)
+                                $criteria = array(
+                                    "org_id:=" => $privat["org_id"]
+                                );
+                                $links = $this->modx->getCollection("slWarehouseStores", $criteria);
+                                foreach ($links as $link) {
+                                    $link->set("org_id", $org_id);
+                                    $link->save();
+                                }
+                                // 2. Выставить в индивидуальных акциях актуальный client_id (slActions client_id, если type 3)
+                                $criteria = array(
+                                    "client_id:=" => $privat["org_id"],
+                                    "type:=" => 3
+                                );
+                                $actions = $this->modx->getCollection("slActions", $criteria);
+                                foreach ($actions as $action) {
+                                    $action->set("client_id", $org_id);
+                                    $action->save();
+                                }
+                                // 3. Заменить организацию в slActionsStores (slActionsStores -> store_id)
+                                $criteria = array(
+                                    "store_id:=" => $privat["org_id"]
+                                );
+                                $actionStores = $this->modx->getCollection("slActionsStores", $criteria);
+                                foreach ($actionStores as $actionStore) {
+                                    $actionStore->set("store_id", $org_id);
+                                    $actionStore->save();
+                                }
+                                // 4. Убираем owner_id (TODO: потом удалить ее нафиг)
+                                $org = $this->modx->getObject("slOrg", $privat["org_id"]);
+                                if ($org) {
+                                    $org->set("active", 0);
+                                    $org->set("owner_id", 0);
+                                    $org->save();
+                                }
+                            }
                         }
                         $userdata["organization"]['requizites'] = $org_req->toArray();
                         // Создаем склады
@@ -158,135 +207,141 @@ class slUser
                 );
                 $this->sl->tools->sendMail($chunk, $data, $email, $subject);
                 // отправка данных в Bitrix24
-                // 1. Проверяем не создана ли карточка в Бизнес процессе
-                $card_id = 0;
-                $organization_id = 0;
-                $res = $this->sl->b24->checkRequizites($properties['org']['inn']);
-                if($res["result"]){
-                    $organization_id = $res["result"][0]["ENTITY_ID"];
-                    if($organization_id){
-                        $criteria = array(
-                            "entityTypeId" => 1034,                 // Это наш бизнес процесс
-                            "filter" => array(
-                                "companyId" => $organization_id
+                if($this->sl->config["tocrm"] == 1) {
+                    // 1. Проверяем не создана ли карточка в Бизнес процессе
+                    $card_id = 0;
+                    $organization_id = 0;
+                    $res = $this->sl->b24->checkRequizites($properties['org']['inn']);
+                    if ($res["result"]) {
+                        $organization_id = $res["result"][0]["ENTITY_ID"];
+                        if ($organization_id) {
+                            $criteria = array(
+                                "entityTypeId" => 1034,                 // Это наш бизнес процесс
+                                "filter" => array(
+                                    "companyId" => $organization_id
+                                )
+                            );
+                            $res = $this->sl->b24->checkCard($criteria);
+                            if ($res["total"] > 0) {
+                                $card_id = $res["result"]["items"][0]["id"];
+                            }
+                        }
+                    }
+                    if ($card_id) {
+                        // 1. Двигаем по стадии
+                        $res = $this->sl->b24->updateCard(1034, $card_id, array("stageId" => "DT1034_89:UC_2TBIBK"));
+                    } else {
+                        // 2. Создаем заново объекты и связываем
+                        $organization_data = array();
+                        $name_data = array();
+                        // Клининг параметров
+                        if (!class_exists('Dadata')) {
+                            require_once dirname(__FILE__) . '/dadata.class.php';
+                        }
+
+                        $token = $this->modx->getOption('shoplogistic_api_key_dadata');
+                        $secret = $this->modx->getOption('shoplogistic_secret_key_dadata');
+                        $dadata = new Dadata($token, $secret);
+                        $dadata->init();
+                        // клиним имя
+                        $result = $dadata->clean("name", $properties['name']);
+                        if ($result) {
+                            $name_data = $result[0];
+                        }
+                        $companyData["TITLE"] = $properties['org']['name'];
+                        // Если организация не найдена
+                        if (!$organization_id) {
+                            $result = $dadata->getOrganization($properties['org']['inn']);
+                            if ($result["suggestions"]) {
+                                $organization_data = $result["suggestions"][0];
+                            }
+                            // Собираем данные
+                            $companyData = array(
+                                "CONTACT" => array(),
+                                "COMPANY_TYPE" => "OTHER"
+                            );
+                            if ($organization_data) {
+                                $companyData["TITLE"] = $organization_data["value"];
+                            } else {
+                                $companyData["TITLE"] = $properties['org']['name'];
+                            }
+                            if ($name_data) {
+                                $legalData = array(
+                                    "NAME" => $name_data["name"],
+                                    "SECOND_NAME" => $name_data["patronymic"],
+                                    "LAST_NAME" => $name_data["surname"],
+                                    "phone" => $properties['telephone'],
+                                    "email" => $properties["email"],
+                                    "ASSIGNED_BY_ID" => 55
+                                );
+                            } else {
+                                $legalData = array(
+                                    "NAME" => $properties['name'],
+                                    "phone" => $properties['telephone'],
+                                    "email" => $properties["email"],
+                                    "ASSIGNED_BY_ID" => 55
+                                );
+                            }
+                            $lpr = $this->sl->b24->addContact($legalData);
+                            $companyData["CONTACT"][] = $lpr;
+                            $organization_id = $this->sl->b24->addCompany($companyData);
+                        }
+                        if ($organization_data) {
+                            // Цепляем реквизиты
+                            $requiziteData = array(
+                                "NAME" => $companyData["TITLE"],
+                                "RQ_INN" => $organization_data["data"]["inn"],
+                                "RQ_KPP" => $organization_data["data"]["kpp"],
+                                "RQ_EMAIL" => $properties["email"],
+                                "RQ_PHONE" => $properties['telephone'],
+                                'ENTITY_TYPE_ID' => 4,
+                                "ENTITY_ID" => $organization_id,
+                                "PRESET_ID" => 1,
+                                'ACTIVE' => 'Y',
+                            );
+                            if (strlen(trim($organization_data["data"]["ogrn"])) == 13) {
+                                $requiziteData["RQ_OGRN"] = $organization_data["data"]["ogrn"];
+                                $requiziteData["UF_CRM_1718187136"] = $properties["email"];
+                                $requiziteData["UF_CRM_1718187151"] = $properties['telephone'];
+                                $requiziteData["PRESET_ID"] = 1;
+                            }
+                            if (strlen(trim($organization_data["data"]["ogrn"])) == 15) {
+                                $requiziteData["RQ_OGRNIP"] = $organization_data["data"]["ogrn"];
+                                $requiziteData["UF_CRM_1718187196"] = $properties["email"];
+                                $requiziteData["UF_CRM_1718187208"] = $properties['telephone'];
+                                $requiziteData["PRESET_ID"] = 3;
+                            }
+                            $req = $this->sl->b24->addRequizite($requiziteData);
+                            if ($properties['delivery_addresses'][0]["value"]) {
+                                $addressData = array(
+                                    'fields' => array(
+                                        'TYPE_ID' => 1,
+                                        'ENTITY_TYPE_ID' => 8,
+                                        'ENTITY_ID' => $req,
+                                        'ADDRESS_1' => $properties['delivery_addresses'][0]["value"]
+                                    ),
+                                );
+                                $address_actual = $this->sl->b24->request('crm.address.add', $addressData);
+                            }
+                        }
+                        $cardData = array(
+                            "entityTypeId" => 1034,
+                            "fields" => array(
+                                "title" => $companyData["TITLE"],
+                                "categoryId" => 89,
+                                "stageId" => "DT1034_89:UC_2TBIBK",
+                                "assignedById" => 55,
+                                "companyId" => $organization_id,
+                                "contactIds" => $companyData["CONTACT"],
+                                "ufCrm29_1718046509" => $lpr
                             )
                         );
-                        $res = $this->sl->b24->checkCard($criteria);
-                        if($res["total"] > 0){
-                            $card_id = $res["result"]["items"][0]["id"];
-                        }
+                        $card = $this->sl->b24->addCard($cardData);
                     }
-                }
-                if($card_id){
-                    // 1. Двигаем по стадии
-                    $res = $this->sl->b24->updateCard(1034, $card_id, array("stageId" => "DT1034_89:UC_2TBIBK"));
-                }else{
-                    // 2. Создаем заново объекты и связываем
-                    $organization_data = array();
-                    $name_data = array();
-                    // Клининг параметров
-                    if (!class_exists('Dadata')) {
-                        require_once dirname(__FILE__) . '/dadata.class.php';
+                    if ($organization_id) {
+                        $org->set("bitrix_id", $organization_id);
+                        $org->save();
                     }
-
-                    $token = $this->modx->getOption('shoplogistic_api_key_dadata');
-                    $secret = $this->modx->getOption('shoplogistic_secret_key_dadata');
-                    $dadata = new Dadata($token, $secret);
-                    $dadata->init();
-                    // клиним имя
-                    $result = $dadata->clean("name", $properties['name']);
-                    if($result){
-                        $name_data = $result[0];
-                    }
-                    $companyData["TITLE"] = $properties['org']['name'];
-                    // Если организация не найдена
-                    if(!$organization_id){
-                        $result = $dadata->getOrganization($properties['org']['inn']);
-                        if($result["suggestions"]){
-                            $organization_data = $result["suggestions"][0];
-                        }
-                        // Собираем данные
-                        $companyData = array(
-                            "CONTACT" => array(),
-                            "COMPANY_TYPE" => "OTHER"
-                        );
-                        if($organization_data){
-                            $companyData["TITLE"] = $organization_data["value"];
-                        }else{
-                            $companyData["TITLE"] = $properties['org']['name'];
-                        }
-                        if($name_data){
-                            $legalData = array(
-                                "NAME" => $name_data["name"],
-                                "SECOND_NAME" => $name_data["patronymic"],
-                                "LAST_NAME" => $name_data["surname"],
-                                "phone" => $properties['telephone'],
-                                "email" => $properties["email"],
-                                "ASSIGNED_BY_ID" => 55
-                            );
-                        }else{
-                            $legalData = array(
-                                "NAME" => $properties['name'],
-                                "phone" => $properties['telephone'],
-                                "email" => $properties["email"],
-                                "ASSIGNED_BY_ID" => 55
-                            );
-                        }
-                        $lpr = $this->sl->b24->addContact($legalData);
-                        $companyData["CONTACT"][] = $lpr;
-                        $organization_id = $this->sl->b24->addCompany($companyData);
-                    }
-                    if($organization_data){
-                        // Цепляем реквизиты
-                        $requiziteData = array(
-                            "NAME" => $companyData["TITLE"],
-                            "RQ_INN" => $organization_data["data"]["inn"],
-                            "RQ_KPP" => $organization_data["data"]["kpp"],
-                            "RQ_EMAIL" => $properties["email"],
-                            "RQ_PHONE" => $properties['telephone'],
-                            'ENTITY_TYPE_ID' => 4,
-                            "ENTITY_ID" => $organization_id,
-                            "PRESET_ID" => 1,
-                            'ACTIVE' => 'Y',
-                        );
-                        if(strlen(trim($organization_data["data"]["ogrn"])) == 13){
-                            $requiziteData["RQ_OGRN"] = $organization_data["data"]["ogrn"];
-                            $requiziteData["UF_CRM_1718187136"] = $properties["email"];
-                            $requiziteData["UF_CRM_1718187151"] = $properties['telephone'];
-                            $requiziteData["PRESET_ID"] = 1;
-                        }
-                        if(strlen(trim($organization_data["data"]["ogrn"])) == 15){
-                            $requiziteData["RQ_OGRNIP"] = $organization_data["data"]["ogrn"];
-                            $requiziteData["UF_CRM_1718187196"] = $properties["email"];
-                            $requiziteData["UF_CRM_1718187208"] = $properties['telephone'];
-                            $requiziteData["PRESET_ID"] = 3;
-                        }
-                        $req = $this->sl->b24->addRequizite($requiziteData);
-                        if($properties['delivery_addresses'][0]["value"]){
-                            $addressData = array(
-                                'fields'=>array(
-                                    'TYPE_ID' => 1,
-                                    'ENTITY_TYPE_ID' => 8,
-                                    'ENTITY_ID' => $req,
-                                    'ADDRESS_1' => $properties['delivery_addresses'][0]["value"]
-                                ),
-                            );
-                            $address_actual = $this->sl->b24->request('crm.address.add', $addressData);
-                        }
-                    }
-                    $cardData = array(
-                        "entityTypeId" => 1034,
-                        "fields" => array(
-                            "title" => $companyData["TITLE"],
-                            "categoryId" => 89,
-                            "stageId" => "DT1034_89:UC_2TBIBK",
-                            "assignedById" => 55,
-                            "companyId" => $organization_id,
-                            "contactIds" => $companyData["CONTACT"],
-                            "ufCrm29_1718046509" => $lpr
-                        )
-                    );
-                    $card = $this->sl->b24->addCard($cardData);
                 }
                 return $this->sl->tools->success("Пользователь успешно зарегистрирован!", $userdata);
             }

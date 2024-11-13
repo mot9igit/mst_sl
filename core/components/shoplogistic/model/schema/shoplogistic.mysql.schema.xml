@@ -179,7 +179,7 @@
         <field key="type_all_sale" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true"/>
         <field key="all_sale_value" dbtype="decimal" precision="12,2" phptype="float" null="true" />
         <field key="type_all_sale_symbol" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" />
-        <field key="type_price" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" />
+        <field key="type_price" dbtype="varchar" precision="256" phptype="string" null="true" default="" />
 
 
 
@@ -551,6 +551,7 @@
         <field key="warehouse" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="vendor" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="owner_id" dbtype="int" precision="11" phptype="integer" null="true" default="0"/>
+        <field key="bitrix_id" dbtype="int" precision="11" phptype="integer" null="true" default="0"/>
         <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
         <field key="properties" dbtype="text" phptype="json" null="true"/>
 
@@ -632,7 +633,7 @@
         <field key="address_short" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="ur_address" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="contact" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
-        <field key="email" dbtype="varchar" precision="100" phptype="string" null="false" default=""/>
+        <field key="email" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
         <field key="phone" dbtype="varchar" precision="100" phptype="string" null="false" default=""/>
         <field key="file" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
         <field key="yml_file" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
@@ -757,6 +758,24 @@
         <aggregate alias="Org" class="slOrg" local="org_id" foreign="id" cardinality="one" owner="foreign"/>
         <aggregate alias="Store" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
         <aggregate alias="UserProfile" class="modUserProfile" local="user_id" foreign="id" cardinality="many" owner="foreign"/>
+    </object>
+
+    <object class="slNotificationManagers" table="sl_notification_managers" extends="xPDOSimpleObject">
+        <field key="org_id" dbtype="int" precision="11" phptype="integer" null="true" default=""/>
+        <field key="receiver" dbtype="varchar" precision="255" phptype="string" null="true"/>
+        <field key="phone" dbtype="varchar" precision="20" phptype="string" null="true"/>
+        <field key="email" dbtype="varchar" precision="191" phptype="string" null="true"/>
+        <field key="global" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="type" dbtype="varchar" precision="255" phptype="string" null="true"/>
+        <field key="city" dbtype="varchar" precision="1024" phptype="string" null="true"/>
+        <field key="region" dbtype="varchar" precision="1024" phptype="string" null="true"/>
+        <field key="org" dbtype="varchar" precision="1024" phptype="string" null="true"/>
+
+        <index alias="org_id" name="org_id" primary="false" unique="false" type="BTREE">
+            <column key="org_id" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="Org" class="slOrg" local="org_id" foreign="id" cardinality="one" owner="foreign"/>
     </object>
 
     <object class="slOrgStores" table="sl_org_stores" extends="xPDOSimpleObject">
@@ -1047,6 +1066,7 @@
         <field key="opt_remain_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="product_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="category_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="our_category_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="status" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="brand_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
@@ -1058,6 +1078,7 @@
         <field key="article" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="barcode" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="catalog" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="groups" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
         <field key="remains" dbtype="int" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="reserved" dbtype="int" attributes="unsigned" phptype="integer" null="true" default="0"/>
         <field key="available" dbtype="int" attributes="unsigned" phptype="integer" null="true" default="0"/>
@@ -1070,6 +1091,7 @@
         <field key="force_price" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="published" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
         <field key="checked" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+        <field key="brand_manual" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
         <field key="autolink" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
         <field key="purchase_speed" dbtype="decimal" precision="12,2" phptype="float" null="true" default="0"/>
         <field key="out_of_stock_days" dbtype="int" attributes="unsigned" phptype="integer" null="true" default="0"/>
@@ -1101,6 +1123,9 @@
         </index>
         <index alias="category_id" name="category_id" primary="false" unique="false" type="BTREE">
             <column key="category_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="our_category_id" name="our_category_id" primary="false" unique="false" type="BTREE">
+            <column key="our_category_id" length="" collation="A" null="false"/>
         </index>
         <index alias="price" name="price" primary="false" unique="false" type="BTREE">
             <column key="price" length="" collation="A" null="false"/>
@@ -1144,6 +1169,9 @@
         <index alias="tags" name="tags" primary="false" unique="false" type="BTREE">
             <column key="tags" length="" collation="A" null="false"/>
         </index>
+        <index alias="groups" name="groups" primary="false" unique="false" type="BTREE">
+            <column key="groups" length="" collation="A" null="true"/>
+        </index>
 
         <aggregate alias="Store" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
         <aggregate alias="Product" class="msProduct" local="product_id" foreign="id" cardinality="one" owner="foreign"/>
@@ -1155,9 +1183,35 @@
         <aggregate alias="UpdatedUser" class="modUser" local="updatedby" foreign="id" cardinality="many" owner="foreign"/>
         <aggregate alias="UpdatedUserProfile" class="modUserProfile" local="updatedby" foreign="id" cardinality="many" owner="foreign"/>
         <aggregate alias="Category" class="slStoresRemainsCategories" local="category_id" foreign="id" cardinality="one" owner="foreign"/>
+        <aggregate alias="OurCategory" class="modResource" local="our_category_id" foreign="id" cardinality="one" owner="foreign"/>
 
         <composite alias="History" class="slStoresRemainsHistory" local="id" foreign="remain_id" cardinality="many" owner="local"/>
         <composite alias="Prices" class="slStoresRemainsPrices" local="id" foreign="remain_id" cardinality="many" owner="local"/>
+    </object>
+
+    <!-- Группы карточек товара -->
+    <object class="slStoresRemainsGroups" table="sl_stores_remains_groups" extends="xPDOSimpleObject">
+        <field key="name" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="description" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+        <field key="store_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+        <field key="createdby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="updatedby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="updatedon" dbtype="datetime" phptype="datetime" null="true" />
+        <field key="properties" dbtype="text" phptype="json" null="true"/>
+
+        <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+            <column key="name" length="" collation="A" null="false"/>
+        </index>
+        <index alias="store_id" name="store_id" primary="false" unique="false" type="BTREE">
+            <column key="store_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+            <column key="active" length="" collation="A" null="false"/>
+        </index>
+
+        <aggregate alias="Store" class="slStores" local="store_id" foreign="id" cardinality="one" owner="foreign"/>
     </object>
 
     <!-- Цены карточек товара -->

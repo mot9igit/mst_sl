@@ -110,6 +110,10 @@ class slAPIRequestHistoryGetListProcessor extends modObjectGetListProcessor
 
 
         if($array['file']){
+            $array['file'] = str_replace("tmp/tmp", "tmp/folder_tmp", $array['file']);
+            $file_path = str_replace("//", "/", $this->modx->getoption("base_path").$array['file']);
+            $files = scandir($file_path);
+            $array['file'] = $array['file'].'/'.$files[2];
             // Edit
             $array['actions'][] = [
                 'cls' => '',

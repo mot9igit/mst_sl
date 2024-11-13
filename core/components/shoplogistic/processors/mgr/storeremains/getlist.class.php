@@ -104,6 +104,20 @@ class slStoresRemainsGetListProcessor extends modObjectGetListProcessor
 		$array['product_name'] = $this->modx->shopLogistic->getProductNameById($array['product_id']);
 		$array['store_name'] = $this->modx->shopLogistic->getStoreNameById($array['store_id']);
 
+        if($array["groups"]){
+            $array["groups"] = explode(",", $array["groups"]);
+            $array["groups_name"] = array();
+            foreach($array["groups"] as $group){
+                if($c = $this->modx->getObject("slStoresRemainsGroups", $group)){
+                    $array["groups_name"][] = array(
+                        "id" => $c->get("id"),
+                        "name" => $c->get("name")
+                    );
+                }
+            }
+            $array["groups"] = $array["groups_name"];
+        }
+
         // Edit
         $array['actions'][] = [
             'cls' => '',

@@ -67,6 +67,12 @@ $_lang['setting_shoplogistic_cart_mode_desc'] = '1 - ищем глобально
 $_lang['setting_shoplogistic_mode'] = 'Режим работы';
 $_lang['setting_shoplogistic_mode_desc'] = '1 - показываем остатки магазина и дистрибьютора, 2 - показываем все остатки, заказ отсылаем в ближайший магазин';
 
+$_lang['setting_shoplogistic_alert_mode'] = 'Режим работы уведомлений';
+$_lang['setting_shoplogistic_alert_mode_desc'] = '1 - уведомляем стандартно, 0 - не уведомляем';
+
+$_lang['setting_shoplogistic_tocrm'] = 'Отправлять данные в CRM?';
+$_lang['setting_shoplogistic_tocrm_desc'] = '1 - отправлять, 0 - не отправлять';
+
 $_lang['setting_shoplogistic_cart_to_warehouse'] = 'Отправлять ли заказ к ближайшему дистру?';
 $_lang['setting_shoplogistic_cart_to_warehouse_desc'] = 'Если не найден магазин с остатком корзины';
 

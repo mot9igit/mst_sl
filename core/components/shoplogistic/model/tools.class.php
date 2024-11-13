@@ -103,7 +103,7 @@ class slTools
                 $city = $this->modx->newObject("dartLocationCity");
                 $city->set("city", $address["data"]["city"] ? $address["data"]["city"] : $address["data"]["settlement"]);
                 $city->set("key", $resource->cleanAlias($address["data"]["city"] ? $address["data"]["city"] : $address["data"]["settlement"]));
-                $city->set("postal_code", $address["postal_code"]);
+                $city->set("postal_code",$address["data"]["postal_code"]);
                 $city->set("region", $region->get("id"));
                 if($city->save()){
                     return $city->get("id");
@@ -404,6 +404,40 @@ class slTools
         return $out;
     }
 
+    public function prepareImageAction($url, $optionsBig = "", $optionsMedium = "", $optionsMin = "", $prefix = 1){
+        $out = array();
+        if($prefix) {
+            $pos = strpos($url, 'assets/content/');
+            if ($pos === false) {
+                $url = 'assets/content/' . $url;
+            }
+        }
+        $image = $this->modx->getOption("base_path") . $url;
+        $out['image'] = $this->modx->getOption("site_url") . $url;
+        if($optionsMin){
+            $big_file = $this->modx->runSnippet("phpThumbOn", array(
+                "input" => $image,
+                "options" => $optionsMin
+            ));
+            $out['thumb_small'] = $this->modx->getOption("site_url") . $big_file;
+        }
+        if($optionsMedium){
+            $big_file = $this->modx->runSnippet("phpThumbOn", array(
+                "input" => $image,
+                "options" => $optionsMedium
+            ));
+            $out['thumb_medium'] = $this->modx->getOption("site_url") . $big_file;
+        }
+        if($optionsBig){
+            $big_file = $this->modx->runSnippet("phpThumbOn", array(
+                "input" => $image,
+                "options" => $optionsBig
+            ));
+            $out['image'] = $this->modx->getOption("site_url") . $big_file;
+        }
+        return $out;
+    }
+
     /**
      * Берем IP посетителя
      *
@@ -444,7 +478,10 @@ class slTools
                 $this->modx->mail->address('to',$mail);
             }
         }else{
-            $this->modx->mail->address('to', $mails);
+            $mms = explode(",", $mails);
+            foreach($mms as $mm){
+                $this->modx->mail->address('to', $mm);
+            }
         }
         $this->modx->mail->address('reply-to', 'client.ms@yandex.ru');
         $this->modx->mail->setHTML(true);

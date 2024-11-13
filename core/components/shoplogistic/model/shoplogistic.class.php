@@ -21,7 +21,7 @@ class shopLogistic
 			'corePath' => $corePath,
 			'modelPath' => $corePath . 'model/',
 			'processorsPath' => $corePath . 'processors/',
-			'version' => '0.1.0',
+			'version' => '0.1.3',
             'json_response' => false,
 
 			'connectorUrl' => $assetsUrl . 'connector.php',
@@ -33,7 +33,11 @@ class shopLogistic
             'urlMain' => $this->modx->getOption("site_url"),
 
 			'regexp_gen_code' => $this->modx->getOption('shoplogistic_regexp_gen_code'),
-			'city_fields' => array_merge(['id'], explode(',', $this->modx->getOption('shoplogistic_city_fields')), ['actions'])
+			'city_fields' => array_merge(['id'], explode(',', $this->modx->getOption('shoplogistic_city_fields')), ['actions']),
+
+            'alert_mode' => $this->modx->getOption('shoplogistic_alert_mode'),
+            'tocrm' => $this->modx->getOption('shoplogistic_tocrm')
+
 		], $config);
 
 		$this->modx->addPackage('shoplogistic', $this->config['modelPath']);

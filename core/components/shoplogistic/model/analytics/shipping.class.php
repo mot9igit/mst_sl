@@ -113,9 +113,14 @@ class shippingHandler
         }else{
             $q->sortby('slWarehouseShip.id', "DESC");
         }
-        $q->prepare();
-        $this->modx->log(1, $q->toSQL());
         $result['total'] = $this->modx->getCount('slWarehouseShipment', $q);
+        // Устанавливаем лимит 1/10 от общего количества записей
+        // со сдвигом 1/20 (offset)
+        if($properties['page'] && $properties['perpage']) {
+            $limit = $properties['perpage'];
+            $offset = ($properties['page'] - 1) * $properties['perpage'];
+            $q->limit($limit, $offset);
+        }
         if($q->prepare() && $q->stmt->execute()){
             $result['shipment'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
             /* -------------- HIGHLIGHT --------------- */

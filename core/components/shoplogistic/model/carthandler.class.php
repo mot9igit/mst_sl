@@ -694,8 +694,12 @@ class cartDifficultHandler
 
             $query->select(array("slActions.*,slActionsProducts.*"));
 
-            $query->prepare();
-            $this->modx->log(1, $query->toSQL());
+            if(!$remain_id) {
+                $query->prepare();
+                $backtrace = $this->sl->tools->backtrace();
+                $this->sl->tools->log($query->toSQL(), "ass_backtrace");
+                $this->sl->tools->log(print_r($backtrace, 1), "ass_backtrace");
+            }
             if($query->prepare() && $query->stmt->execute()){
                 $results = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -817,12 +821,19 @@ class cartDifficultHandler
                     $cache = $this->modx->getCacheManager();
                     $options = array( xPDO::OPT_CACHE_KEY => 'default/delivery/cdek' );
                     $key = md5($key_date.' '.$postal_code_from.'_'.$postal_code_to);
-                    if($cache_data = $cache->get($key, $options)) {
-                        $offset = $cache_data["terminal"]["time"];
+                    $cache_data = $cache->get($key, $options);
+                    $this->sl->tools->log($cache_data, 'delivery_check');
+                    if($cache_data) {
+                        $offset = $cache_data["terminal"]["time"] + 1;
                     }else{
-                        $data = $this->sl->cdek->getCalcPrice($postal_code_from,$postal_code_to,array(502));
+                        $this->sl->cdek->auth();
+                        $data = $this->sl->cdek->getCalcPrice($postal_code_from, $postal_code_to, array(502));
+                        $data['from'] = $store_from;
+                        $data['to'] = $store_to;
+                        $data['from_postal'] = $postal_code_from;
+                        $data['to_postal'] = $postal_code_to;
                         if($data["terminal"]){
-                            $offset = $data["terminal"]["time"];
+                            $offset = $data["terminal"]["time"] + 1;
                         }
                         $cache->set($key, $data, 86400, $options);
                     }

@@ -22,6 +22,7 @@ $xpdo_meta_map['slOrg']= array (
     'warehouse' => 0,
     'vendor' => 0,
     'owner_id' => 0,
+    'bitrix_id' => 0,
     'active' => 1,
     'properties' => NULL,
   ),
@@ -116,6 +117,14 @@ $xpdo_meta_map['slOrg']= array (
       'default' => 0,
     ),
     'owner_id' => 
+    array (
+      'dbtype' => 'int',
+      'precision' => '11',
+      'phptype' => 'integer',
+      'null' => true,
+      'default' => 0,
+    ),
+    'bitrix_id' => 
     array (
       'dbtype' => 'int',
       'precision' => '11',

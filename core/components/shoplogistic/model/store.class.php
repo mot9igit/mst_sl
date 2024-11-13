@@ -19,6 +19,9 @@ class storeHandler
     }
 
     /**
+     * Берем критерии отбора для розницы
+     *
+     * @param string $prefix (Префикс с точкой)
      * @return array
      */
     public function getMarketplaceAvailableCriteria($prefix = ''){
@@ -29,6 +32,9 @@ class storeHandler
     }
 
     /**
+     * Берем критерии отбора для опта
+     *
+     * @param string $prefix (Префикс с точкой)
      * @return array
      */
     public function getOptMarketplaceAvailableCriteria($prefix = ''){
@@ -40,15 +46,19 @@ class storeHandler
 
     /**
      * Берем активные магазины
-     *
+     * @param int $type (Тип: 1 - маркеплейс, 2 - опт)
      * @return array
      */
-    public function getActiveStores(){
+    public function getActiveStores($type = 1){
         $output = array();
         $query = $this->modx->newQuery("slStores");
-        $query->where(array(
-            "slStores.active:=" => 1
-        ));
+        if($type == 1){
+            $criteria = $this->getMarketplaceAvailableCriteria("slStores.");
+        }
+        if($type == 2){
+            $criteria = $this->getOptMarketplaceAvailableCriteria("slStores.");
+        }
+        $query->where($criteria);
         $query->select(array("slStores.id"));
         if($query->prepare() && $query->stmt->execute()){
             $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -125,6 +135,7 @@ class storeHandler
                 if($query->prepare() && $query->stmt->execute()){
                     $setting = $query->stmt->fetch(PDO::FETCH_ASSOC);
                     if($setting){
+
                         if(!$object = $this->modx->getObject("slStoresSettings", array("store_id" => $properties['id'], "setting_id" => $setting['id']))){
                             $object = $this->modx->newObject("slStoresSettings");
                             $object->set("store_id", $properties['id']);
@@ -1179,7 +1190,7 @@ class storeHandler
                                         }
                                     }
                                 }
-                                if (boolval($row['available'])) {
+                                if (boolval($row['available']) || strval($row->sales_notes)) {
                                     // смотрим по складам
                                     if ($row->outlets) {
                                         $remain_data["count_free"] = intval($row->outlets->outlet["instock"]);
@@ -1187,7 +1198,20 @@ class storeHandler
                                         $remain_data["published"] = 1;
                                     } else {
                                         // смотрим упрощенный вариант (Foxweld)
-                                        $count = intval($row->count);
+                                        $count = 0;
+                                        if(intval($row->count)){
+                                            $count = intval($row->count);
+                                        }
+                                        // смотрим упрощенный вариант (Sturm!)
+                                        if(strval($row->sales_notes)){
+                                            $sales_notes = strval($row->sales_notes);
+                                            $sales_notes = preg_replace('/[^0-9]/', '', $sales_notes);
+                                            if($sales_notes){
+                                                $count = intval($sales_notes);
+                                            }else{
+                                                $count = 0;
+                                            }
+                                        }
                                         if($count){
                                             $remain_data["count_free"] = $count;
                                             $remain_data["count_current"] = $count;
@@ -1212,6 +1236,7 @@ class storeHandler
                                     $remain_id = $this->sl->product->importRemainSingle($store_id, $remain_data);
                                 }
                             }
+                            $this->enable($store_id);
                             $this->sl->product->getStore($store['apikey']);
                             $this->sl->product->getStore($store['apikey'], "date_remains_update");
                         }else{

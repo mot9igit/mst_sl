@@ -749,17 +749,19 @@ class b24Handler
 		return $response;
 	}
 
+    /**
+     * Запрос к B24
+     *
+     * @param $method
+     * @param $data
+     * @return array|mixed|string|string[]
+     */
 	public function request($method, $data = array()){
 		$response = $this->crest->call($method, $data);
+        $this->sl->tools->log($method, "b24_cards_import.log");
+        $this->sl->tools->log($data, "b24_cards_import.log");
+        $this->sl->tools->log($response, "b24_cards_import.log");
+        usleep(500000);
 		return $response;
 	}
-
-    public function tolog($data) {
-        $this->modx->log(xPDO::LOG_LEVEL_ERROR, print_r($data, 1), array(
-            'target' => 'FILE',
-            'options' => array(
-                'filename' => 'bitrix24.log'
-            )
-        ));
-    }
 }

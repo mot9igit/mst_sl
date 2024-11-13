@@ -74,7 +74,7 @@ $xpdo_meta_map['slActions']= array (
     'type_all_sale' => NULL,
     'all_sale_value' => NULL,
     'type_all_sale_symbol' => NULL,
-    'type_price' => NULL,
+    'type_price' => '',
   ),
   'fieldMeta' => 
   array (
@@ -600,11 +600,11 @@ $xpdo_meta_map['slActions']= array (
     ),
     'type_price' => 
     array (
-      'dbtype' => 'int',
-      'precision' => '10',
-      'attributes' => 'unsigned',
-      'phptype' => 'integer',
+      'dbtype' => 'varchar',
+      'precision' => '256',
+      'phptype' => 'string',
       'null' => true,
+      'default' => '',
     ),
   ),
   'indexes' => 

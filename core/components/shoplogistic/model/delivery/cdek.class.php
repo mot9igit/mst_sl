@@ -55,7 +55,7 @@
             $response = $this->request("oauth/token?parameters", $data);
             if($response["access_token"] && $response["expires_in"]){
                 $this->setToken($response["access_token"], $response["expires_in"]);
-                return true;
+                return $response;
             }else{
                 // уведомление в телегу
                 $json = json_encode($response, JSON_UNESCAPED_UNICODE);

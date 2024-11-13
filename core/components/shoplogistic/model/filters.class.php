@@ -158,10 +158,14 @@ class filters
                 $query->leftJoin("modResource", "modResource", "modResource.id = msProductData.id");
                 $query->leftJoin("msVendor", "msVendor", "msVendor.id = msProductData.vendor");
                 $query->select(array(implode(",", $ms_fields).",".implode(",", $resource_filters)));
-                if($this->category){
-                    $query->where(array("modResource.parent:=" => $this->category));
+                if($this->category) {
+                    $categories = $this->sl->analyticsOpt->getParentsBlock($this->category);
                 }
-
+                if($categories){
+                    $query->where(array("modResource.parent:IN" => $categories));
+                }
+                $query->prepare();
+                $this->sl->tools->log($query->toSQL(), "filters_cats");
                 $total = $this->modx->getCount("msProductData", $query);
 
                 $limit = $this->limit;
@@ -175,8 +179,8 @@ class filters
                     if(count($resource_filters)){
                         $query->select(array(implode(",", $resource_filters)));
                     }
-                    if($this->category){
-                        $query->where(array("modResource.parent:=" => $this->category));
+                    if($categories){
+                        $query->where(array("modResource.parent:IN" => $categories));
                     }
 					$query->where(array("msProductData.image:!=" => ""));
 					$query->where(array("msProductData.vendor_article:!=" => ""));
@@ -539,10 +543,15 @@ class filters
      *
      * @return mixed
      */
-    public function getCache (){
+    public function getCache ($parent = 0){
         $cache = $this->modx->getCacheManager();
-        if($this->category){
-            $parent = 'cat_'.$this->category;
+        if(!$parent){
+            $cat = $this->category;
+        }else{
+            $cat = $parent;
+        }
+        if($cat){
+            $parent = 'cat_'.$cat;
         }else{
             $parent = 'all';
         }

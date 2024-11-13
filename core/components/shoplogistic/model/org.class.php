@@ -71,7 +71,7 @@ class slOrganization
         // берем заказы
         $q = $this->modx->newQuery('slOrder');
         $q->leftJoin('msOrder', 'msOrder', 'msOrder.id = slOrder.order_id');
-        $q->leftJoin('msOrderAddress', 'msOrderAddress', 'msOrderAddress.id = slOrder.order_id');
+        $q->leftJoin('msOrderAddress', 'msOrderAddress', 'msOrderAddress.id = msOrder.id');
         $q->leftJoin('modUser', 'User', 'User.id = msOrder.user_id');
         $q->leftJoin('modUserProfile', 'UserProfile', 'UserProfile.id = msOrder.user_id');
         $q->leftJoin('slCRMStage', 'slCRMStage', 'slCRMStage.id = slOrder.status');
@@ -81,8 +81,6 @@ class slOrganization
             $q->where(array(
                 'slOrder.id' => $properties['order_id']
             ));
-        }
-        if($properties['order_id']){
             $q->limit(1);
             $result['total'] = 1;
         }else{
@@ -121,13 +119,11 @@ class slOrganization
         $q->select(
             $this->modx->getSelectColumns('slOrder', 'slOrder', '', array('status', 'delivery', 'payment'), true) . ', ' . $this->modx->getSelectColumns('msOrder', 'msOrder', '', array('id', 'status', 'delivery', 'payment'), true) . ',
             msOrder.id as order_id, msOrder.status as status_id, msOrder.delivery as delivery_id, msOrder.payment as payment_id,
-            UserProfile.fullname as customer, User.username as customer_username, msOrderAddress.phone as customer_phone, 
+            msOrderAddress.receiver as customer, msOrderAddress.text_address as user_address, User.username as customer_username, msOrderAddress.phone as customer_phone, 
             msOrderAddress.email as customer_email, slCRMStage.name as status_name, slCRMStage.color as status_color, slCRMStage.transition_anchor, 
             slCRMStage.description as stage_description, slCRMStage.check_code as stage_check_code, slCRMStage.stores_available,
-            Delivery.name as delivery, Payment.name as payment, slOrder.id as id'
+            Delivery.name as delivery, Payment.name as payment, slOrder.id as id, slOrder.num as num'
         );
-        // $q->prepare();
-        // $this->modx->log(1, $q->toSQL());
         if($q->prepare() && $q->stmt->execute()){
             $result['orders'] = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -139,6 +135,20 @@ class slOrganization
                 $store = $this->modx->getObject("slStores", array('id' => $order["store_id"]));
                 if($store){
                     $result['orders'][$index]['store'] = $store->get("name_short");
+                }
+                if($order["tk"]){
+                    if($order["tk"] == "cdek"){
+                        $result['orders'][$index]['tk'] = "СДЭК";
+                    }
+                    if($order["tk"] == "postrf"){
+                        $result['orders'][$index]['tk'] = "Почта России";
+                    }
+                    if($order["tk"] == "yandex"){
+                        $result['orders'][$index]['tk'] = "Экспресс доставка (Я.Такси)";
+                    }
+                    if($order["tk"] == "evening"){
+                        $result['orders'][$index]['tk'] = "Вечерняя доставка (Я.Такси)";
+                    }
                 }
                 if($properties['order_id']){
                     $q = $this->modx->newQuery('slOrderProduct');
@@ -289,8 +299,6 @@ class slOrganization
                 ));
                 $query->select(array("slStoresWeekWork.*"));
                 $query->sortby("slStoresWeekWork.week_day", "ASC");
-                $query->prepare();
-                $this->modx->log(1,  $query->toSQL());
                 if($query->prepare() && $query->stmt->execute()){
                     $data = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
                     foreach($data as $key => $item){
@@ -662,14 +670,24 @@ class slOrganization
             "slWarehouseStores.warehouse_id:=" => $properties['id']
         ));
 
+
+
         if($properties['filter']){
             $criteria = array();
             $criteria['slOrg.name:LIKE'] = '%'.$properties['filter']['filter'].'%';
             $criteria['OR:slOrg.address:LIKE'] = '%'.$properties['filter']['filter'].'%';
             $criteria['OR:slStores.name:LIKE'] = '%'.$properties['filter']['filter'].'%';
             $query->where($criteria);
+
+            if($properties['filter']['filtersdata'] && $properties['filter']['filtersdata']['store'] != null){
+                $query->where(array(
+                    "`slStores`.`id`:=" => $properties['filter']['filtersdata']['store']
+                ));
+            }
         }
-        
+
+
+
         $results['total'] = $this->modx->getCount('slStores', $query);
         if($properties['page'] && $properties['perpage']){
             $limit = $properties['perpage'];
@@ -686,7 +704,13 @@ class slOrganization
             $results['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($results['items'] as $k => $item){
-                $results['items'][$k]['image'] = $this->sl->tools->prepareImage($item['image'])['image'];
+                if($item['image']){
+                    $results['items'][$k]['image'] = $this->sl->tools->prepareImage($item['image'])['image'];
+                }else{
+                    $urlMain = $this->modx->getOption("site_url");
+                    $results['items'][$k]['image'] =  $urlMain . $this->modx->getPlaceholder("+conf_noimage");
+                }
+
 
                 $q = $this->modx->newQuery("slActions");
                 $q->select(array(
@@ -785,6 +809,32 @@ class slOrganization
      */
     public function toggleOpts($properties)
     {
+        // Собираем данные для писем
+        $mail_data = array();
+        $query = $this->modx->newQuery("slOrg");
+        $query->where(array("slOrg.id:=" => $properties["store"]));
+        $query->select(array("slOrg.*"));
+        if($query->prepare() && $query->stmt->execute()) {
+            $mail_data["who"] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            $query = $this->modx->newQuery("slOrgRequisites");
+            $query->where(array("slOrgRequisites.org_id:=" => $properties["store"]));
+            $query->select(array("slOrgRequisites.*"));
+            if ($query->prepare() && $query->stmt->execute()) {
+                $mail_data["who"]['req'] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            }
+        }
+        $query = $this->modx->newQuery("slOrg");
+        $query->where(array("slOrg.id:=" => $properties["id"]));
+        $query->select(array("slOrg.*"));
+        if($query->prepare() && $query->stmt->execute()) {
+            $mail_data["to"] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            $query = $this->modx->newQuery("slOrgRequisites");
+            $query->where(array("slOrgRequisites.org_id:=" => $properties["id"]));
+            $query->select(array("slOrgRequisites.*"));
+            if ($query->prepare() && $query->stmt->execute()) {
+                $mail_data["to"]['req'] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+            }
+        }
         if($properties['action']){
             // установить
             if(!$object = $this->modx->getObject("slWarehouseStores", array("org_id" => $properties["store"], "warehouse_id" => $properties["id"]))){
@@ -796,6 +846,30 @@ class slOrganization
             $object->set("date", time());
             $object->save();
 
+            // Включить в закупках
+            // Берем все склады оптовика
+            // toggleOptsVisible
+            $query = $this->modx->newQuery("slOrgStores");
+            $query->leftJoin("slStores", "slStores", "slStores.id = slOrgStores.store_id");
+            $query->where(array(
+                "slOrgStores.org_id:=" => $properties["store"],
+                "slStores.active" => 1
+            ));
+            $query->select(array("slStores.*"));
+            if($query->prepare() && $query->stmt->execute()){
+                $stores = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                if($stores){
+                    foreach($stores as $store){
+                        $props = array(
+                            "id" => $properties["id"],
+                            "action" => 1,
+                            "store" => $store["id"]
+                        );
+                        $props = $this->toggleOptsVisible($props);
+                    }
+                }
+            }
+
             //уведомление продавцу
             $notification = array(
                 "org_id" => $properties["id"],
@@ -803,6 +877,16 @@ class slOrganization
                 "store_id" => $properties["store"]
             );
             $this->sl->notification->setNotification(array("data" => $notification));
+
+
+            // Письмо, что подписались
+            if($properties["id"] != 39) {
+                $emails = $this->sl->notification->getEmailManagers($properties["id"], $properties["store"], 7);
+                if(count($emails) && $this->sl->config["alert_mode"] == 1){
+                    $result = $this->sl->tools->sendMail("@FILE chunks/email_new_store.tpl", $mail_data, $emails, "Подключился новый клиент {$mail_data["who"]["name"]}! МС Закупки.");
+                }
+            }
+
 
             return $this->sl->success("Объект создан", $object->toArray());
         }else{
@@ -820,6 +904,14 @@ class slOrganization
                 "store_id" => $properties["store"]
             );
             $this->sl->notification->setNotification(array("data" => $notification));
+
+            // Письмо, что отписались
+            if($properties["id"] != 39) {
+                $emails = $this->sl->notification->getEmailManagers($properties["id"], $properties["store"], 8);
+                if(count($emails) && $this->sl->config["alert_mode"] == 1){
+                    $result = $this->sl->tools->sendMail("@FILE chunks/email_new_store.tpl", $mail_data, $emails, "Отключился новый клиент {$mail_data["who"]["name"]}! МС Закупки.");
+                }
+            }
 
             return $this->sl->success("Объект удален", $data);
         }
@@ -871,7 +963,11 @@ class slOrganization
             }
         }
 
-        $query->select(array("slOrg.*,IF(slWarehouseStores.warehouse_id = slOrg.id, 1, 0) as connection, slWarehouseStores.date as connection_date"));
+        $query->select(array(
+            "slOrg.*,
+            IF(slWarehouseStores.warehouse_id = slOrg.id, 1, 0) as connection,
+            slWarehouseStores.date as connection_date"
+        ));
         $result['total'] = $this->modx->getCount('slOrg', $query);
 
         // Устанавливаем лимит 1/10 от общего количества записей
@@ -896,6 +992,10 @@ class slOrganization
         if ($query->prepare() && $query->stmt->execute()) {
             $result['items'] = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach($result['items'] as $key => $val){
+                $req = $this->modx->getObject("slOrgRequisites", array("org_id:=" => $val["id"]));
+                if($req){
+                    $result['items'][$key]['req'] = $req->toArray();
+                }
                 if($val["image"]){
                     $result['items'][$key]['image'] = $this->modx->getOption("site_url")."assets/content/".$val["image"];
                 }else{
@@ -1056,7 +1156,11 @@ class slOrganization
             if($vendors) {
                 foreach ($vendors as $key => $value) {
                     if (!in_array($value['id'], $iids)) {
-                        $vendors[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+                        if($value['image']){
+                            $vendors[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+                        } else{
+                            $vendors[$key]['image'] = $urlMain . "/assets/files/img/nopic.png";
+                        }
                         if ($vendors[$key]['coordinats']) {
                             $vendors[$key]['mapcoordinates'] = explode(",", $vendors[$key]['coordinats']);
                             foreach ($vendors[$key]['mapcoordinates'] as $k => $coord) {
@@ -1133,8 +1237,7 @@ class slOrganization
             $query = $this->modx->newQuery("slOrgUsers");
             $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgUsers.org_id");
             $query->where(array(
-                "slOrgUsers.user_id:=" => $user_id,
-                "slOrg.active:=" => 1
+                "slOrgUsers.user_id:=" => $user_id
             ));
             $query->select(array(
                 "slOrg.*"
@@ -1311,6 +1414,119 @@ class slOrganization
                         $stores = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                         $org['warehouses'] = $stores;
                     }
+
+                    $q_m = $this->modx->newQuery("slNotificationManagers");
+                    $q_m->where(array(
+                        "`slNotificationManagers`.`org_id`:=" => $org['id'],
+                    ));
+                    $q_m->select(array(
+                        "`slNotificationManagers`.*"
+                    ));
+
+                    if($q_m->prepare() && $q_m->stmt->execute()){
+                        $managers = $q_m->stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $data_managers = array();
+                        $mapping = [
+                            1 => "order_status_changes",
+                            2 => "new_opt_order",
+                            3 => "company_enabled",
+                            4 => "company_connected",
+                            5 => "new_vendor",
+                            7 => "added_to_my_vendors",
+                            8 => "deleted_from_my_vendors"
+                        ];
+                        foreach ($managers as $key => $manager){
+
+
+                            // Преобразуем строку с числами в массив
+                            $typesArray = explode(",", $manager['type']);
+
+                            // Создаём пустой объект для результата
+                            $notif = [];
+
+                            // Перебираем все числа и добавляем соответствующие ключи в объект
+                            foreach ($typesArray as $type) {
+                                $type = (int)$type; // Преобразуем строку в целое число
+                                if (isset($mapping[$type])) {
+                                    $notif[$mapping[$type]] = true;
+                                }
+                            }
+
+                            if(!$manager['global']){
+                                $clients = array();
+
+                                $q_r = $this->modx->newQuery("dartLocationRegion");
+                                $q_r->select(array(
+                                    "dartLocationRegion.id",
+                                    "dartLocationRegion.name",
+                                ));
+
+                                $numbersArray = explode(",", $manager['region']);
+                                $q_r->where(array(
+                                    "`dartLocationRegion`.`id`:IN" => $numbersArray,
+                                ));
+
+                                if ($q_r->prepare() && $q_r->stmt->execute()) {
+                                    $regions = $q_r->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    foreach ($regions as $kr => $region){
+                                        $regions[$kr]['id'] = "r_".$region['id'];
+                                    }
+                                }
+
+                                $results = array();
+                                $q_o = $this->modx->newQuery("slOrg");
+                                $q_o->select(array(
+                                    "slOrg.id,
+                                    slOrg.name as name"
+                                ));
+                                $numbersArray = explode(",", $manager['org']);
+                                $q_o->where(array(
+                                    "AND:slOrg.active:=" => 1,
+                                    "`slOrg`.`id`:IN" => $numbersArray
+                                ));
+                                if ($q_o->prepare() && $q_o->stmt->execute()) {
+                                    $orgs = $q_o->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    foreach ($orgs as $ko => $org){
+                                        $orgs[$ko]['id'] = "o_".$org['id'];
+                                    }
+                                }
+
+                                $q_c = $this->modx->newQuery("dartLocationCity");
+                                $q_c->select(array(
+                                    "dartLocationCity.id",
+                                    "dartLocationCity.city as name",
+                                ));
+                                $numbersArray = explode(",", $manager['city']);
+                                $q_c->where(array(
+                                    "`dartLocationCity`.`id`:IN" => $numbersArray,
+                                ));
+                                if ($q_c->prepare() && $q_c->stmt->execute()) {
+                                    $city = $q_c->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    foreach ($city as $kc => $cit){
+                                        $city[$kc]['id'] = "c_".$cit['id'];
+                                    }
+
+                                    $clients = array_merge($regions, $city, $orgs);
+                                }
+                            }
+
+                            $data_managers[] = array(
+                                "id" => $manager['id'],
+                                "name" => $manager['receiver'],
+                                "email" => $manager['email'],
+                                "phone" => $manager['phone'],
+                                "unlimitied_clients" => $manager['global'] == 1? true : false,
+                                "notifications" => $notif,
+                                "clients" => $clients
+                            );
+                        }
+                    }
+
+
+                    $org['managers'] = $data_managers;
                     $org["success"] = true;
                     return $org;
                 }
@@ -1338,6 +1554,46 @@ class slOrganization
         if($query->prepare() && $query->stmt->execute()){
             $clients = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
             return $clients;
+        }
+    }
+
+    public function getRegionsAndCity($id){
+        //Получаем все города и регионы организации
+        $result = array();
+
+        $q = $this->modx->newQuery("slOrgStores");
+        $q->leftJoin("slStores", "slStores", "slStores.id = slOrgStores.store_id");
+        $q->where(array(
+            "`slOrgStores`.`org_id`:=" => $id,
+        ));
+        $q->select(array(
+            "`slStores`.city"
+        ));
+        if($q->prepare() && $q->stmt->execute()){
+            $stores = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+            foreach ($stores as $store){
+                $result['city'][] = $store['city'];
+            }
+
+            $query = $this->modx->newQuery("dartLocationCity");
+            $query->where(array(
+                "`dartLocationCity`.`id`:IN" => $result['city'],
+            ));
+            $query->select(array(
+                "dartLocationCity.region",
+            ));
+
+            if($query->prepare() && $query->stmt->execute()) {
+                $regions = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($regions as $region){
+                    $result['region'][] = $region['region'];
+                }
+            }
+
+            return $result;
         }
     }
 
@@ -1435,9 +1691,10 @@ class slOrganization
      * @param $properties
      * @return mixed
      */
-    public function setOrgVirtualProfile($properties){
+    public function setOrgVirtualProfile($properties, $force = 0){
         $user_id = $this->sl->userHandler->getUserId();
-        if($properties["id"] && $user_id){
+        if(($properties["id"] && $user_id) || ($properties["id"] && $force)){
+            $userdata = array();
             if($properties["client_id"]){
                 // проверяем доступ
                 $org = $this->modx->getObject("slOrg", $properties["client_id"]);
@@ -1468,13 +1725,16 @@ class slOrganization
                 ));
                 $count = $this->modx->getCount('slOrgRequisites', $query);
                 if($count > 0){
-                    return $this->sl->tools->error("Организация с ИНН {$properties['org']['inn']} уже существует!");
+                    $query->select(array("slOrg.*"));
+                    if($query->prepare() && $query->stmt->execute()){
+                        $userdata["organization"] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                    return $this->sl->tools->error("Организация с ИНН {$properties['org']['inn']} уже существует!", $userdata);
                 }
                 $org = $this->modx->newObject("slOrg");
                 $org->set("owner_id", $properties["id"]);
             }
             // Получили все объекты
-            $userdata = array();
             if($properties['data']['upload_image']){
                 if ($properties['data']['image']) {
                     $avatar = $this->modx->getOption('base_path') . "assets/content/avatars/" . $properties['data']['image']['name'];
@@ -1525,7 +1785,7 @@ class slOrganization
                             $address['address']["data"] = $res[0];
                         }
                         if($index == 0) {
-                            $org_req->set("fact_address", $address["value"]);
+                            $org_req->set("fact_address", $address["address"]["value"]);
                             $org_req->save();
                         }
                         if($address["id"]){
@@ -1536,6 +1796,9 @@ class slOrganization
                         $store->set("name", $properties['data']['org']['name']["value"].' || '.$address["address"]["value"]);
                         $city = $this->sl->tools->getCity($address["address"]);
                         $store->set("city", $city);
+                        if($index == 0) {
+                            $userdata["organization"]["city"] = $city;
+                        }
                         $store->set("address", $address["address"]["value"]);
                         $store->set("contact", $properties['data']['contact']);
                         $store->set("email", $properties['data']['email']);
@@ -1600,16 +1863,91 @@ class slOrganization
         if($properties['id'] && $properties['data']){
             $org = $this->modx->getObject('slOrg', $properties['id']);
 
-            if($properties['data']['contact']){
-                $org->set('contact', $properties['data']['contact']);
-            }
+//            if($properties['data']['contact']){
+//                $org->set('contact', $properties['data']['contact']);
+//            }
+//
+//            if($properties['data']['email']){
+//                $org->set('email', $properties['data']['email']);
+//            }
+//
+//            if($properties['data']['phone']){
+//                $org->set('phone', $properties['data']['phone']);
+//            }
 
-            if($properties['data']['email']){
-                $org->set('email', $properties['data']['email']);
-            }
+            $sql = "DELETE FROM {$this->modx->getTableName('slNotificationManagers')} WHERE `org_id` = {$properties['id']}";
+            $q_del = $this->modx->query($sql);
 
-            if($properties['data']['phone']){
-                $org->set('phone', $properties['data']['phone']);
+            if($properties['data']['managers']){
+//                $crit = array(
+//                    "org_id" => $properties['id']
+//                );
+//                $this->modx->removeCollection("slNotificationManagers", $crit);
+
+                foreach($properties['data']['managers'] as $manager){
+                    $manager_new = $this->modx->newObject("slNotificationManagers");
+                    $manager_new->set("org_id", $properties['id']);
+                    $manager_new->set("receiver", $manager['name']);
+                    $manager_new->set("phone", $manager['phone']);
+                    $manager_new->set("email", $manager['email']);
+                    $manager_new->set("global", $manager['unlimitied_clients']);
+
+                    if($manager['unlimitied_clients'] == false){
+                        $region = [];
+                        $city = [];
+                        $orgs = [];
+
+                        foreach ($manager['clients'] as $item) {
+                            if (strpos($item['id'], 'r_') === 0) {
+                                $region[] = substr($item['id'], 2); // Удаляем 'r_' и добавляем только число
+                            } elseif (strpos($item['id'], 'c_') === 0) {
+                                $city[] = substr($item['id'], 2); // Удаляем 'c_' и добавляем только число
+                            } elseif (strpos($item['id'], 'o_') === 0) {
+                                $orgs[] = substr($item['id'], 2); // Удаляем 'o_' и добавляем только число
+                            }
+                        }
+
+                        $regionString = implode(",", $region);
+                        $cityString = implode(",", $city);
+                        $orgString = implode(",", $orgs);
+
+//                        echo "$regionString\n";
+//                        echo "$cityString\n";
+//                        echo "$orgString\n";
+
+                        $manager_new->set("city", $cityString);
+                        $manager_new->set("region", $regionString);
+                        $manager_new->set("org", $orgString);
+                    }
+
+                    $types = []; // Перемещаем сюда, чтобы массив был одним для всех уведомлений
+
+                    foreach ($manager['notifications'] as $key => $notif) {
+                        if ($notif) { // Проверяем только на true
+                            if ($key == "added_to_my_vendors") {
+                                $types[] = 7;
+                            } else if ($key == "company_connected") {
+                                $types[] = 4;
+                            } else if ($key == "company_enabled") {
+                                $types[] = 3;
+                            } else if ($key == "deleted_from_my_vendors") {
+                                $types[] = 8;
+                            } else if ($key == "new_opt_order") {
+                                $types[] = 2;
+                            } else if ($key == "new_vendor") {
+                                $types[] = 5;
+                            } else if ($key == "order_status_changes") {
+                                $types[] = 1;
+                            }
+                        }
+                    }
+
+                    $typesString = implode(",", $types);
+
+                    $manager_new->set("type", $typesString);
+
+                    $manager_new->save();
+                }
             }
 
             if($properties['data']['upload_image']){
@@ -1625,7 +1963,8 @@ class slOrganization
             $org->save();
             return array(
                 "status" => true,
-                "message" => "Данные успешно сохранены!"
+                "message" => "Данные успешно сохранены!",
+                "test" => $types
             );
         }
     }

@@ -265,7 +265,7 @@ $xpdo_meta_map['slStores']= array (
     'email' => 
     array (
       'dbtype' => 'varchar',
-      'precision' => '100',
+      'precision' => '255',
       'phptype' => 'string',
       'null' => false,
       'default' => '',

@@ -3463,6 +3463,7 @@ class objectsHandler
         }
 
         if($properties['isallproducts'] == "all"){
+            $results['isallproducts'] = 'all';
             if($q->prepare() && $q->stmt->execute()) {
                 $out = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
                 $selected = [];
@@ -4196,7 +4197,11 @@ class objectsHandler
             $urlMain = $this->modx->getOption("site_url");
 
             foreach ($vendors as $key => $value) {
-                $vendors[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+                if($vendors[$key]['image']){
+                    $vendors[$key]['image'] = $urlMain . "assets/content/" . $value['image'];
+                } else {
+                    $vendors[$key]['image'] = $urlMain . "/assets/files/img/nopic.png";
+                }
             }
 
             return $vendors;

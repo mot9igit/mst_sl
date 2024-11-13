@@ -3,31 +3,16 @@ shopLogistic.grid.StoreRemains = function (config) {
     if (!config.id) {
         config.id = 'shoplogistic-grid-storeremains';
     }
-    if(Object.prototype.hasOwnProperty.call(config, "record")){
-        Ext.applyIf(config, {
-            baseParams: {
-                action: 'mgr/storeremains/getlist',
-                sort: 'id',
-                dir: 'asc',
-                store_id: config.record.object.id
-            },
-            multi_select: true,
-            stateful: true,
-            stateId: config.record.object.id,
-            topbar: 1
-        });
-    }else{
-        Ext.applyIf(config, {
-            baseParams: {
-                action: 'mgr/storeremains/getlist',
-                sort: 'id',
-                dir: 'asc',
-                topbar: 0
-            },
-            stateful: true,
-        });
-    }
-
+    Ext.applyIf(config, {
+        baseParams: {
+            action: 'mgr/storeremains/getlist',
+            sort: 'id',
+            dir: 'asc',
+            store_id: config.record.object.id
+        },
+        stateful: true,
+        stateId: config.record.object.id,
+    });
     shopLogistic.grid.StoreRemains.superclass.constructor.call(this, config);
 
     // Clear selection on grid refresh
@@ -127,23 +112,13 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
     },
 
     getFields: function () {
-        return ['id', 'name', 'brand_id', 'tags', 'our_category_id', 'our_category', 'groups', 'catalog_guid', 'base_guid', 'catalog_id', 'brand_manual', 'published', 'checked', 'status', 'status_name', 'color', 'guid', 'catalog', 'article', 'barcode', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
+        return ['id', 'name', 'brand_id', 'published', 'checked', 'guid', 'catalog', 'article', 'barcode', 'product_article', 'product_name', 'product_id', 'store_name', 'store_id', 'remains', 'reserved', 'available', 'price', 'description', 'actions'];
     },
 
     getColumns: function () {
         return [{
-            header: _('shoplogistic_id'),
-            dataIndex: 'id',
-            sortable: true,
-            width: 200
-        },{
             header: _('shoplogistic_storeremains_guid'),
             dataIndex: 'guid',
-            sortable: true,
-            width: 200
-        },{
-            header: _('shoplogistic_storeremains_base_guid'),
-            dataIndex: 'base_guid',
             sortable: true,
             width: 200
         },{
@@ -172,19 +147,6 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
             sortable: true,
             width: 70,
         },{
-            header: _('shoplogistic_storeremains_available'),
-            dataIndex: 'available',
-            sortable: true,
-            width: 70,
-        },{
-            header: _('shoplogistic_storeremains_status'),
-            dataIndex: 'status_name',
-            sortable: true,
-            width: 100,
-            renderer: function (val, cell, row) {
-                return shopLogistic.utils.renderBadge(val, cell, row);
-            }
-        },{
             header: _('shoplogistic_storeremains_price'),
             dataIndex: 'price',
             sortable: true,
@@ -211,32 +173,28 @@ Ext.extend(shopLogistic.grid.StoreRemains, shopLogistic.grid.Default, {
         }];
     },
 
-    getTopBar: function (config) {
-        if(config.topbar){
-            return [{
-                text: '<i class="icon icon-plus"></i>&nbsp;' + _('shoplogistic_storeremain_create'),
-                handler: this.createStoreRemain,
-                scope: this
-            }, '->', {
-                xtype: 'shoplogistic-field-search',
-                width: 250,
-                listeners: {
-                    search: {
-                        fn: function (field) {
-                            this._doSearch(field);
-                        }, scope: this
-                    },
-                    clear: {
-                        fn: function (field) {
-                            field.setValue('');
-                            this._clearSearch();
-                        }, scope: this
-                    },
-                }
-            }];
-        }else{
-            return [];
-        }
-    }
+    getTopBar: function () {
+        return [{
+            text: '<i class="icon icon-plus"></i>&nbsp;' + _('shoplogistic_storeremain_create'),
+            handler: this.createStoreRemain,
+            scope: this
+        }, '->', {
+            xtype: 'shoplogistic-field-search',
+            width: 250,
+            listeners: {
+                search: {
+                    fn: function (field) {
+                        this._doSearch(field);
+                    }, scope: this
+                },
+                clear: {
+                    fn: function (field) {
+                        field.setValue('');
+                        this._clearSearch();
+                    }, scope: this
+                },
+            }
+        }];
+    },
 });
 Ext.reg('shoplogistic-grid-storeremains', shopLogistic.grid.StoreRemains);

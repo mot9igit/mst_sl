@@ -441,6 +441,12 @@ Ext.extend(shopLogistic.window.UpdateStore, shopLogistic.window.CreateStore, {
                 record: config.record,
             }]
         }, {
+            title: "Группы товаров",
+            items: [{
+                xtype: 'shoplogistic-grid-store-remains-groups',
+                record: config.record,
+            }]
+        },{
             title: _('shoplogistic_docs'),
             items: [{
                 xtype: 'shoplogistic-grid-stores-docs',

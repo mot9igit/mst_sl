@@ -13,6 +13,7 @@ shopLogistic.window.CreateStoreRemains = function (config) {
 Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, {
 
     getFields: function (config) {
+        console.log(config)
         return [{
             xtype: 'hidden',
             name: 'id',
@@ -48,6 +49,14 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
                     allowBlank: true
                 }]
             }]
+        },{
+            xtype: 'shoplogistic-combo-category',
+            fieldLabel: "Категория",
+            name: "our_category_id",
+            hiddenName: 'our_category_id',
+            anchor: '99%',
+            id: config.id + '-our_category_id',
+            allowBlank: true
         },{
             xtype: 'textarea',
             fieldLabel: _('shoplogistic_storeuser_description'),
@@ -107,6 +116,14 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
                     anchor: '99%',
                     id: config.id + '-barcode',
                     allowBlank: true
+                },{
+                    xtype: 'shoplogistic-combo-vendor',
+                    fieldLabel: "Бренд",
+                    description: "Если Вы установите бренд, то он не будет меняться автоматически",
+                    name: 'brand_id',
+                    anchor: '99%',
+                    id: config.id + '-brand_id',
+                    allowBlank: true
                 }]
             }]
         },{
@@ -160,6 +177,17 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             anchor: '99%',
             id: config.id + '-product_id',
             allowBlank: false
+        },{
+            xtype: 'shoplogistic-combo-groups',
+            fieldLabel: "Группы товара",
+            description: "Привязка к группам товара склада",
+            name: 'groups',
+            hiddenName: "groups",
+            anchor: '99%',
+            store_id: config.record.store_id,
+            id: config.id + '-groups',
+            value: config.record.groups,
+            allowBlank: true
         }, {
             xtype: 'xcheckbox',
             boxLabel: _('shoplogistic_storeremains_published'),
@@ -171,6 +199,12 @@ Ext.extend(shopLogistic.window.CreateStoreRemains, shopLogistic.window.Default, 
             boxLabel: _('shoplogistic_storeremains_checked'),
             name: 'checked',
             id: config.id + '-checked',
+            checked: false,
+        },{
+            xtype: 'xcheckbox',
+            boxLabel: 'Бренд установлен вручную',
+            name: 'brand_manual',
+            id: config.id + '-brand_manual',
             checked: false,
         }];
     },

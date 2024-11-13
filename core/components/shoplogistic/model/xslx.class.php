@@ -102,6 +102,626 @@ class slXSLX{
         return $output;
     }
 
+    public function setIndividualActions($owner_id, $file, $store_id = 53){
+        $output = array();
+        $owner = $this->modx->getObject("slOrg", $owner_id);
+        if($owner) {
+            $owner_data = $owner->toArray();
+            $org_id = $owner->get("id");
+            $out = array(
+                "total" => 0,
+                "success" => array(
+                    "total" => 0,
+                    "data" => array()
+                ),
+                "errors" => array(
+                    "total" => 0,
+                    "data" => array()
+                )
+            );
+            $file_in = $this->modx->getOption("base_path") . $file;
+            if (file_exists($file_in)) {
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
+                } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                    $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+                }
+                $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+                $out["total"] = count($sheetData);
+                foreach ($sheetData as $key => $value) {
+                    // пропускаем шапку
+                    if ($key != 1) {
+                        // тестовый запуск
+                        // if($key == 2) {
+                            // Нам важны контакты, поэтому проверяем есть ли они
+                            if ($value['F'] || $value['G']) {
+                                $inn = $value['C'];
+                                $query = $this->modx->newQuery("slOrgRequisites");
+                                $query->leftJoin("slOrg", "slOrg", "slOrg.id = slOrgRequisites.org_id");
+                                $query->where(array(
+                                    'slOrgRequisites.inn:=' => $inn
+                                ));
+                                $count = $this->modx->getCount('slOrgRequisites', $query);
+                                if ($count > 0) {
+                                    $query->select(array("slOrg.*"));
+                                    if ($query->prepare() && $query->stmt->execute()) {
+                                        $userdata["organization"] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                                        if (count($userdata["organization"])) {
+                                            if ($userdata["organization"]["id"]) {
+                                                $org = $this->modx->getObject("slOrg", $userdata["organization"]["id"]);
+                                                if ($org) {
+                                                    $type_koeff = 0.65;
+                                                    $client_data = $org->toArray();
+                                                    $save_data = array(
+                                                        "name" => "Индивидуальная акция {$owner_data['name']} для {$client_data['name']}",
+                                                        "resource" => 0,
+                                                        "global" => 1,
+                                                        "active" => 1,
+                                                        "createdon" => time(),
+                                                        "store_id" => $store_id,
+                                                        "compatibility_discount" => 0,
+                                                        "compatibility_postponement" => 0,
+                                                        "type" => 3,
+                                                        "shipment_type" => 0,
+                                                        "payer" => 0,
+                                                        "delivery_payment_terms" => 0,
+                                                        "delivery_payment_value" => 0,
+                                                        "org_id" => $owner_data['id'],
+                                                        "client_id" => $client_data['id']
+                                                    );
+                                                    if ($value["H"]) {
+                                                        $save_data["delay"] = $value["H"];
+                                                    }
+                                                    // Добавляем акцию
+                                                    $criteria = array(
+                                                        "org_id:=" => $owner_data['id'],
+                                                        "client_id:=" => $client_data['id']
+                                                    );
+                                                    $act = $this->modx->getObject("slActions", $criteria);
+                                                    if(!$act){
+                                                        $act = $this->modx->newObject("slActions");
+                                                    }
+                                                    foreach($save_data as $k => $v){
+                                                        $act->set($k, $v);
+                                                    }
+                                                    $act->save();
+                                                    $client_data["action"] = $act->toArray();
+                                                    // выставляем отсрочку
+                                                    $criteria = array(
+                                                        "action_id:=" => $client_data["action"]["id"]
+                                                    );
+                                                    $delay = $this->modx->getObject("slActionsDelay",$criteria);
+                                                    if(!$delay){
+                                                        $delay = $this->modx->newObject("slActionsDelay");
+                                                    }
+                                                    $delay->set("percent", 100);
+                                                    $delay->set("action_id", $client_data["action"]["id"]);
+                                                    if ($value["H"]) {
+                                                        $delay->set("day", $value["H"]);
+                                                    }else{
+                                                        $delay->set("day", 0);
+                                                    }
+                                                    $delay->save();
+                                                    $client_data["action"]['delay'] = $delay->toArray();
+                                                    if($value["I"]){
+                                                        // Основная продукция Интерскол
+                                                        $sale_koeff = 1 - floatval($value["I"]);
+                                                        $group_id = 2;
+                                                        $query = $this->modx->newQuery("slStoresRemains");
+                                                        $query->where(array(
+                                                            "FIND_IN_SET({$group_id}, groups) > 0",
+                                                            "slStoresRemains.store_id:=" => $store_id
+                                                        ));
+                                                        $query->select(array("slStoresRemains.*"));
+                                                        if($query->prepare() && $query->stmt->execute()) {
+                                                            $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                                            foreach ($remains as $remain) {
+                                                                $remain["new_price"] = $remain["price"] * $sale_koeff;
+                                                                $remain["old_price"] = $remain["price"];
+                                                                $remain["sale_koeff"] = $sale_koeff;
+
+                                                                $criteria = array(
+                                                                    "action_id:=" => $client_data["action"]["id"],
+                                                                    "remain_id:=" => $remain["id"]
+                                                                );
+                                                                $product = $this->modx->getObject("slActionsProducts",$criteria);
+                                                                if(!$product){
+                                                                    $product = $this->modx->newObject("slActionsProducts");
+                                                                }
+                                                                $product->set("action_id", $client_data["action"]["id"]);
+                                                                $product->set("old_price", $remain["old_price"]);
+                                                                $product->set("new_price", $remain["new_price"]);
+                                                                $product->set("active", 1);
+                                                                $product->set("createdon", time());
+                                                                $product->set("multiplicity", 1);
+                                                                $product->set("remain_id", $remain["id"]);
+                                                                $product->set("min_count", 1);
+                                                                $product->save();
+                                                                // $client_data["action"]["products"][] = $product->toArray();
+                                                            }
+                                                        }
+                                                    }
+                                                    if($value["J"]){
+                                                        // Оснастка Интерскол
+                                                        $sale_koeff = 1 - floatval($value["J"]);
+                                                        $type_koeff = $sale_koeff;
+                                                        $group_id = 1;
+                                                        $query = $this->modx->newQuery("slStoresRemains");
+                                                        $query->where(array(
+                                                            "FIND_IN_SET({$group_id}, groups) > 0",
+                                                            "slStoresRemains.store_id:=" => $store_id
+                                                        ));
+                                                        $query->select(array("slStoresRemains.*"));
+                                                        if($query->prepare() && $query->stmt->execute()) {
+                                                            $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                                            foreach ($remains as $remain) {
+                                                                $remain["new_price"] = $remain["price"] * $sale_koeff;
+                                                                $remain["old_price"] = $remain["price"];
+                                                                $remain["sale_koeff"] = $sale_koeff;
+                                                                $criteria = array(
+                                                                    "action_id:=" => $client_data["action"]["id"],
+                                                                    "remain_id:=" => $remain["id"]
+                                                                );
+                                                                $product = $this->modx->getObject("slActionsProducts",$criteria);
+                                                                if(!$product){
+                                                                    $product = $this->modx->newObject("slActionsProducts");
+                                                                }
+                                                                $product->set("action_id", $client_data["action"]["id"]);
+                                                                $product->set("old_price", $remain["old_price"]);
+                                                                $product->set("new_price", $remain["new_price"]);
+                                                                $product->set("active", 1);
+                                                                $product->set("createdon", time());
+                                                                $product->set("multiplicity", 1);
+                                                                $product->set("remain_id", $remain["id"]);
+                                                                $product->set("min_count", 1);
+                                                                $product->save();
+                                                                // $client_data["action"]["products"][] = $product->toArray();
+                                                            }
+                                                        }
+                                                    }
+                                                    // Фиксированные цены Интерскол
+                                                    if($type_koeff == 0.65){
+                                                        $file = $this->modx->getOption("base_path") . 'assets/files/tmp/xlsx/53_fixes_r.xlsx';
+                                                    }
+                                                    if($type_koeff == 0.54){
+                                                        $file = $this->modx->getOption("base_path") . 'assets/files/tmp/xlsx/53_fixes_opt.xlsx';
+                                                    }
+                                                    if (file_exists($file)) {
+                                                        try {
+                                                            $salesheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+                                                        } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                                                            $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+                                                        }
+                                                        $saleData = $salesheet->getActiveSheet()->toArray(null, true, true, true);
+                                                        $group_id = 3;
+                                                        $query = $this->modx->newQuery("slStoresRemains");
+                                                        $query->where(array(
+                                                            "FIND_IN_SET({$group_id}, groups) > 0",
+                                                            "slStoresRemains.store_id:=" => $store_id
+                                                        ));
+                                                        $query->select(array("slStoresRemains.*"));
+                                                        if ($query->prepare() && $query->stmt->execute()) {
+                                                            $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                                                            foreach ($remains as $remain) {
+                                                                foreach ($saleData as $key => $value) {
+                                                                    if($remain['article'] == $value["A"]){
+                                                                        $remain["new_price"] = $value["B"];
+                                                                        $remain["old_price"] = $remain["price"];
+                                                                        $criteria = array(
+                                                                            "action_id:=" => $client_data["action"]["id"],
+                                                                            "remain_id:=" => $remain["id"]
+                                                                        );
+                                                                        $product = $this->modx->getObject("slActionsProducts",$criteria);
+                                                                        if(!$product){
+                                                                            $product = $this->modx->newObject("slActionsProducts");
+                                                                        }
+                                                                        $product->set("action_id", $client_data["action"]["id"]);
+                                                                        $product->set("old_price", $remain["old_price"]);
+                                                                        $product->set("new_price", $remain["new_price"]);
+                                                                        $product->set("active", 1);
+                                                                        $product->set("createdon", time());
+                                                                        $product->set("multiplicity", 1);
+                                                                        $product->set("remain_id", $remain["id"]);
+                                                                        $product->set("min_count", 1);
+                                                                        $product->save();
+                                                                        // $client_data["action"]["products"][] = $product->toArray();
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    $out['errors']['data'][] = $client_data;
+                                                } else {
+                                                    $out['errors']['data'][] = $value;
+                                                }
+                                            } else {
+                                                $out['errors']['data'][] = $value;
+                                            }
+                                        } else {
+                                            $out['errors']['data'][] = $value;
+                                        }
+                                    } else {
+                                        $out['errors']['data'][] = $value;
+                                    }
+                                } else {
+                                    $out['errors']['data'][] = $value;
+                                }
+                            }
+                        //}
+                    }
+                }
+                $out['success']['total'] = count($out['success']['data']);
+                $out['errors']['total'] = count($out['errors']['data']);
+                $output = $this->sl->tools->success("Файл обработан", $out);
+            }else{
+                $output = $this->sl->tools->error("Файл не найден", $file_in);
+            }
+        }else {
+            $output = $this->sl->tools->error("Организация не найдена");
+        }
+        return $output;
+    }
+
+    /**
+     * Закидываем пакетно организации
+     *
+     * @param $owner_id
+     * @param $file
+     * @return mixed
+     * @throws \PhpOffice\PhpSpreadsheet\Exception
+     */
+    public function parseOrganizations($owner_id, $file){
+        $output = array();
+        $owner = $this->modx->getObject("slOrg", $owner_id);
+        if($owner) {
+            $org_id = $owner->get("id");
+            $out = array(
+                "total" => 0,
+                "success" => array(
+                    "total" => 0,
+                    "data" => array()
+                ),
+                "errors" => array(
+                    "total" => 0,
+                    "data" => array()
+                )
+            );
+            $file_in = $this->modx->getOption("base_path").$file;
+            if(file_exists($file_in)) {
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
+                } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                    $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+                }
+                $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+                $out["total"] = count($sheetData);
+                foreach($sheetData as $key => $value) {
+                    // пропускаем шапку
+                    if ($key != 1) {
+                        // Нам важны контакты, поэтому проверяем есть ли они
+                        if($value['F'] || $value['G']){
+                            // Собираем данные по организации
+                            $properties = array(
+                                "id" => $owner_id,
+                                "client_id" => 0
+                            );
+                            $properties["name"] = trim($value['A']);
+                            $properties['data']['org']['name']["value"] = trim($value['A']);
+                            $properties['data']['org']['inn'] = trim($value['C']);
+                            $properties['data']['upload_image'] = false;
+                            $properties['data']['contact'] = trim($value['E']);
+                            if($value['F']){
+                                $properties['data']['phone'] = $this->sl->tools->phoneFormat(trim($value['F']));
+                            }
+                            $properties['data']['email'] = trim($value['G']);
+                            $warehouses = explode("||", trim($value['D']));
+                            foreach($warehouses as $warehouse){
+                                $properties['data']['org']["warehouses"][] = array(
+                                    "address" => array(
+                                        "id" => 0,
+                                        "value" => trim($warehouse)
+                                    )
+                                );
+                            }
+                            $out['success']['data'][] = $properties;
+                            // Сохраняем
+                            $data = $this->sl->orgHandler->setOrgVirtualProfile($properties, 1);
+                            $org = false;
+                            if($data["data"]["organization"]["id"]){
+                                $org = $this->modx->getObject("slOrg", $data["data"]["organization"]["id"]);
+                            }
+                            // Закидываем в B24
+                            $card_id = 0;
+                            $organization_id = 0;
+                            $res = $this->sl->b24->checkRequizites($properties['data']['org']['inn']);
+                            if($res["result"]){
+                                $organization_id = $res["result"][0]["ENTITY_ID"];
+                                if($organization_id){
+                                    $criteria = array(
+                                        "entityTypeId" => 1034,                 // Это наш бизнес процесс
+                                        "filter" => array(
+                                            "companyId" => $organization_id
+                                        )
+                                    );
+                                    $res = $this->sl->b24->checkCard($criteria);
+                                    if($res["total"] > 0){
+                                        $card_id = $res["result"]["items"][0]["id"];
+                                    }
+                                }
+                            }
+                            if($card_id){
+                                // 1. Меняем стадию
+                                $res = $this->sl->b24->updateCard(1034, $card_id, array("stageId" => "DT1034_89:NEW"));
+                            }else{
+                                // 2. Создаем заново объекты и связываем
+                                $organization_data = array();
+                                $name_data = array();
+                                // Клининг параметров
+                                if (!class_exists('Dadata')) {
+                                    require_once dirname(__FILE__) . '/dadata.class.php';
+                                }
+
+                                $token = $this->modx->getOption('shoplogistic_api_key_dadata');
+                                $secret = $this->modx->getOption('shoplogistic_secret_key_dadata');
+                                $dadata = new Dadata($token, $secret);
+                                $dadata->init();
+                                // клиним имя
+                                $result = $dadata->clean("name", $properties['data']['contact']);
+                                if($result){
+                                    $name_data = $result[0];
+                                }
+                                $companyData["TITLE"] = $properties['data']['org']['name']["value"];
+                                if($name_data){
+                                    $legalData = array(
+                                        "NAME" => $name_data["name"],
+                                        "SECOND_NAME" => $name_data["patronymic"],
+                                        "LAST_NAME" => $name_data["surname"],
+                                        "phone" => $properties['data']['phone'],
+                                        "email" => $properties['data']['email'],
+                                        "ASSIGNED_BY_ID" => 55
+                                    );
+                                }else{
+                                    $legalData = array(
+                                        "NAME" => $properties['data']['contact'],
+                                        "phone" => $properties['data']['phone'],
+                                        "email" => $properties['data']['email'],
+                                        "ASSIGNED_BY_ID" => 55
+                                    );
+                                }
+                                // Если организация не найдена
+                                // Собираем данные
+                                $companyData = array(
+                                    "CONTACT" => array(),
+                                    "COMPANY_TYPE" => "OTHER",
+                                    "TITLE" => $properties['data']['org']['name']["value"]
+                                );
+                                if(!$organization_id){
+                                    $result = $dadata->getOrganization($properties['data']['org']['inn']);
+                                    if($result["suggestions"]) {
+                                        $organization_data = $result["suggestions"][0];
+                                    }
+                                    if($organization_data){
+                                        $companyData["TITLE"] = $organization_data["value"];
+                                    }else{
+                                        $companyData["TITLE"] = $properties['data']['org']['name']["value"];
+                                    }
+                                    $lpr = $this->sl->b24->addContact($legalData);
+                                    $companyData["CONTACT"][] = $lpr;
+                                    $organization_id = $this->sl->b24->addCompany($companyData);
+                                }else{
+                                    $lpr = $this->sl->b24->addContact($legalData);
+                                    $companyData["CONTACT"][] = $lpr;
+                                }
+                                if($organization_id){
+                                    if($org){
+                                        $org->set("bitrix_id", $organization_id);
+                                        $org->save();
+                                    }
+                                }
+                                if($organization_data){
+                                    // Цепляем реквизиты
+                                    $requiziteData = array(
+                                        "NAME" => $companyData["TITLE"],
+                                        "RQ_INN" => $organization_data["data"]["inn"],
+                                        "RQ_KPP" => $organization_data["data"]["kpp"],
+                                        "RQ_EMAIL" => $properties['data']['email'],
+                                        "RQ_PHONE" => $properties['data']['phone'],
+                                        'ENTITY_TYPE_ID' => 4,
+                                        "ENTITY_ID" => $organization_id,
+                                        "PRESET_ID" => 1,
+                                        'ACTIVE' => 'Y',
+                                    );
+                                    if(strlen(trim($organization_data["data"]["ogrn"])) == 13){
+                                        $requiziteData["RQ_OGRN"] = $organization_data["data"]["ogrn"];
+                                        $requiziteData["UF_CRM_1718187136"] = $properties['data']['email'];
+                                        $requiziteData["UF_CRM_1718187151"] = $properties['data']['phone'];
+                                        $requiziteData["PRESET_ID"] = 1;
+                                    }
+                                    if(strlen(trim($organization_data["data"]["ogrn"])) == 15){
+                                        $requiziteData["RQ_OGRNIP"] = $organization_data["data"]["ogrn"];
+                                        $requiziteData["UF_CRM_1718187196"] = $properties['data']['email'];
+                                        $requiziteData["UF_CRM_1718187208"] = $properties['data']['phone'];
+                                        $requiziteData["PRESET_ID"] = 3;
+                                    }
+                                    $req = $this->sl->b24->addRequizite($requiziteData);
+                                    if($properties['delivery_addresses'][0]["value"]){
+                                        $addressData = array(
+                                            'fields'=>array(
+                                                'TYPE_ID' => 1,
+                                                'ENTITY_TYPE_ID' => 8,
+                                                'ENTITY_ID' => $req,
+                                                'ADDRESS_1' => $properties['data']['org']["warehouses"][0]['address']["value"]
+                                            ),
+                                        );
+                                        $address_actual = $this->sl->b24->request('crm.address.add', $addressData);
+                                    }
+                                }
+                                // СПО ЕКБ - 2079, МСТ - 1285
+                                $cardData = array(
+                                    "entityTypeId" => 1034,
+                                    "fields" => array(
+                                        "title" => $companyData["TITLE"],
+                                        "categoryId" => 89,
+                                        "stageId" => "DT1034_89:NEW",
+                                        "assignedById" => 55,
+                                        "companyId" => $organization_id,
+                                        "contactIds" => $companyData["CONTACT"],
+                                        "ufCrm29_1718046509" => $lpr,
+                                        "ufCrm29_1723628130779" => $companyData["TITLE"],
+                                        "ufCrm11_1690930757286" => 1959,
+                                        "ufCrm29_1723628107335" => $properties['data']['org']["warehouses"][0]['address']["value"],
+                                        "ufCrm29_1723628206207" => $properties['data']['contact'],
+                                        "ufCrm29_1723627823491" => $properties['data']['phone'],
+                                        "ufCrm29_1723627869858" => $properties['data']['email'],
+                                        "ufCrm29_1723628150363" => $properties['data']['org']['inn'],
+                                        'ufCrm11_1686253198139' => 1285
+                                    )
+                                );
+                                if($properties['data']['org']["warehouses"][0]['address']["value"]) {
+                                    if (!class_exists('Dadata')) {
+                                        require_once dirname(__FILE__) . '/dadata.class.php';
+                                    }
+                                    $token = $this->modx->getOption('shoplogistic_api_key_dadata');
+                                    $secret = $this->modx->getOption('shoplogistic_secret_key_dadata');
+                                    $dadata = new Dadata($token, $secret);
+                                    $dadata->init();
+                                    $res = $dadata->clean('address', $properties['data']['org']["warehouses"][0]['address']["value"]);
+                                    if(isset($res[0])){
+                                        $cardData['fields']['ufCrm29_1723627886050'] = $res[0]["city"] ? $res[0]["city"] : $res[0]["settlement"];
+                                    }
+
+                                }
+                                $card = $this->sl->b24->addCard($cardData);
+                            }
+                        }else{
+                            $out['errors']['data'][] = $properties;
+                        }
+                    }
+                }
+                $out['success']['total'] = count($out['success']['data']);
+                $out['errors']['total'] = count($out['success']['data']);
+                $output = $this->sl->tools->success("Файл обработан", $out);
+            }else{
+                $output = $this->sl->tools->error("Файл не найден", $file_in);
+            }
+        }else {
+            $output = $this->sl->tools->error("Организация не найдена");
+        }
+        return $output;
+    }
+
+    /**
+     * Парсим файл групп товаров
+     *
+     * @param $group_id
+     * @param $file
+     * @return void
+     */
+    public function parseProductGroupsFile ($group_id, $file) {
+        $output = array();
+        $group = $this->modx->getObject("slStoresRemainsGroups", $group_id);
+        if($group){
+            $store_id = $group->get("store_id");
+            $out = array(
+                "total" => 0,
+                "success" => array(
+                    "total" => 0,
+                    "data" => array()
+                ),
+                "errors" => array(
+                    "total" => 0,
+                    "data" => array()
+                )
+            );
+            $file_in = $this->modx->getOption("base_path").$file;
+            if(file_exists($file_in)) {
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
+                } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                    $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+                }
+                // Обнуление категорий товаров
+                $query = $this->modx->newQuery("slStoresRemains");
+                $query->where(array(
+                    "FIND_IN_SET({$group_id}, groups) > 0",
+                    "slStoresRemains.store_id:=" => $store_id
+                ));
+                $query->select(array("slStoresRemains.id"));
+                if($query->prepare() && $query->stmt->execute()){
+                    $remains = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach($remains as $remain){
+                        $object = $this->modx->getObject("slStoresRemains", $remain["id"]);
+                        if($object){
+                            $groups = $object->get("groups");
+                            $groups = explode(",", $groups);
+                            foreach($groups as $k => $g){
+                                if($g == $group_id){
+                                    unset($groups[$k]);
+                                }
+                            }
+                            $object->set("groups", implode(",", $groups));
+                            $object->save();
+                        }
+                    }
+                }
+                $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+                $out["total"] = count($sheetData);
+                foreach($sheetData as $key => $value) {
+                    // пропускаем шапку
+                    // if ($key != 1) {
+                        $criteria = array(
+                            "store_id:=" => $store_id,
+                            "article:=" => trim($value["A"])
+                        );
+                        $query = $this->modx->newQuery("slStoresRemains");
+                        $query->where($criteria);
+                        $query->select(array(
+                            "slStoresRemains.*"
+                        ));
+                        $count = $this->modx->getCount("slStoresRemains", $query);
+                        if(!$count){
+                            $out['errors'][] = $this->sl->tools->error("Остаток не найден!", $value);
+                        }else{
+                            if($count == 1){
+                                if($query->prepare() && $query->stmt->execute()) {
+                                    $remain = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                                    if($remain){
+                                        $object = $this->modx->getObject("slStoresRemains", $remain["id"]);
+                                        if($object){
+                                            $groups = $object->get("groups");
+                                            $groups = explode(",", $groups);
+                                            $groups[] = $group_id;
+                                            $object->set("groups", implode(",", $groups));
+                                            if($object->save()){
+                                                $out['success']['data'][] = $this->sl->tools->error("Объект остатка обновлен!", $value);
+                                            }else{
+                                                $out['errors']['data'][] = $this->sl->tools->error("Объект остатка не обновлен, ошибка!", $value);
+                                            }
+                                        }else{
+                                            $out['errors']['data'][] = $this->sl->tools->error("Объект остатка не найден!", $value);
+                                        }
+                                    }else{
+                                        $out['errors']['data'][] = $this->sl->tools->error("Остаток не найден!", $value);
+                                    }
+                                }
+                            }else{
+                                $out['errors']['data'][] = $this->sl->tools->error("Найдено больше 1 товара с аналогичным артикулом!", $value);
+                            }
+                        }
+                    // }
+                }
+                $out['success']['total'] = count($out['success']['data']);
+                $out['errors']['total'] = count($out['errors']['data']);
+                $output = $this->sl->tools->success("Файл обработан", $out);
+            }else{
+                $output = $this->sl->tools->error("Файл не найден", $file_in);
+            }
+        }else{
+            $output = $this->sl->tools->error("Группа не найдена");
+        }
+        return $output;
+    }
+
     /**
      * Читаем файл товаров для акций
      *
@@ -303,6 +923,15 @@ class slXSLX{
 
             if($q->prepare() && $q->stmt->execute()){
                 $org = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                $query = $this->modx->newQuery("slOrgRequisites");
+                $query->where(array("slOrgRequisites.org_id:=" => $org["id"]));
+                $query->select(array("slOrgRequisites.*"));
+                if($query->prepare() && $query->stmt->execute()){
+                    $org['req'] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                }
+                if($org['req']){
+                    $org['inn'] = $org['req']['inn'];
+                }
                 $sheet->getCell('B2')->setValue($org['name'] . ", ИНН: " . $org['inn']);
             }
 
@@ -322,7 +951,7 @@ class slXSLX{
             //Срок доставки
             if($basket['stores'][$properties['store_id']]['products']){
                 $product_first = array_key_first($basket['stores'][$properties['store_id']]['products']);
-                $delivery = $this->sl->cart->getNearShipment($basket['stores'][$properties['store_id']]['products'][$product_first]['remain_id'], $basket['stores'][$properties['store_id']]['products'][$product_first]["store_id"]);
+                $delivery = $this->sl->cart->getNearShipment($basket['stores'][$properties['store_id']]['products'][$product_first]["store_id"], $properties['store_id']);
 
                 $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
 
@@ -599,6 +1228,15 @@ class slXSLX{
 
                     if($q->prepare() && $q->stmt->execute()){
                         $org = $q->stmt->fetch(PDO::FETCH_ASSOC);
+                        $query = $this->modx->newQuery("slOrgRequisites");
+                        $query->where(array("slOrgRequisites.org_id:=" => $org["id"]));
+                        $query->select(array("slOrgRequisites.*"));
+                        if($query->prepare() && $query->stmt->execute()){
+                            $org['req'] = $query->stmt->fetch(PDO::FETCH_ASSOC);
+                        }
+                        if($org['req']){
+                            $org['inn'] = $org['req']['inn'];
+                        }
                         $sheet->getCell('B2')->setValue($org['name'] . ", ИНН: " . $org['inn']);
                     }
 
@@ -618,7 +1256,7 @@ class slXSLX{
                     //Срок доставки
                     if($store['products']){
                         $product_first = array_key_first($store['products']);
-                        $delivery = $this->sl->cart->getNearShipment($store['products'][$product_first]['remain_id'], $store['products'][$product_first]["store_id"]);
+                        $delivery = $this->sl->cart->getNearShipment($store['products'][$product_first]["store_id"], $store['id']);
 
                         $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
 
@@ -631,7 +1269,7 @@ class slXSLX{
                         //TODO КОПЛЕКТЫ
                         $product_first = array_key_first($store['complects']);
 //
-                        $delivery = $this->sl->cart->getNearShipment($store['complects'][$product_first]['products'][0]['remain_id'], $store['products'][$product_first]['products'][0]["store_id"]);
+                        $delivery = $this->sl->cart->getNearShipment($store['products'][$product_first]['products'][0]["store_id"], $store['id']);
 //
                         $date_delivery = date("d.m.Y", time()+60*60*24* $delivery);
 //
@@ -709,7 +1347,6 @@ class slXSLX{
                                                 $tagsText = $tagsText . " при покупке от " . $tag['min_count'] . 'шт';
                                             }
                                             $tagsText = $tagsText . ", ";
-
                                         }
 
                                         if($tag['type'] == 'min_sum'){
@@ -1381,5 +2018,199 @@ class slXSLX{
                 return $path."weeksales_{$report_data['id']}.xlsx";
             }
         }
+    }
+
+    public function etm(){
+        $output = array();
+        $file = 'cron/files/etm/report.xlsx';
+        // открываем файл отчета
+        $file_in = $this->modx->getOption("base_path").$file;
+        if(file_exists($file_in)) {
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_in);
+            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                $output = $this->sl->tools->error("Некорректный файл для загрузки!");
+            }
+            $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+            $output["total_report"] = count($sheetData);
+            foreach($sheetData as $key => $value) {
+                if ($key != 1) {
+                    $tmp = array(
+                        "code" => $value["O"],
+                        "name" => $value["P"],
+                        "vendor_code" => $value["R"],
+                        "article" => $value["U"],
+                        "needle" => array()
+                    );
+                    if($value["A"] == "Нет"){
+                        $tmp["needle"][] = "photo_main";
+                    }
+                    if($value["B"] == "Нет"){
+                        $tmp["needle"][] = "photo_other";
+                    }
+                    if($value["C"] == "Нет"){
+                        $tmp["needle"][] = "tech_info";
+                    }
+                    if($value["H"] == "Нет"){
+                        $tmp["needle"][] = "description";
+                    }
+                    if(count($tmp["needle"])){
+                        $output["products"][] = $tmp;
+                    }
+                }
+            }
+            $yml_file = "https://dev.mst.tools/assets/files/parser/97.xml";
+            $xml = simplexml_load_file($yml_file);
+            // Генерируем документ Фото
+            $photosheet = new Spreadsheet();
+            $activePhotosheet = $photosheet->getActiveSheet();
+            // заполняем шапку
+            $activePhotosheet->setCellValue('A1', "Статус");
+            $activePhotosheet->setCellValue('B1', "Код производителя");
+            $activePhotosheet->setCellValue('C1', "Расширенный артикул");
+            $activePhotosheet->setCellValue('D1', "Бренд");
+            $activePhotosheet->setCellValue('E1', "Основное Изображение");
+            $activePhotosheet->setCellValue('F1', "Дополнительные Изображения");
+            $activePhotosheet->setCellValue('G1', "Ссылка на скачивание файла");
+            // Генерируем документ Описания
+            $descsheet = new Spreadsheet();
+            $activeDescsheet = $descsheet->getActiveSheet();
+            // заполняем шапку
+            $activeDescsheet->setCellValue('A1', "Статус");
+            $activeDescsheet->setCellValue('B1', "Код производителя");
+            $activeDescsheet->setCellValue('C1', "Расширенный артикул");
+            $activeDescsheet->setCellValue('D1', "Бренд");
+            $activeDescsheet->setCellValue('E1', "Описание");
+            $activeDescsheet->setCellValue('F1', "Преимущества");
+            // Генерируем документ Доп материалов
+            $docssheet = new Spreadsheet();
+            $activeDocssheet = $docssheet->getActiveSheet();
+            // заполняем шапку
+            $activeDocssheet->setCellValue('A1', "Статус");
+            $activeDocssheet->setCellValue('B1', "Код производителя");
+            $activeDocssheet->setCellValue('C1', "Расширенный артикул");
+            $activeDocssheet->setCellValue('D1', "Бренд");
+            $activeDocssheet->setCellValue('E1', "Название дополнительной технической информации");
+            $activeDocssheet->setCellValue('F1', "Наименование файла");
+            $activeDocssheet->setCellValue('G1', "Ссылка на скачивание файла");
+            $indexes = array(
+                "photo" => 2,
+                "desc" => 2,
+                "docs" => 2
+            );
+            foreach($output["products"] as $k => $product){
+                if(count($product["needle"])){
+                    foreach ($xml->shop->offers->offer as $row) {
+                        $articles = explode(",", strval($row->article));
+                        foreach($articles as $ka => $article){
+                            $articles[$ka] = trim($article);
+                        }
+                        if(in_array($product["article"], $articles)){
+                            foreach($product["needle"] as $need){
+                                if($need == "photo_main"){
+                                    $photo = strval($row->pictures->picture[0]);
+                                    if($photo) {
+                                        $output["products"][$k]["needle_values"][$need] = strval($row->pictures->picture[0]);
+                                    }
+                                }
+                                if($need == "photo_other"){
+                                    foreach($row->pictures->picture as $kp => $picture){
+                                        $output["products"][$k]["needle_values"][$need][] = strval($picture);
+                                    }
+                                    unset($output["products"][$k]["needle_values"][$need][0]);
+                                }
+                                if($need == "description"){
+                                    $desc = trim(str_replace("Купить", "", strip_tags(strval($row->descriptionFull))));
+                                    $description = explode("Рекомендованная розничная цена", $desc);
+                                    $output["products"][$k]["needle_values"][$need] = $description[0];
+                                }
+                                if($need == "tech_info"){
+                                    foreach($row->param as $param){
+                                        $pval = strval($param);
+                                        $pos = strpos($pval, "/storage/docs/");
+                                        if ($pos !== false) {
+                                            $output["products"][$k]["needle_values"][$need][strval($param["name"])] = "https://www.interskol.ru".$pval;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Если какая-то инфа есть
+                    if(count($output["products"][$k]["needle_values"])){
+                        // 1. Собираем картинки Главная
+                        if($output["products"][$k]["needle_values"]["photo_main"]){
+                            $url = $output["products"][$k]["needle_values"]["photo_main"];
+                            $urlers = explode("/", $output["products"][$k]["needle_values"]["photo_main"]);
+                            $urlers = array_reverse($urlers);
+                            $activePhotosheet->setCellValue('A'.$indexes["photo"], "Добавление материалов");
+                            $activePhotosheet->setCellValue('B'.$indexes["photo"], "2623");
+                            $activePhotosheet->setCellValue('C'.$indexes["photo"], $output["products"][$k]['article']);
+                            $activePhotosheet->setCellValue('D'.$indexes["photo"], "Интерскол");
+                            $activePhotosheet->setCellValue('E'.$indexes["photo"], $urlers[0]);
+                            $activePhotosheet->setCellValue('G'.$indexes["photo"], $url);
+                            $indexes["photo"]++;
+                        }
+                        // 2. Собираем картинки Допы
+                        if(count($output["products"][$k]["needle_values"]["photo_other"])){
+                            foreach($output["products"][$k]["needle_values"]["photo_other"] as $photo){
+                                $url = $photo;
+                                $urlers = explode("/", $photo);
+                                $urlers = array_reverse($urlers);
+                                $activePhotosheet->setCellValue('A'.$indexes["photo"], "Добавление материалов");
+                                $activePhotosheet->setCellValue('B'.$indexes["photo"], "2623");
+                                $activePhotosheet->setCellValue('C'.$indexes["photo"], $output["products"][$k]['article']);
+                                $activePhotosheet->setCellValue('D'.$indexes["photo"], "Интерскол");
+                                $activePhotosheet->setCellValue('F'.$indexes["photo"], $urlers[0]);
+                                $activePhotosheet->setCellValue('G'.$indexes["photo"], $url);
+                                $indexes["photo"]++;
+                            }
+
+                        }
+                        // 3. Собираем описания
+                        if($output["products"][$k]["needle_values"]["description"]){
+                            if(trim($output["products"][$k]["needle_values"]["description"]) != "Совместимость:"){
+                                $activeDescsheet->setCellValue('A'.$indexes["desc"], "Добавление материалов");
+                                $activeDescsheet->setCellValue('B'.$indexes["desc"], "2623");
+                                $activeDescsheet->setCellValue('C'.$indexes["desc"], $output["products"][$k]['article']);
+                                $activeDescsheet->setCellValue('D'.$indexes["desc"], "Интерскол");
+                                $activeDescsheet->setCellValue('E'.$indexes["desc"], trim($output["products"][$k]["needle_values"]["description"]));
+                                $indexes["desc"]++;
+                            }
+                        }
+                        // 4. Собираем доп материалы
+                        if($output["products"][$k]["needle_values"]["tech_info"]){
+                            foreach($output["products"][$k]["needle_values"]["tech_info"] as $kf => $file){
+                                $url = $file;
+                                $urlers = explode("/", $file);
+                                $urlers = array_reverse($urlers);
+                                $activeDocssheet->setCellValue('A'.$indexes["docs"], "Добавление материалов");
+                                $activeDocssheet->setCellValue('B'.$indexes["docs"], "2623");
+                                $activeDocssheet->setCellValue('C'.$indexes["docs"], $output["products"][$k]['article']);
+                                $activeDocssheet->setCellValue('D'.$indexes["docs"], "Интерскол");
+                                $activeDocssheet->setCellValue('E'.$indexes["docs"], $kf);
+                                $activeDocssheet->setCellValue('F'.$indexes["docs"], $urlers[0]);
+                                $activeDocssheet->setCellValue('G'.$indexes["docs"], $url);
+                                $indexes["docs"]++;
+                            }
+                        }
+                    }
+                }
+            }
+            // Фотки
+            $pwriter = new Xlsx($photosheet);
+            $path = "cron/files/etm/output/";
+            if (!file_exists( $this->modx->getOption('base_path').$path)) {
+                mkdir($this->modx->getOption('base_path').$path, 0777, true);
+            }
+            $pwriter->save($this->modx->getOption('base_path').$path."images.xlsx");
+            // Описания
+            $descwriter = new Xlsx($descsheet);
+            $descwriter->save($this->modx->getOption('base_path').$path."desc.xlsx");
+            // Доп материалы
+            $docswriter = new Xlsx($docssheet);
+            $docswriter->save($this->modx->getOption('base_path').$path."docs.xlsx");
+        }
+        return $output;
     }
 }

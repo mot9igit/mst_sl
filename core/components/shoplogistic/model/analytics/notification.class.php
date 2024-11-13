@@ -40,6 +40,9 @@ class notificationHandler
             case 'delete':
                 $response = $this->deleteNotification($properties);
                 break;
+            case 'get/regions/stores':
+                $response = $this->getCityAndStores($properties);
+                break;
         }
         return $response;
     }
@@ -62,7 +65,7 @@ class notificationHandler
      *      3) Ваша компания отключена
      *      4) Ваша компания подключена
      *      5) Появился новый поставщик
-     *      6) Появился новый поставщик
+     *      6) TODO
      *      7) Вас добавили в поставщики
      *      8) Вас удалили из поставщиков
      *      9) Ваш склад отключен
@@ -127,8 +130,8 @@ class notificationHandler
             // И сортируем по дате в обратном порядке
             $query->sortby('date', "DESC");
 
-            $query->prepare();
-            $this->modx->log(1, $query->toSQL());
+//            $query->prepare();
+//            $this->modx->log(1, $query->toSQL());
 
             if($query->prepare() && $query->stmt->execute()) {
                 $items = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -266,6 +269,113 @@ class notificationHandler
 
                 return $this->getNotification($properties);
             }
+        }
+    }
+
+
+    public function getCityAndStores($properties)
+    {
+        $q = $this->modx->newQuery("dartLocationRegion");
+        $q->select(array(
+            "dartLocationRegion.id",
+            "dartLocationRegion.name",
+        ));
+        if ($q->prepare() && $q->stmt->execute()) {
+            $regions = $q->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($regions as $kr => $region){
+                $regions[$kr]['id'] = "r_".$region['id'];
+            }
+        }
+
+        $properties['perpage'] = 999;
+        $getDillers = $this->sl->orgHandler->getDilers($properties['id'], $properties);
+        $orgs = array();
+        foreach ($getDillers['items'] as $k => $diller){
+            $orgs[] = array(
+                "id" => "o_" . $diller['id'],
+                "name" => $diller['warehouse']
+            );
+        }
+
+        $quer = $this->modx->newQuery("dartLocationCity");
+        $quer->select(array(
+            "dartLocationCity.id",
+            "dartLocationCity.city as name",
+        ));
+        if ($quer->prepare() && $quer->stmt->execute()) {
+            $city = $quer->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($city as $kc => $cit){
+                $city[$kc]['id'] = "c_".$cit['id'];
+            }
+
+            return array_merge($regions, $city, $orgs);
+        }
+    }
+
+    public function getEmailManagers($id_to, $id_from, $type){
+        //id_to - id организации, которой нужно отправить уведомления
+        //id_from - id организации, которая вызвала это уведомление
+        //type - тип уведомления
+
+        if (!$id_to || !$id_from || !$type) {
+            return null;
+        }
+
+        // Получаем локации
+        $getLocations = $this->sl->orgHandler->getRegionsAndCity($id_from);
+
+        $query = $this->modx->newQuery("slNotificationManagers");
+
+        // Условие на org_id
+        $query->where(array(
+            "slNotificationManagers.org_id" => $id_to,
+        ));
+
+        // Условие на тип
+        $query->where("FIND_IN_SET('$type', slNotificationManagers.type)");
+
+        // Основное условие: global = 1 или совпадение по region или city или org содержит $id_from
+        $additionalConditions = [
+            "slNotificationManagers.global = 1",
+            "FIND_IN_SET('$id_from', slNotificationManagers.org)"
+        ];
+
+        // Условия для region
+        if (!empty($getLocations['region'])) {
+            $regionConditions = [];
+            foreach ($getLocations['region'] as $region) {
+                $regionConditions[] = "FIND_IN_SET('$region', slNotificationManagers.region)";
+            }
+            $additionalConditions[] = '(' . implode(' OR ', $regionConditions) . ')';
+        }
+
+        // Условия для city
+        if (!empty($getLocations['city'])) {
+            $cityConditions = [];
+            foreach ($getLocations['city'] as $city) {
+                $cityConditions[] = "FIND_IN_SET('$city', slNotificationManagers.city)";
+            }
+            $additionalConditions[] = '(' . implode(' OR ', $cityConditions) . ')';
+        }
+
+        // Объединяем все условия для OR
+        $query->where('(' . implode(' OR ', $additionalConditions) . ')');
+
+        $query->select(array("slNotificationManagers.*"));
+
+        $query->prepare();
+        $this->modx->log(1, $query->toSQL());
+
+        if($query->prepare() && $query->stmt->execute()) {
+            $managers = $query->stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $emails = array();
+            foreach ($managers as $key => $manager){
+                $emails[] = $manager['email'];
+            }
+            return $emails;
         }
     }
 }

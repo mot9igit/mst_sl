@@ -213,9 +213,9 @@ $xpdo_meta_map['slActionsStores']= array (
       'cardinality' => 'many',
       'owner' => 'foreign',
     ),
-    'slStores' => 
+    'slOrg' => 
     array (
-      'class' => 'slStores',
+      'class' => 'slOrg',
       'local' => 'store_id',
       'foreign' => 'id',
       'cardinality' => 'one',

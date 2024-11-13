@@ -19,7 +19,7 @@ shopLogistic.grid.Org = function (config) {
 Ext.extend(shopLogistic.grid.Org, shopLogistic.grid.Default, {
 
     getFields: function () {
-        return ['id', 'description', 'balance', 'store', 'warehouse', 'vendor', 'name', 'image', 'active', 'email', 'phone', 'contact', 'actions'];
+        return ['id', 'description', 'bitrix_id','balance', 'store', 'warehouse', 'vendor', 'name', 'image', 'active', 'email', 'phone', 'contact', 'actions'];
     },
 
     getTopBar: function () {
@@ -27,6 +27,22 @@ Ext.extend(shopLogistic.grid.Org, shopLogistic.grid.Default, {
             text: '<i class="icon icon-plus"></i> ' + _('shoplogistic_org_create'),
             handler: this.createOrg,
             scope: this
+        }, '->', {
+            xtype: 'shoplogistic-field-search',
+            width: 250,
+            listeners: {
+                search: {
+                    fn: function (field) {
+                        this._doSearch(field);
+                    }, scope: this
+                },
+                clear: {
+                    fn: function (field) {
+                        field.setValue('');
+                        this._clearSearch();
+                    }, scope: this
+                },
+            }
         }];
     },
 

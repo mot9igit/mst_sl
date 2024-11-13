@@ -550,6 +550,7 @@ class productHandler
                         }
                         */
                         // 2. Минимальная стоимость по категории (ОБНОВЛЯТЬ???)
+                        /*
                         $query = $this->modx->newQuery("modResource");
                         $query->leftJoin("modTemplateVarResource", "modTemplateVarResource", "modTemplateVarResource.contentid = modResource.parent AND modTemplateVarResource.tmplvarid = 42");
                         $query->where(array(
@@ -614,7 +615,7 @@ class productHandler
                                     }
                                 }
                             }
-                        }
+                        }*/
                     }
                 }
                 return true;
@@ -644,26 +645,30 @@ class productHandler
         }
         $query = $this->modx->newQuery("slStoresRemains");
         $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
-        $query->where(array(
+        $m_criteria = $this->sl->store->getMarketplaceAvailableCriteria("slStores.");
+        $criteria = array(
             "slStores.active:=" => 1,
-            "slStoresRemains.remains:>" => 0,
+            "slStoresRemains.available:>" => 0,
             "slStoresRemains.published:=" => 1,
             "slStoresRemains.price:>" => $min_price,
             "slStoresRemains.product_id:=" => $product_id,
-        ));
+        );
+        $query->where(array_merge($m_criteria, $criteria));
         $query->select(array("slStoresRemains.*"));
         $query->sortby("price", "ASC");
         $query->limit(1);
         if($query->prepare() && $query->stmt->execute()){
             $response = $query->stmt->fetch(PDO::FETCH_ASSOC);
-            // чекаем акции
-            $action = $this->sl->cart->getSales($response['id'], $response["store_id"]);
-            if($action){
-                if($action["new_price"]){
-                    $response["price"] = $action["new_price"];
-                }
-                if($action["old_price"]){
-                    $response["old_price"] = $action["old_price"];
+            if($response){
+                // чекаем акции
+                $action = $this->sl->cart->getSales($response['id'], $response["store_id"]);
+                if($action){
+                    if($action["new_price"]){
+                        $response["price"] = $action["new_price"];
+                    }
+                    if($action["old_price"]){
+                        $response["old_price"] = $action["old_price"];
+                    }
                 }
             }
             return $response;
@@ -681,24 +686,27 @@ class productHandler
     public function getStoreRemain($store_id, $product_id){
         $query = $this->modx->newQuery("slStoresRemains");
         $query->leftJoin("slStores", "slStores", "slStores.id = slStoresRemains.store_id");
-        $query->where(array(
-            "slStores.active:=" => 1,
+        $m_criteria = $this->sl->store->getMarketplaceAvailableCriteria("slStores.");
+        $criteria = array(
             "slStores.id:=" => $store_id,
-            "slStoresRemains.remains:>" => 0,
+            "slStoresRemains.available:>" => 0,
             "slStoresRemains.published:=" => 1,
             "slStoresRemains.price:>" => 0,
             "slStoresRemains.product_id:=" => $product_id,
-        ));
+        );
+        $query->where(array_merge($m_criteria, $criteria));
         $query->select(array("slStoresRemains.*"));
         if($query->prepare() && $query->stmt->execute()){
             $response = $query->stmt->fetch(PDO::FETCH_ASSOC);
-            $action = $this->sl->cart->getSales($response['id'], $response["store_id"]);
-            if($action){
-                if($action["new_price"]){
-                    $response["price"] = $action["new_price"];
-                }
-                if($action["old_price"]){
-                    $response["old_price"] = $action["old_price"];
+            if($response){
+                $action = $this->sl->cart->getSales($response['id'], $response["store_id"]);
+                if($action){
+                    if($action["new_price"]){
+                        $response["price"] = $action["new_price"];
+                    }
+                    if($action["old_price"]){
+                        $response["old_price"] = $action["old_price"];
+                    }
                 }
             }
             return $response;
@@ -979,7 +987,6 @@ class productHandler
         } else {
             $o->set("available", $available);
         }
-        // $this->modx->log(1, var_export($data['published'], true));
         if (isset($data['published'])) {
             if((bool) $data['published'] === false){
                 $o->set("published", 0);
@@ -987,7 +994,10 @@ class productHandler
                 $o->set("published", 1);
             }
         }
-        $o->set("price", $data['price']);
+        // Внесено изменение из-за КЛС обновление цен в 0 значение
+        if($data['price'] > 1) {
+            $o->set("price", $data['price']);
+        }
         $o->set('store_id', $store_id);
         // set statuses
 
@@ -1187,12 +1197,20 @@ class productHandler
 
     public function linkProduct($remain_id, $type = 'slStores'){
         $update_data = array();
+        $vendor = array();
         $remain = $this->sl->getObject($remain_id, "slStoresRemains");
         if($remain){
-            $vendor = $this->searchVendor($remain['name']);
-            if(!$vendor){
-                $vendor = $this->searchVendor($remain['catalog']);
+            if($remain['brand_manual']){
+                if($remain['brand_id']){
+                    $vendor['id'] = $remain['brand_id'];
+                }
+            }else{
+                $vendor = $this->searchVendor($remain['name']);
+                if(!$vendor){
+                    $vendor = $this->searchVendor($remain['catalog']);
+                }
             }
+
             if($vendor){
                 if(!$remain['article']){
                     $update_data = array(
@@ -2003,11 +2021,20 @@ class productHandler
             'failed' => 0,
             'updated' => 0
         );
+        $prices = array();
+        if($data['promo_prices_list']){
+            foreach($data['promo_prices_list'] as $price){
+                $prices[$price['price_id']] = array(
+                    "name" => $price['price_Name']
+                );
+            }
+        }
         $store = $this->getStore($data['key'], "remains_checkpoint_update");
         if($store){
             foreach ($data['product_archive'] as $k => $archive) {
-                $today = new DateTime($archive['date']);
-                $dd = $today->getTimestamp();
+                $today = new DateTime();
+                $dp = new DateTime($archive['date']);
+                $dd = $dp->getTimestamp();
                 $today->setTime(0,0,0);
                 $date_from = $today->getTimestamp();
                 $today->setTime(23,59,59);
@@ -2038,6 +2065,19 @@ class productHandler
                         $remain->set("reserved", 0);
                         $remain->set("available",$product['count_free']);
                         $remain->save();
+                        if($product['promo_prices']){
+                            foreach($product['promo_prices'] as $pr){
+                                if(!$product_price = $this->modx->getObject("slStoresRemainsPrices", array("remain_id" => $remain_id, "key" => $pr["price_id"]))){
+                                    $product_price = $this->modx->newObject("slStoresRemainsPrices");
+                                }
+                                $product_price->set("remain_id", $remain_id);
+                                $product_price->set("name", $prices[$pr["price_id"]]['name']);
+                                $product_price->set("key", $pr["price_id"]);
+                                $product_price->set("price", $pr["value"]);
+                                $product_price->set("active", 1);
+                                $product_price->save();
+                            }
+                        }
                     }
                     if($remain_id){
                         $criteria = array(

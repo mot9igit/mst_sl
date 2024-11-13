@@ -764,6 +764,104 @@ shopLogistic.combo.Cities = function (config) {
 Ext.extend(shopLogistic.combo.Cities, Ext.ux.form.SuperBoxSelect);
 Ext.reg('shoplogistic-combo-cities', shopLogistic.combo.Cities);
 
+shopLogistic.combo.Group = function (config) {
+    config = config || {};
+    Ext.applyIf(config, {
+        allowBlank: true,
+        allowAddNewData: true,
+        addNewDataOnBlur: false,
+        resizable: true,
+        minChars: 2,
+        store: new Ext.data.JsonStore({
+            id: (config.name || 'group') + '-group',
+            root: 'results',
+            autoLoad: true,
+            autoSave: false,
+            totalProperty: 'total',
+            fields: ['name','id'],
+            url: shopLogistic.config.connector_url,
+            baseParams: {
+                action: 'mgr/system/remains/groups/getlist',
+                store_id: config.store_id
+            }
+        }),
+        name: 'groups',
+        xtype: 'superboxselect',
+        hiddenName: 'groups',
+        fields: ['id', 'name'],
+        mode: 'remote',
+        displayField: 'name',
+        fieldLabel: "Группы товаров",
+        valueField: 'id',
+        triggerAction: 'all',
+        extraItemCls: 'x-tag',
+        expandBtnCls: 'x-form-trigger',
+        clearBtnCls: 'x-form-trigger',
+        anchor: '99%',
+        autoLoad: true,
+        renderTo: Ext.getBody(),
+        displayFieldTpl: new Ext.XTemplate(
+            '\
+            <tpl for=".">\
+                <div class="x-combo-list-item">\
+                    <span>\
+                        <small>({id})</small>\
+                        <b>{name}</b>\
+                    </span>\
+                </div>\
+            </tpl>',
+            {compiled: true}
+        ),
+        addValue : function (value) {
+            if (Ext.isEmpty(value)) {
+                return;
+            }
+            var values = value;
+            if (!Ext.isArray(value)) {
+                value = '' + value;
+                values = value.split(this.valueDelimiter);
+            }
+            Ext.each(values,function (val) {
+                var record = this.findRecord(this.valueField, val);
+                if (record) {
+                    this.addRecord(record);
+                }
+                this.remoteLookup.push(val);
+            },this);
+            if (this.mode === 'remote') {
+                var q = this.remoteLookup.join(this.queryValuesDelimiter);
+                this.doQuery(q,false, true);
+            }
+        },
+        setValueEx : function (data) {
+            // fix for setValue
+            if (this.rendered && this.valueField) {
+                if (!Ext.isArray(data)) {
+                    data = [data];
+                }
+                var values = [];
+                Ext.each(data,function (value, i) {
+                    if (typeof value == 'string' && value != '') {
+                        value = {};
+                        value[this.valueField] = data[i];
+                    }
+                    if (typeof value == 'object' && value[this.valueField]) {
+                        values.push(value);
+                    }
+                },this);
+                data = values;
+            }
+
+            this.constructor.prototype.setValueEx.apply(this, [data]);
+        }
+    });
+    config.name += '[]';
+    config.hiddenName += '[]';
+    shopLogistic.combo.Group.superclass.constructor.call(this, config);
+};
+Ext.extend(shopLogistic.combo.Group, Ext.ux.form.SuperBoxSelect);
+Ext.reg('shoplogistic-combo-groups', shopLogistic.combo.Group);
+
 shopLogistic.combo.Options = function (config) {
     config = config || {};
     // console.log(config);

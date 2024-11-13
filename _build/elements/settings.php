@@ -96,6 +96,16 @@ return [
 		'value' => 1,
 		'area' => 'shoplogistic_main',
 	],
+    'alert_mode' => [
+        'xtype' => 'numberfield',
+        'value' => 1,
+        'area' => 'shoplogistic_main',
+    ],
+    'tocrm' => [
+        'xtype' => 'numberfield',
+        'value' => 1,
+        'area' => 'shoplogistic_main',
+    ],
 	'ur_name' => [
 		'xtype' => 'textfield',
 		'value' => '',
